@@ -12,3 +12,4 @@ export * from './points';
 export * from './schemas/checkin';
 export * from './schemas/staff';
 export * from './avatar';
+export * from './schemas/admin';

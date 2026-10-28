@@ -1,5 +1,6 @@
 import { expiryFor, planCheckin, toJstDate, toJstIso, type CheckinResult, type Settings, type TodayVisit, type VisitMethod } from '@dr/shared';
 import { errors } from '../lib/errors';
+import { auditStatement } from './audit';
 import { nextUsableTicket, pointBalance } from './points';
 
 /** そのおうちの、指定した日の来場(取り消し済みを除く) */
@@ -189,4 +190,94 @@ export async function addDogsToVisit(
       .prepare('UPDATE visits SET dog_count = (SELECT COUNT(*) FROM visit_dogs WHERE visit_id = ?1) WHERE id = ?1')
       .bind(visitId),
   ]);
+}
+
+/**
+ * チェックインを取り消す(S-03)。付けたポイントと使った無料券を元に戻す(8章)。
+ * - その来場でポイントがたまって発行された無料券は回収する(使われていれば取り消せない)
+ * - 来場の記録は消さず「取り消し済み」にする。取り消した日は、もう一度チェックインできる
+ * - 同時に2回押されても、二重に戻さない(書き込みはすべて「まだ取り消されていなければ」の条件つき)
+ */
+export async function cancelCheckin(
+  db: D1Database,
+  args: { visitId: number; staffId: number; reason: string; now: Date },
+): Promise<void> {
+  const nowIso = toJstIso(args.now);
+  const visit = await db
+    .prepare('SELECT id, household_id, visit_date, used_ticket, dog_count, method, cancelled_at FROM visits WHERE id = ?')
+    .bind(args.visitId)
+    .first<{
+      id: number;
+      household_id: number | null;
+      visit_date: string;
+      used_ticket: number;
+      dog_count: number;
+      method: string;
+      cancelled_at: string | null;
+    }>();
+  if (!visit) throw errors.notFound('チェックインが見つかりませんでした。画面を読み込み直してください。');
+  if (visit.cancelled_at) {
+    throw errors.conflict('already_cancelled', 'このチェックインは、すでに取り消されています。画面を読み込み直してください。');
+  }
+
+  const { results: issued } = await db
+    .prepare("SELECT id, status FROM tickets WHERE issued_visit_id = ? AND status <> 'void'")
+    .bind(visit.id)
+    .all<{ id: number; status: string }>();
+  if (issued.some((t) => t.status === 'used')) {
+    throw errors.conflict(
+      'ticket_already_used',
+      'この来場でたまって発行された無料券が、もう使われているため取り消せません。ポイントの手動登録で調整してください。',
+    );
+  }
+  const ledgerSum = await db
+    .prepare('SELECT COALESCE(SUM(delta), 0) AS n FROM point_ledger WHERE visit_id = ?')
+    .bind(visit.id)
+    .first<{ n: number }>();
+
+  const stillOpen = { sql: 'EXISTS (SELECT 1 FROM visits WHERE id = ? AND cancelled_at IS NULL)', args: [visit.id] };
+  const statements: D1PreparedStatement[] = [];
+  if (visit.household_id && (ledgerSum?.n ?? 0) !== 0) {
+    statements.push(
+      db
+        .prepare(
+          `INSERT INTO point_ledger (household_id, delta, kind, visit_id, reason, actor_type, actor_id, created_at)
+           SELECT ?, ?, 'cancel', ?, ?, 'staff', ?, ? WHERE ${stillOpen.sql}`,
+        )
+        .bind(visit.household_id, -(ledgerSum?.n ?? 0), visit.id, args.reason, args.staffId, nowIso, ...stillOpen.args),
+    );
+  }
+  // 発行した無料券を回収し、使った無料券を未使用に戻す
+  statements.push(
+    db
+      .prepare(`UPDATE tickets SET status = 'void', note = ? WHERE issued_visit_id = ? AND status = 'unused' AND ${stillOpen.sql}`)
+      .bind('来場の取り消しで回収', visit.id, ...stillOpen.args),
+    db
+      .prepare(
+        `UPDATE tickets SET status = 'unused', used_visit_id = NULL, used_at = NULL
+          WHERE used_visit_id = ? AND status = 'used' AND ${stillOpen.sql}`,
+      )
+      .bind(visit.id, ...stillOpen.args),
+    auditStatement(db, {
+      staffId: args.staffId,
+      action: 'visit.cancel',
+      targetType: 'visit',
+      targetId: visit.id,
+      before: { cancelled: false, points: ledgerSum?.n ?? 0, usedTicket: visit.used_ticket === 1, issuedTickets: issued.map((t) => t.id) },
+      after: { cancelled: true },
+      reason: args.reason,
+      undo: { visitId: visit.id },
+      now: args.now,
+      onlyIf: stillOpen,
+    }),
+    db
+      .prepare(
+        `UPDATE visits SET cancelled_at = ?, cancel_reason = ?, cancelled_by_staff_id = ? WHERE id = ? AND cancelled_at IS NULL`,
+      )
+      .bind(nowIso, args.reason, args.staffId, visit.id),
+  );
+  const results = await db.batch(statements);
+  if (results.at(-1)!.meta.changes !== 1) {
+    throw errors.conflict('already_cancelled', 'このチェックインは、すでに取り消されています。画面を読み込み直してください。');
+  }
 }
