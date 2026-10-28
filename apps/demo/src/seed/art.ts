@@ -68,10 +68,9 @@ async function svgToJpeg(svg: string, width: number, height: number): Promise<Ui
   canvas.width = width;
   canvas.height = height;
   canvas.getContext('2d')!.drawImage(img, 0, 0, width, height);
-  const blob = await new Promise<Blob>((resolve, reject) =>
-    canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('jpeg'))), 'image/jpeg', 0.85),
-  );
-  return new Uint8Array(await blob.arrayBuffer());
+  // toBlob は、画面の中の画面(iframe)を読み込み直している間に返ってこないことがあるため、同期の toDataURL を使う
+  const b64 = canvas.toDataURL('image/jpeg', 0.85).split(',')[1] ?? '';
+  return Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
 }
 
 export function makeDogPhoto(variant: number, kind: 'photo' | 'thumb'): Promise<Uint8Array> {

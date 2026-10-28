@@ -404,12 +404,12 @@ export async function seedDemo(sql: Database, opts: SeedOptions): Promise<SeedSu
     // 登録の日にも来ている(登録はドッグランの受付で行うことが多い)
     if (rand() < 0.7) addVisit(h, at(h.regAt.slice(0, 10), Math.min(17 * 60 + 30, Number(h.regAt.slice(11, 13)) * 60 + Number(h.regAt.slice(14, 16)) + 3)));
   }
-  // 今日の来場(いまの時刻より前に、数組)
-  const todayVisitors = randomHouseholds.filter((h) => h.regAt.slice(0, 10) < today).slice(-12);
+  // 今日の来場(いまの時刻より前に、数組。写真のあるおうちを中心に)
+  const todayVisitors = randomHouseholds.filter((h) => h.regAt.slice(0, 10) < today).slice(0, 10);
   if (nowMinutes >= 9 * 60 + 30) {
     const n = Math.min(5, Math.floor((nowMinutes - 9 * 60) / 45) + 1);
     for (let i = 0; i < n; i++) {
-      const h = todayVisitors[(i * 5) % todayVisitors.length]!;
+      const h = todayVisitors[(i * 3) % todayVisitors.length]!;
       const m = 9 * 60 + Math.floor(((nowMinutes - 15 - 9 * 60) * (i + 0.5)) / n);
       addVisit(h, at(today, m), { proxy: false });
     }
@@ -444,7 +444,14 @@ export async function seedDemo(sql: Database, opts: SeedOptions): Promise<SeedSu
     v.id = i + 1;
   });
 
-  // ---- 書き込み
+  // ---- 書き込み(待ち時間のある処理は、まとめて書き込む前に済ませる)
+  const hashes: string[] = [];
+  for (const _ of STAFF) hashes.push(await opts.hashPassword(DEMO_PASSWORD));
+  let cardKey: string | null = null;
+  if (opts.makeCardPhoto && opts.putMedia) {
+    cardKey = `requests/${formatMemberNo(hMomo.id)}/demo-paper-card.jpg`;
+    await opts.putMedia(cardKey, await opts.makeCardPhoto());
+  }
   const run = (q: string, params: SqlValue[] = []) => sql.run(q, params);
   sql.run('BEGIN');
   try {
@@ -453,7 +460,7 @@ export async function seedDemo(sql: Database, opts: SeedOptions): Promise<SeedSu
       run(
         `INSERT INTO staff_users (id, email, name, password_hash, role, status, created_at, updated_at)
          VALUES (?, ?, ?, ?, ?, 'active', ?, ?)`,
-        [i + 1, s.email, s.name, await opts.hashPassword(DEMO_PASSWORD), s.role, at(START, 9 * 60), at(START, 9 * 60)],
+        [i + 1, s.email, s.name, hashes[i]!, s.role, at(START, 9 * 60), at(START, 9 * 60)],
       );
     }
 
@@ -621,11 +628,6 @@ export async function seedDemo(sql: Database, opts: SeedOptions): Promise<SeedSu
     );
 
     // 確認待ち: 旧カードの引き継ぎ申請(紙のスタンプカード)
-    let cardKey: string | null = null;
-    if (opts.makeCardPhoto && opts.putMedia) {
-      cardKey = `requests/${formatMemberNo(hMomo.id)}/demo-paper-card.jpg`;
-      await opts.putMedia(cardKey, await opts.makeCardPhoto());
-    }
     run(
       `INSERT INTO requests (id, kind, household_id, requester_member_id, payload, attachment_key, status, created_at)
        VALUES (2, 'migration', ?, ?, ?, ?, 'pending', ?)`,
@@ -663,6 +665,7 @@ export async function seedDemo(sql: Database, opts: SeedOptions): Promise<SeedSu
         const key = `dogs/${d.no}/demo-${d.id}`;
         await opts.putMedia(`${key}.jpg`, await opts.makeDogPhoto(variant, 'photo'));
         await opts.putMedia(`${key}_thumb.jpg`, await opts.makeDogPhoto(variant, 'thumb'));
+        // 写真を入れ終えてから書き込む(1つずつの書き込みなので、途中で止まっても矛盾しない)
         sql.run('UPDATE dogs SET photo_key = ?, thumb_key = ? WHERE id = ?', [`${key}.jpg`, `${key}_thumb.jpg`, d.id]);
         variant++;
       }

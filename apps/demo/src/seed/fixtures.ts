@@ -29,9 +29,9 @@ export const FIXED = {
 } as const;
 
 export const STAFF = [
-  { email: 'staff@example.com', name: '佐藤(受付)', role: 'staff' as const, label: '受付スタッフ' },
-  { email: 'admin@example.com', name: '田中(管理者)', role: 'admin' as const, label: '管理者' },
-  { email: 'developer@example.com', name: '山本(製作者)', role: 'developer' as const, label: '製作者' },
+  { email: 'staff@example.com', name: '佐藤', role: 'staff' as const, label: '受付スタッフ' },
+  { email: 'admin@example.com', name: '田中', role: 'admin' as const, label: '管理者' },
+  { email: 'developer@example.com', name: '山本', role: 'developer' as const, label: '製作者' },
 ];
 
 export const DEMO_PASSWORD = 'demo-password-1234';

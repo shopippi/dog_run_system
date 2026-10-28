@@ -84,8 +84,23 @@ export class DemoEngine {
     this.d1.onWrite = () => this.scheduleSave();
   }
 
+  /** やり直しの途中は、画面からの要求を待たせる */
+  private gate: Promise<void> = Promise.resolve();
+
   /** 最初からやり直す: 空のデータベースにマイグレーションを当て、初期データを入れる */
   async reset(): Promise<void> {
+    let done!: () => void;
+    const prev = this.gate;
+    this.gate = new Promise((r) => (done = r));
+    await prev;
+    try {
+      await this.resetNow();
+    } finally {
+      done();
+    }
+  }
+
+  private async resetNow(): Promise<void> {
     if (!this.opts.memoryOnly) await store.clear();
     this.open(new this.opts.SQL.Database());
     for (const m of MIGRATIONS) this.sql.exec(m.sql);
@@ -157,6 +172,7 @@ export class DemoEngine {
 
   /** 画面から届いた要求を、API(Hono)で処理する。クッキーは画面ごとの入れ物で保つ */
   async handle(req: BridgeRequest, jarName: string): Promise<BridgeResponse> {
+    await this.gate;
     const now = this.now();
     const jar = this.jar(jarName);
     const headers = new Headers(req.headers);
@@ -185,8 +201,11 @@ export class DemoEngine {
     for (const c of list) jar.store(c, now.getTime());
     const cookiesChanged = list.length > 0;
     const body = res.status === 204 || res.status === 304 || method === 'HEAD' ? null : await res.arrayBuffer();
-    if (cookiesChanged) this.scheduleSave();
-    if (method !== 'GET' && method !== 'HEAD') this.onChange?.();
+    if (method !== 'GET' && method !== 'HEAD') {
+      // 書き込みの操作は、すぐに保存する(直後に再読み込みしても失われないように)
+      await this.saveNow();
+      this.onChange?.();
+    } else if (cookiesChanged) this.scheduleSave();
     return { status: res.status, statusText: res.statusText, headers: out, body };
   }
 
