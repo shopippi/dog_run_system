@@ -1,0 +1,39 @@
+import { SELF } from 'cloudflare:test';
+
+export const BASE = 'https://dogrun.test';
+
+export type CallOptions = {
+  /** お客さんとして呼ぶときの LINE ユーザー(例: 'U001:パパ') */
+  user?: string;
+  method?: string;
+  body?: unknown;
+  /** 現在時刻を指定する(x-debug-now) */
+  now?: string;
+  headers?: Record<string, string>;
+};
+
+/** API を呼んで、状態コードと JSON を返す。 */
+export async function call<T = any>(path: string, opts: CallOptions = {}): Promise<{ status: number; body: T }> {
+  const headers: Record<string, string> = { ...opts.headers };
+  if (opts.user) {
+    const [id, name = ''] = opts.user.split(':');
+    headers.authorization = `Bearer mock:${id}:${encodeURIComponent(name)}`;
+  }
+  if (opts.now) headers['x-debug-now'] = opts.now;
+  let body: BodyInit | undefined;
+  if (opts.body instanceof FormData) {
+    body = opts.body;
+  } else if (opts.body !== undefined) {
+    headers['content-type'] = 'application/json';
+    body = JSON.stringify(opts.body);
+  }
+  const res = await SELF.fetch(`${BASE}${path}`, { method: opts.method ?? (body ? 'POST' : 'GET'), headers, body });
+  const text = await res.text();
+  let json: unknown = null;
+  try {
+    json = text ? JSON.parse(text) : null;
+  } catch {
+    json = text;
+  }
+  return { status: res.status, body: json as T };
+}

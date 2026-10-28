@@ -3,3 +3,5 @@ export * from './date';
 export * from './ids';
 export * from './search';
 export * from './settings';
+export * from './api-types';
+export * from './schemas/register';
