@@ -634,7 +634,7 @@ export async function seedDemo(sql: Database, opts: SeedOptions): Promise<SeedSu
       [
         hMomo.id,
         hMomo.members[0]!.id,
-        JSON.stringify({ source: 'paper_card', points: 7, tickets: 0, note: '紙のスタンプカードに7個押してあります' }),
+        JSON.stringify({ source: 'paper_card', claimedPoints: 7, note: '紙のスタンプカードに7個押してあります' }),
         cardKey,
         toJstIso(new Date(now.getTime() - 5 * 3600e3)),
       ],
