@@ -160,10 +160,8 @@ test('管理画面: 写真は API から読んでから出し(404 にならな�
   await expect(photo).toHaveAttribute('src', /^blob:/);
   expect(await photo.evaluate((img: HTMLImageElement) => img.naturalWidth)).toBeGreaterThan(0);
 
-  // 確認待ちの旧カードの写真も同じ
+  // 旧カードの引き継ぎ(受付で直接入力)の画面を開いても、写真の読み込みで 404 にならない
   await scene(page, 7);
-  const card = a.getByRole('img', { name: '旧カードの写真' }).first();
-  await expect(card).toHaveAttribute('src', /^blob:/);
   expect(notFound).toEqual([]);
 
   // システムの状態: 初期データに実行の履歴があり、すべて緑。天気は外につながずにスキップして成功にする
