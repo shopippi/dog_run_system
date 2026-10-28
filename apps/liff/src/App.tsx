@@ -16,6 +16,7 @@ import { SurveyPrompt } from './pages/SurveyPrompt';
 import { MigrationRequestPage } from './pages/migration/MigrationRequestPage';
 import { HistoryPage } from './pages/history/HistoryPage';
 import { ProfilePage } from './pages/profile/ProfilePage';
+import { HelpPage } from './pages/help/HelpPage';
 
 export function App() {
   const { me, error, loading, reload } = useMe();
@@ -71,6 +72,7 @@ function backFor(path: string): HeaderBack | null {
   if (path === '/migration') return { to: '/', label: '会員証' };
   if (path === '/history') return { to: '/', label: '会員証' };
   if (path === '/profile') return { to: '/', label: '会員証' };
+  if (path === '/help') return { to: '/', label: '会員証' };
   return null;
 }
 
@@ -90,6 +92,7 @@ function Registered() {
       <Route path="/migration" element={<MigrationRequestPage />} />
       <Route path="/history" element={<HistoryPage />} />
       <Route path="/profile" element={<ProfilePage />} />
+      <Route path="/help" element={<HelpPage />} />
       <Route path="*" element={<CardPage />} />
     </Routes>
   );

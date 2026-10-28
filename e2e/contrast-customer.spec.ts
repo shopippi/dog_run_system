@@ -124,6 +124,14 @@ for (const scheme of ['light', 'dark'] as const) {
       await page.getByRole('button', { name: '抜ける', exact: true }).waitFor();
       await check(page, 'L-11 家族の一覧');
 
+      // 会員証(メニューの行と「使い方」のリンクが加わった)と、使い方・よくある質問
+      await openLiff(page, user);
+      await page.getByRole('region', { name: '会員証' }).waitFor();
+      await check(page, 'L-07 会員証(メニュー)');
+      await page.getByRole('link', { name: '使い方・よくある質問' }).click();
+      await page.getByText('無料券はどうやって使いますか?').click();
+      await check(page, '使い方・よくある質問');
+
       // L-13 旧カードの引き継ぎ(入力中・申請後の状態の一覧)
       await openLiff(page, user, '/migration');
       await page.getByRole('heading', { name: '旧カードの引き継ぎ' }).waitFor();

@@ -97,6 +97,9 @@ function Card({ me }: { me: MeRegistered }) {
         </Link>
       </nav>
       <p className="note">1日1ポイント。{card.pointsPerTicket}ポイントで無料券1枚(来場1回分)。</p>
+      <Link to="/help" className="cu-link">
+        使い方・よくある質問
+      </Link>
     </main>
   );
 }
