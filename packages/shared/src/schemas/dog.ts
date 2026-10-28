@@ -36,3 +36,14 @@ export const PHOTO_MAX_EDGE = 800;
 export const THUMB_EDGE = 240;
 export const PHOTO_MAX_BYTES = 1_000_000;
 export const THUMB_MAX_BYTES = 200_000;
+
+/** お客さんが変えられる項目(C-08)。犬種とサイズは管理者だけが変えられる(6.1)。 */
+export const dogPatchSchema = z
+  .object({
+    name: dogNameSchema,
+    sex: z.enum(DOG_SEXES).nullable(),
+    birthYm: birthYmSchema.nullable(),
+    neutered: z.enum(NEUTERED_VALUES).nullable(),
+  })
+  .partial();
+export type DogPatch = z.infer<typeof dogPatchSchema>;
