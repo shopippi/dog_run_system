@@ -322,3 +322,38 @@ input::placeholder { color: var(--text-tertiary); }
   .nav-group { flex-direction: column; gap: 2px; padding-bottom: var(--sp-3); }
   .nav-label { display: block; margin: 0; padding: var(--sp-2) var(--sp-3) var(--sp-1); font-size: var(--fs-12); color: var(--text-tertiary); font-weight: var(--fw-strong); letter-spacing: .04em; }
 }
+
+/* ---- M-08 おうちの統合(担当B。接頭辞 mg-) ---- */
+.mg-section { display: flex; flex-direction: column; gap: var(--sp-4); padding: var(--sp-5); }
+.mg-title { font-size: var(--fs-17); font-feature-settings: "palt"; }
+.mg-slots { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--sp-3); }
+@media (max-width: 720px) { .mg-slots { grid-template-columns: minmax(0, 1fr); } }
+.mg-slot {
+  display: flex; align-items: center; gap: var(--sp-3); min-height: 72px; min-width: 0;
+  padding: var(--sp-3) var(--sp-4); border: 1px solid var(--border); border-radius: var(--radius-row);
+}
+.mg-slot-body { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+.mg-slot-body b { font-size: var(--fs-15); overflow-wrap: anywhere; }
+.picker { display: flex; flex-direction: column; gap: var(--sp-3); }
+.picker .results { border: 1px solid var(--border); border-radius: var(--radius-row); overflow: hidden; }
+.picker .result-row:disabled { color: var(--text-secondary); cursor: not-allowed; }
+.picker-grid { padding: 0; }
+.mg-keep { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: var(--sp-2); }
+.mg-keep .pick-row input { accent-color: var(--accent); }
+.mg-dogs { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.mg-dog { display: flex; flex-direction: column; gap: var(--sp-4); padding: var(--sp-4) 0; }
+.mg-dog + .mg-dog { border-top: 1px solid var(--border); }
+.mg-dog-head { display: flex; align-items: center; gap: var(--sp-4); }
+.mg-chips label { gap: var(--sp-2); }
+.mg-chips .av { width: 28px; height: 28px; }
+.mg-chips label.mg-chip-off { color: var(--text-tertiary); background: var(--surface-sunk); }
+.mg-chips label.mg-chip-off input { cursor: not-allowed; }
+.mg-take { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: var(--sp-2); }
+.mg-result-head { display: flex; align-items: center; gap: var(--sp-3); }
+.mg-kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); border: 1px solid var(--border); border-radius: var(--radius-row); }
+@media (max-width: 600px) { .mg-kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); } .mg-kpis .kpi:nth-child(3) { border-left: 1px solid var(--border); } .mg-kpis .kpi:nth-child(n+3) { border-top: 0; } }
+.mg-list { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: var(--sp-2) var(--sp-4); margin: 0; font-size: var(--fs-14); }
+.mg-list dt { color: var(--text-secondary); }
+.mg-list dd { margin: 0; overflow-wrap: anywhere; }
+.mg-actions { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
+.mg-done { font-size: var(--fs-15); font-weight: var(--fw-strong); }

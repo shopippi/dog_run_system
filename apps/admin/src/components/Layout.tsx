@@ -22,6 +22,7 @@ const GROUPS: Group[] = [
     label: '運営',
     items: [
       { to: '/requests', label: '確認待ち', icon: 'inbox', adminOnly: true, badge: true },
+      { to: '/merge', label: 'おうちの統合', icon: 'merge', adminOnly: true, writeOnly: true },
       { to: '/dashboard', label: 'ダッシュボード', icon: 'chart' },
       { to: '/events', label: 'イベント・休業日', icon: 'flag', adminOnly: true },
     ],
