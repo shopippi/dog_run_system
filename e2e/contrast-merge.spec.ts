@@ -1,6 +1,6 @@
 import { expect, test, type Browser, type Page } from '@playwright/test';
-import { adminLogin, makePhoto, newLineUser, openCheckin, registerViaUi } from './helpers';
-import { insertMigrationRequest, putMedia, requestMerge } from './merge-helpers';
+import { adminLogin, makePhoto, newLineUser, registerViaUi } from './helpers';
+import { insertMigrationRequest, putMedia, requestMerge, visitYesterday } from './merge-helpers';
 
 // 担当B(おうちの統合・確認待ち)の画面の、文字と背景のコントラスト(WCAG の 4.5:1)。
 // 確かめ方は e2e/contrast.spec.ts の lowContrast と同じ(コピーして使う)。
@@ -96,9 +96,7 @@ async function seed(browser: Browser) {
   const mama = newLineUser('ママ');
   const papaNo = await registerViaUi(customer, papa, ['ソラ']);
   const mamaNo = await registerViaUi(customer, mama, ['そらちゃん', 'ミルク']);
-  await openCheckin(customer, papa);
-  await customer.getByRole('button', { name: 'チェックインする' }).click();
-  await customer.getByRole('region', { name: 'チェックイン完了' }).waitFor();
+  visitYesterday(papaNo);
   await customer.close();
   return { papaNo, mamaNo };
 }
@@ -163,7 +161,6 @@ for (const scheme of ['light', 'dark'] as const) {
       const { papaNo, mamaNo } = await seed(browser);
       const page = await browser.newPage({ ...TABLET, colorScheme: scheme });
       await adminLogin(page, 'admin', '/merge');
-      await page.getByRole('link', { name: 'おうちの統合' }).click();
       const picker1 = page.getByRole('group', { name: 'おうち1を探す' });
       await picker1.getByRole('searchbox', { name: '探す言葉' }).fill(papaNo);
       const list1 = picker1.getByRole('list', { name: 'おうち1を探すの候補' });

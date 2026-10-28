@@ -56,3 +56,23 @@ export function insertMigrationRequest(memberNo: string, payload: { source: stri
        FROM households h WHERE h.member_no = '${memberNo}'`,
   );
 }
+
+/**
+ * 昨日の来場を直接入れる(1ポイントつき)。今日の来場の一覧を長くしないため、統合・確認待ちの準備ではこちらを使う。
+ * 「写真で探す」(最近来たおうち)にも出る。
+ */
+export function visitYesterday(memberNo: string) {
+  const day = "date('now', '+9 hours', '-1 day')";
+  const at = "strftime('%Y-%m-%dT10:00:00+09:00', 'now', '+9 hours', '-1 day')";
+  const h = `(SELECT id FROM households WHERE member_no = '${memberNo}')`;
+  const v = `(SELECT id FROM visits WHERE household_id = ${h} AND visit_date = ${day} AND cancelled_at IS NULL)`;
+  sql(
+    `INSERT INTO visits (household_id, checked_in_member_id, visit_date, checked_in_at, dog_count, used_ticket, method)
+       SELECT ${h}, (SELECT MIN(id) FROM family_members WHERE household_id = ${h}), ${day}, ${at},
+              (SELECT COUNT(*) FROM dogs WHERE household_id = ${h} AND status = 'active'), 0, 'self';
+     INSERT INTO visit_dogs (visit_id, dog_id, visit_date, created_at)
+       SELECT ${v}, id, ${day}, ${at} FROM dogs WHERE household_id = ${h} AND status = 'active';
+     INSERT INTO point_ledger (household_id, delta, kind, visit_id, actor_type, created_at)
+       SELECT ${h}, 1, 'visit', ${v}, 'member', ${at};`,
+  );
+}

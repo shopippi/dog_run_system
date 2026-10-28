@@ -27,7 +27,8 @@ function formatYmd(iso: string) {
  */
 export function MergePage() {
   const [params] = useSearchParams();
-  const { readOnly } = useAuth();
+  const { readOnly, staff } = useAuth();
+  const isStaff = staff?.role === 'staff';
   const requestId = Number(params.get('request')) || undefined;
   const [slots, setSlots] = useState<[number | null, number | null]>(() => [
     Number(params.get('a')) || null,
@@ -52,7 +53,7 @@ export function MergePage() {
 
   // 2つのおうちが決まったら、まとめた後の結果を確かめる(組み合わせを変えるたびに読み直す)
   useEffect(() => {
-    if (!both || readOnly || done) return;
+    if (!both || readOnly || isStaff || done) return;
     let alive = true;
     setError(null);
     adminPost<MergePreview>('/merges/preview', { keepHouseholdId: keep, absorbHouseholdId: absorb, dogPairs })
@@ -74,7 +75,7 @@ export function MergePage() {
     return () => {
       alive = false;
     };
-  }, [both, keep, absorb, dogPairs, keepId, readOnly, done]);
+  }, [both, keep, absorb, dogPairs, keepId, readOnly, isStaff, done]);
 
   const reset = () => {
     setKeepId(null);
@@ -102,9 +103,13 @@ export function MergePage() {
         title="おうちの統合"
         howto="別々にポイントをためていた家族のおうちを、1つにまとめます。2つのおうちを選び、同じワンちゃんを写真で組み合わせ、まとめた後の内容を確かめてから「まとめる」を押してください。まとめてから30日以内なら、元に戻せます。"
       />
-      {readOnly ? (
+      {readOnly || isStaff ? (
         <div className="panel">
-          <p className="empty">製作者のアカウントでは、おうちをまとめることはできません。</p>
+          <p className="empty">
+            {readOnly
+              ? '製作者のアカウントでは、おうちをまとめることはできません。'
+              : 'おうちの統合は、管理者のアカウントで行ってください。'}
+          </p>
         </div>
       ) : (
         <>

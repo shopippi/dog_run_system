@@ -1,6 +1,6 @@
 import { expect, test, type Browser, type CDPSession, type Page } from '@playwright/test';
-import { adminLogin, answerSurvey, makePhoto, newLineUser, openCheckin, openLiff, registerViaUi } from './helpers';
-import { insertMigrationRequest, putMedia, requestMerge } from './merge-helpers';
+import { adminLogin, answerSurvey, makePhoto, newLineUser, openLiff, registerViaUi } from './helpers';
+import { insertMigrationRequest, putMedia, requestMerge, visitYesterday } from './merge-helpers';
 
 // 担当B(おうちの統合・確認待ち)の画面の見え方。e2e/admin.layout.spec.ts の checkScreen と同じ確かめ方。
 // PC(1280)とタブレット縦(768)の2つの幅で確かめる。
@@ -90,11 +90,8 @@ async function seed(browser: Browser) {
   const mama = newLineUser('ママ');
   const papaNo = await registerWithPhoto(customer, papa, ['ハル']);
   const mamaNo = await registerViaUi(customer, mama, ['はるちゃん', 'チョコレートクッキー']);
-  for (const user of [papa, mama]) {
-    await openCheckin(customer, user);
-    await customer.getByRole('button', { name: 'チェックインする' }).click();
-    await customer.getByRole('region', { name: 'チェックイン完了' }).waitFor();
-  }
+  visitYesterday(papaNo);
+  visitYesterday(mamaNo);
   await customer.close();
   return { papaNo, mamaNo };
 }
@@ -169,7 +166,6 @@ test.describe('おうちの統合・確認待ちの見え方', () => {
       const { papaNo, mamaNo } = await seed(browser);
       const page = await browser.newPage({ viewport: v.viewport, hasTouch: v.touch });
       await adminLogin(page, 'admin', '/merge');
-      await page.getByRole('link', { name: 'おうちの統合' }).click();
 
       const picker1 = page.getByRole('group', { name: 'おうち1を探す' });
       await picker1.getByRole('searchbox', { name: '探す言葉' }).fill(papaNo);

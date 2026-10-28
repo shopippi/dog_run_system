@@ -47,6 +47,12 @@ export function RequestsPage() {
       <PageHead
         title="確認待ち"
         howto="お客さんからの申請です。旧カードの引き継ぎは写真でポイント数を確かめて承認し、おうちをまとめる申請は「統合の画面に進む」から写真で確かめてまとめます。違うときは「却下する」を押して理由を選びます。"
+        aside={
+          // 申請がなくても、別々にためていたおうちをまとめられるように
+          <Link className="btn ghost" to="/merge">
+            おうちの統合を開く
+          </Link>
+        }
       />
       <div className="segment rq-tabs" role="tablist" aria-label="表示する申請">
         <button type="button" role="tab" aria-selected={tab === 'pending'} onClick={() => setTab('pending')}>

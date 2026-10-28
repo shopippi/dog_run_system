@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
-import { adminLogin, newLineUser, openCheckin, openLiff, registerViaUi } from './helpers';
+import { adminLogin, newLineUser, openLiff, registerViaUi } from './helpers';
+import { visitYesterday } from './merge-helpers';
 
 test('A-07 2つのおうちを選び、同じワンちゃんを組み合わせてまとめる。まとめた後は元に戻せる', async ({ browser }) => {
   test.setTimeout(90_000);
@@ -9,16 +10,15 @@ test('A-07 2つのおうちを選び、同じワンちゃんを組み合わせ�
   const mama = newLineUser('ママ');
   const papaNo = await registerViaUi(customer, papa, ['ゴマ']);
   const mamaNo = await registerViaUi(customer, mama, ['ごまちゃん', 'キナコ']);
-  for (const user of [papa, mama]) {
-    await openCheckin(customer, user);
-    await customer.getByRole('button', { name: 'チェックインする' }).click();
-    await customer.getByRole('region', { name: 'チェックイン完了' }).waitFor();
-  }
+  // 2つのおうちとも、昨日来場していた(今日の来場の一覧を長くしないよう、昨日の来場として入れる)
+  visitYesterday(papaNo);
+  visitYesterday(mamaNo);
 
   const admin = await browser.newContext({ viewport: { width: 1024, height: 768 }, hasTouch: true });
   const page = await admin.newPage();
-  await adminLogin(page, 'admin');
-  await page.getByRole('link', { name: 'おうちの統合' }).click();
+  // 確認待ちの画面から、おうちの統合を開く
+  await adminLogin(page, 'admin', '/requests');
+  await page.getByRole('link', { name: 'おうちの統合を開く' }).click();
 
   // 1. 2つのおうちを探して選ぶ(あとから登録したママのおうちを先に選ぶ)
   const picker1 = page.getByRole('group', { name: 'おうち1を探す' });
@@ -72,7 +72,8 @@ test('A-07 2つのおうちを選び、同じワンちゃんを組み合わせ�
   await admin.close();
 });
 
-test('A-07 受付スタッフには、おうちの統合のメニューが出ない', async ({ page }) => {
-  await adminLogin(page, 'staff');
-  await expect(page.getByRole('link', { name: 'おうちの統合' })).toHaveCount(0);
+test('A-07 受付スタッフは、おうちの統合を使えない', async ({ page }) => {
+  await adminLogin(page, 'staff', '/merge');
+  await expect(page.getByText('おうちの統合は、管理者のアカウントで行ってください。')).toBeVisible();
+  await expect(page.getByRole('group', { name: 'おうち1を探す' })).toHaveCount(0);
 });
