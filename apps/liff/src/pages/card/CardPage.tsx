@@ -82,6 +82,7 @@ function Card({ me }: { me: MeRegistered }) {
 
       <nav className="menu" aria-label="メニュー">
         <Link to="/dogs">ワンちゃん</Link>
+        <Link to="/family">家族を招待</Link>
       </nav>
       <p className="small muted center">1日1ポイント。{card.pointsPerTicket}ポイントで無料券1枚(来場1回分)。</p>
     </main>

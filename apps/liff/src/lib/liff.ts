@@ -97,3 +97,8 @@ export function extractPassphrase(text: string): string | null {
 export function canScan(): boolean {
   return !isMock && liff.isApiAvailable('scanCodeV2');
 }
+
+/** 招待の URL。LINE の中で開くと、LIFF の招待の画面(L-12)になる。 */
+export function inviteUrl(code: string): string {
+  return isMock ? `${location.origin}/liff/invite/${code}` : `https://liff.line.me/${LIFF_ID}/invite/${code}`;
+}

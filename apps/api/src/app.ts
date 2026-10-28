@@ -4,6 +4,7 @@ import { AppError, type ErrorBody } from './lib/errors';
 import { nowMiddleware, requireLineUser } from './lib/middleware';
 import { checkinRoutes } from './routes/customer/checkins';
 import { dogRoutes } from './routes/customer/dogs';
+import { inviteRoutes } from './routes/customer/invites';
 import { meRoutes } from './routes/customer/me';
 import { mediaRoutes } from './routes/customer/media';
 import { surveyRoutes } from './routes/customer/survey';
@@ -38,6 +39,7 @@ export function createApp() {
   customer.route('/', mediaRoutes);
   customer.route('/', surveyRoutes);
   customer.route('/', checkinRoutes);
+  customer.route('/', inviteRoutes);
   app.route('/api', customer);
 
   app.all('/api/*', (c) =>
