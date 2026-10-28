@@ -18,7 +18,7 @@ test('C-06 会員証に、呼び名・会員ID・犬・ポイントが出て、�
   await page.getByRole('link', { name: '会員証にもどる' }).click();
 
   await expect(stamps.getByRole('img', { name: 'ポイント 1 / 10' })).toBeVisible();
-  await expect(stamps.locator('.stamps span.on')).toHaveCount(1);
+  await expect(stamps.locator('.paw.on')).toHaveCount(1);
   await page.getByRole('button', { name: '今日のチェックインを見る' }).click();
   await expect(page.getByRole('region', { name: 'チェックイン完了' })).toBeVisible();
 });

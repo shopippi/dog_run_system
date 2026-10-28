@@ -40,7 +40,7 @@ test('A-05 受付で旧カードを確かめて直接入力する。確認の印
   // 10ポイントを超えても、無料券には自動で替えない(お客さんが会員証で交換する)
   await openLiff(customer, user);
   await expect(customer.getByRole('button', { name: '無料券と交換する(10ポイント)' })).toBeVisible();
-  await expect(customer.getByText('未使用 0枚')).toBeVisible();
+  await expect(customer.getByText('使える無料券はありません')).toBeVisible();
   await customer.close();
 
   // 同じ種類のカードは2回目を入れられない。入力の印は外れている

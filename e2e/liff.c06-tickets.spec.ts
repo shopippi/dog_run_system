@@ -70,7 +70,7 @@ test('C-06 無料券の「使用する」を確認して押すと「無料券を
 
   // 会員証に戻ると、今日使った券の画面をもう一度開ける
   await page.getByRole('link', { name: '会員証にもどる' }).click();
-  await expect(page.getByText('未使用 0枚')).toBeVisible();
+  await expect(page.getByText('使える無料券はありません')).toBeVisible();
   await page.getByRole('link', { name: '今日使った無料券の画面を見る' }).click();
   await expect(page.getByRole('region', { name: '無料券を使用しました' })).toBeVisible();
 

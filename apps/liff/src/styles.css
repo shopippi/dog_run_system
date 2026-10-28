@@ -278,12 +278,6 @@ a { color: var(--accent-text); }
 }
 .ticket-exp { margin-left: var(--sp-2); font-size: var(--fs-13); color: var(--text-secondary); }
 
-/* ---- L-07 スタンプ(会員証の下のパネル) ---- */
-.stamps { display: grid; grid-template-columns: repeat(10, 22px); justify-content: space-between; row-gap: var(--sp-2); }
-.stamps span { width: 22px; height: 22px; border-radius: 50%; border: 1.5px solid var(--border-strong); }
-.stamps span.on { background: var(--ink); border-color: var(--ink); }
-.mc-stamp-text { font-size: var(--fs-15); }
-
 /* ---- L-05 チェックイン ---- */
 .pick-list { display: flex; flex-direction: column; gap: var(--sp-2); }
 .pick-row {
@@ -581,3 +575,35 @@ a { color: var(--accent-text); }
 .cb-file { position: absolute; opacity: 0; width: 1px; height: 1px; pointer-events: none; }
 .cb-stop { width: auto; min-height: 44px; font-size: var(--fs-14); }
 .cb-status { min-height: 1.55em; font-size: var(--fs-13); color: var(--text-secondary); }
+
+/* ================================================================
+ * 担当I: L-07 スタンプ(会員証の下のパネル。C-06)。肉球と骨の塗りの SVG
+ * ================================================================ */
+.stamp-panel {
+  display: flex; flex-direction: column; gap: var(--sp-4);
+  padding: var(--sp-4); border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--surface);
+}
+.stamp-head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--sp-3); }
+.stamp-count { font-size: var(--fs-14); color: var(--text-secondary); white-space: nowrap; }
+.stamp-text { font-size: var(--fs-15); }
+.paws { display: flex; flex-direction: column; gap: var(--sp-3); }
+.paws-tier { display: flex; flex-direction: column; gap: var(--sp-2); }
+.paws-tier + .paws-tier { padding-top: var(--sp-3); border-top: 1px solid var(--border); }
+.paws-more { font-size: var(--fs-12); color: var(--text-secondary); }
+.paws-grid { display: grid; grid-template-columns: repeat(5, 36px); justify-content: space-between; row-gap: var(--sp-3); max-width: 308px; padding: 4px; }
+/* まだの分: 輪郭だけ(border-strong の 1.5px) */
+.paw { display: block; width: 36px; height: 36px; fill: none; stroke: var(--border-strong); stroke-width: 1.5px; vector-effect: non-scaling-stroke; }
+.paw * { vector-effect: non-scaling-stroke; }
+/* たまった分: ink の塗り。押した跡らしく、少し傾ける(角度と濃さは画面の index から決める) */
+.paw.on { fill: var(--ink); stroke: none; transform: rotate(var(--tilt, 0deg)); }
+/* 新しく付いた 1 個だけ、開いたときに押す動き(1 回だけ) */
+.paw.on.fresh { animation: paw-press 250ms ease-out 1; }
+@keyframes paw-press {
+  from { transform: rotate(var(--tilt, 0deg)) scale(1.4); }
+  to { transform: rotate(var(--tilt, 0deg)) scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .paw.on.fresh { animation: none; }
+}
+.stamp-panel .tk-confirm { padding-top: var(--sp-4); border-top: 1px solid var(--border); }
+.tk-empty { font-size: var(--fs-14); color: var(--text-secondary); }
