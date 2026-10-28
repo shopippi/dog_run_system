@@ -4,7 +4,9 @@ import { toJstIso } from '@dr/shared';
 export function auditStatement(
   db: D1Database,
   args: {
-    staffId: number;
+    staffId: number | null;
+    /** スタッフ以外が操作したとき(お客さんが招待からおうちをまとめた、など)。指定すると staffId より優先する */
+    actor?: { type: 'member' | 'staff' | 'system'; id: number | null };
     action: string;
     targetType: string;
     /** 対象のID。SQL で指すときは { sql: 'last_insert_rowid()' } のように書く */
@@ -20,8 +22,8 @@ export function auditStatement(
 ): D1PreparedStatement {
   const targetSql = typeof args.targetId === 'object' ? `CAST((${args.targetId.sql}) AS TEXT)` : '?';
   const values = [
-    'staff',
-    args.staffId,
+    args.actor?.type ?? 'staff',
+    args.actor ? args.actor.id : args.staffId,
     args.action,
     args.targetType,
     ...(typeof args.targetId === 'object' ? (args.targetId.args ?? []) : [String(args.targetId)]),

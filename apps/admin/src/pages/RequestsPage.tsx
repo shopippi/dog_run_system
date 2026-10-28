@@ -34,8 +34,8 @@ export function formatDateTime(iso: string) {
 }
 
 /**
- * M-09 確認待ち(A-05・A-08)。お客さんからの申請を確かめて処理する。
- * - おうちをまとめる申請: 「統合の画面に進む」で M-08 を開く(統合すると承認になる)。却下もできる
+ * M-09 確認待ち(A-05)。お客さんからの申請を確かめて処理する。
+ * (おうちをまとめるのは、お客さんが招待から自分でまとめる形になった(C-12)。「まとめる申請」は出さない)
  * - 旧カードの引き継ぎ申請: 写真を見てポイント数を確認・修正して承認する(A-05)。却下もできる
  * - 処理済みのタブで、承認・却下した申請を見られる
  * - 「受付で直接入力」のタブで、受付で旧カードを見せてもらったおうちに、ポイントを引き継ぐ(A-05、16.1)
@@ -46,7 +46,7 @@ export function RequestsPage() {
     <div className="page">
       <PageHead
         title="確認待ち"
-        howto="お客さんからの申請です。旧カードの引き継ぎは写真でポイント数を確かめて承認し、おうちをまとめる申請は「統合の画面に進む」から写真で確かめてまとめます。違うときは「却下する」を押して理由を選びます。"
+        howto="お客さんからの申請です。旧カードの引き継ぎは写真でポイント数を確かめて承認します。違うときは「却下する」を押して理由を選びます。"
         aside={
           // 申請がなくても、別々にためていたおうちをまとめられるように
           <Link className="btn ghost" to="/merge">
@@ -198,11 +198,6 @@ function RequestRow({
       )}
       {canEdit && (
         <div className="rq-actions">
-          {r.kind === 'merge' && r.related && (
-            <Link className="btn sub" to={`/merge?a=${r.related.id}&b=${r.household.id}&request=${r.id}`}>
-              統合の画面に進む
-            </Link>
-          )}
           {r.kind === 'migration' && (
             <button type="button" className="btn sub" onClick={() => setApproving(true)}>
               確かめて承認する

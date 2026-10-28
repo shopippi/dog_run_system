@@ -606,25 +606,13 @@ export async function seedDemo(sql: Database, opts: SeedOptions): Promise<SeedSu
       ]);
     }
 
-    // 確認待ち: まとめる申請(nico.mama が taka_papa の招待を開いた)
+    // taka_papa が nico.mama に送った家族の招待(まだ開いていない)。nico.mama が開くと、その場でおうちをまとめられる(C-12)。
+    // デモの日付を進めても使えるよう、期限は長めにしておく
     const takaMember = hTaka.members[0]!;
-    const nicoMember = hNico.members[0]!;
-    const reqAt = toJstIso(new Date(now.getTime() - 26 * 60 * 60 * 1000));
     run(
-      `INSERT INTO requests (id, kind, household_id, related_household_id, requester_member_id, payload, status, created_at)
-       VALUES (1, 'merge', ?, ?, ?, ?, 'pending', ?)`,
-      [
-        hNico.id,
-        hTaka.id,
-        nicoMember.id,
-        JSON.stringify({ via: 'invite', inviteCode: 'demo-merge-invite', memberNo: formatMemberNo(hNico.id), relatedMemberNo: formatMemberNo(hTaka.id) }),
-        reqAt,
-      ],
-    );
-    run(
-      `INSERT INTO invites (code, household_id, kind, created_by_member_id, created_at, expires_at, used_by_member_id, used_at, request_id)
-       VALUES ('demo-merge-invite', ?, 'family', ?, ?, ?, ?, ?, 1)`,
-      [hTaka.id, takaMember.id, toJstIso(new Date(now.getTime() - 27 * 3600e3)), toJstIso(new Date(now.getTime() - 3 * 3600e3)), nicoMember.id, reqAt],
+      `INSERT INTO invites (code, household_id, kind, created_by_member_id, created_at, expires_at)
+       VALUES ('demo-merge-invite', ?, 'family', ?, ?, ?)`,
+      [hTaka.id, takaMember.id, toJstIso(new Date(now.getTime() - 3 * 3600e3)), toJstIso(new Date(now.getTime() + 60 * 24 * 3600e3))],
     );
 
     // 確認待ち: 旧カードの引き継ぎ申請(紙のスタンプカード)

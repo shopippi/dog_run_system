@@ -128,13 +128,14 @@ export type InviteInfo = {
   /** はじめての人に聞く質問(家族一人ひとりへの質問だけ) */
   questions: import('./schemas/survey').SurveyQuestion[];
   terms: { termsText: string; privacyText: string } | null;
+  /** 招待を送った家族の LINE の表示名(受付で出した招待なら null) */
+  inviterName: string | null;
+  /** 別のおうちの家族が開いたとき、まとめた後の下見(招待が使えるときだけ) */
+  merge: import('./api-types-merge').InviteMergePreview | null;
 };
 
-export type InviteAcceptResult =
-  /** おうちに参加した */
-  | { result: 'joined'; memberNo: string; householdName: string }
-  /** 別のおうちがあるので、まとめる申請を作った(管理者の確認待ち) */
-  | { result: 'requested' };
+/** 招待を受けて参加した(C-12) */
+export type InviteAcceptResult = { result: 'joined'; memberNo: string; householdName: string };
 
 /** ログイン中の管理画面の利用者(S-01) */
 export type StaffMe = {

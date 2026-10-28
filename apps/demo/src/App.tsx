@@ -251,9 +251,10 @@ function Demo({ engine }: { engine: DemoEngine }) {
       if (ui.role !== 'admin') await loginAs('admin');
       openAdmin('/');
     } else if (n === 5) {
-      openPhone('/', 'U-demo-nico');
+      // taka_papa からの招待を nico.mama が開く。まとめた後に開き直すと「すでにこのおうちの家族です」と出る
+      openPhone('/invite/demo-merge-invite', 'U-demo-nico');
       if (ui.role !== 'admin') await loginAs('admin');
-      openAdmin('/requests');
+      openAdmin('/audit');
     } else if (n === 6) {
       openPhone('/', 'U-demo-mama');
       if (ui.role !== 'admin') await loginAs('admin');

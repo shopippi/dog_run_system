@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   defaultKeepHousehold,
+  mergePhotoSide,
   mergeUndoDeadline,
   mergeUndoStatus,
   planMergeDogs,
@@ -85,6 +86,17 @@ describe('おうちの統合: 犬の組み合わせ', () => {
       { keep: 1, absorb: 5, take: 'keep' },
     ]);
     expect(out).toEqual([expect.objectContaining({ id: 1, name: 'アル', photoUrl: '/p1', mergedFromId: 5 })]);
+  });
+
+  it('写真だけ別に選べる(お客さんがまとめるとき)。名前・犬種は take、写真は photo', () => {
+    const out = planMergeDogs(
+      [dog(1, 'アル', { photoUrl: '/p1', thumbUrl: '/t1' })],
+      [dog(5, 'あるくん', { breedName: '柴犬', photoUrl: '/p5', thumbUrl: '/t5' })],
+      [{ keep: 1, absorb: 5, take: 'keep', photo: 'absorb' }],
+    );
+    expect(out[0]).toMatchObject({ id: 1, name: 'アル', breedName: 'トイプードル', photoUrl: '/p5', thumbUrl: '/t5' });
+    expect(mergePhotoSide({ take: 'keep' })).toBe('keep');
+    expect(mergePhotoSide({ take: 'keep', photo: 'absorb' })).toBe('absorb');
   });
 
   it('組み合わせを確かめる', () => {
