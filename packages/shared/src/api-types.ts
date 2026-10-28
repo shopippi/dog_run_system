@@ -46,3 +46,32 @@ export type RegisterResponse = {
   householdName: string;
   dogs: DogSummary[];
 };
+
+export type TodayVisit = {
+  id: number;
+  /** チェックインした家族の LINE の表示名 */
+  checkedInBy: string;
+  /** 自分がチェックインしたか */
+  isMe: boolean;
+  dogIds: number[];
+  usedTicket: boolean;
+};
+
+/** チェックイン画面(L-05)の表示内容 */
+export type CheckinStatus = {
+  /** 日本時間の今日 */
+  today: string;
+  /** 今日すでにおうちの誰かがチェックインしていれば、その来場 */
+  visit: TodayVisit | null;
+  dogs: DogSummary[];
+  balance: number;
+  unusedTickets: number;
+};
+
+export type CheckinResult = {
+  visitId: number;
+  pointsAwarded: number;
+  ticketsIssued: number;
+  usedTicket: boolean;
+  balanceAfter: number;
+};

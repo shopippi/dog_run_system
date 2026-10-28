@@ -62,3 +62,41 @@ export const survey = (extra: { questionId: number; value: string | null }[] = [
   { questionId: 4, value: 'Instagram' },
   ...extra,
 ];
+
+/** 受付の固定QRコードの合言葉 */
+export async function passphrase(): Promise<string> {
+  const { env } = await import('cloudflare:test');
+  const row = await env.DB.prepare("SELECT value FROM settings WHERE key = 'checkin_passphrase'").first<{ value: string }>();
+  return JSON.parse(row!.value) as string;
+}
+
+/** チェックインする */
+export async function checkin(user: string, dogIds: number[], opts: { useTicket?: boolean; now?: string } = {}) {
+  return call('/api/checkins', {
+    user,
+    now: opts.now,
+    body: { passphrase: await passphrase(), dogIds, useTicket: opts.useTicket ?? false },
+  });
+}
+
+/** 台帳にポイントを直接入れる(テストの準備用) */
+export async function givePoints(memberNo: string, delta: number) {
+  const { env } = await import('cloudflare:test');
+  await env.DB.prepare(
+    `INSERT INTO point_ledger (household_id, delta, kind, actor_type, created_at)
+     SELECT id, ?, 'manual', 'system', '2026-01-01T00:00:00+09:00' FROM households WHERE member_no = ?`,
+  )
+    .bind(delta, memberNo)
+    .run();
+}
+
+/** 家族をおうちに足す(招待の機能を使わずに準備する) */
+export async function addFamily(memberNo: string, lineUserId: string, name: string) {
+  const { env } = await import('cloudflare:test');
+  await env.DB.prepare(
+    `INSERT INTO family_members (household_id, line_user_id, line_display_name, joined_at, join_method, status, updated_at)
+     SELECT id, ?, ?, '2026-01-01T00:00:00+09:00', 'invite', 'active', '2026-01-01T00:00:00+09:00' FROM households WHERE member_no = ?`,
+  )
+    .bind(lineUserId, name, memberNo)
+    .run();
+}

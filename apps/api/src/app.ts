@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import type { AppEnv } from './env';
 import { AppError, type ErrorBody } from './lib/errors';
 import { nowMiddleware, requireLineUser } from './lib/middleware';
+import { checkinRoutes } from './routes/customer/checkins';
 import { dogRoutes } from './routes/customer/dogs';
 import { meRoutes } from './routes/customer/me';
 import { mediaRoutes } from './routes/customer/media';
@@ -36,6 +37,7 @@ export function createApp() {
   customer.route('/', dogRoutes);
   customer.route('/', mediaRoutes);
   customer.route('/', surveyRoutes);
+  customer.route('/', checkinRoutes);
   app.route('/api', customer);
 
   app.all('/api/*', (c) =>

@@ -1,3 +1,5 @@
+import { execFileSync } from 'node:child_process';
+import path from 'node:path';
 import type { Page } from '@playwright/test';
 
 let seq = 0;
@@ -58,4 +60,25 @@ export async function answerSurvey(page: Page) {
   await page.getByRole('radiogroup', { name: /年代/ }).getByRole('radio', { name: '30代' }).check();
   await page.getByRole('radiogroup', { name: /性別/ }).getByRole('radio', { name: '女性' }).check();
   await page.getByRole('radiogroup', { name: /きっかけ/ }).getByRole('radio', { name: 'Instagram' }).check();
+}
+
+let cachedPassphrase: string | null = null;
+
+/** 受付の固定QRコードの合言葉(テスト用のデータベースから読む) */
+export function checkinPassphrase(): string {
+  if (cachedPassphrase) return cachedPassphrase;
+  const out = execFileSync(
+    'npx',
+    ['wrangler', 'd1', 'execute', 'DB', '--local', '--persist-to', '.wrangler/e2e', '--json', '--command',
+      "SELECT value FROM settings WHERE key = 'checkin_passphrase'"],
+    { cwd: path.resolve(__dirname, '../apps/api'), encoding: 'utf8' },
+  );
+  const rows = JSON.parse(out)[0].results as { value: string }[];
+  cachedPassphrase = JSON.parse(rows[0]!.value) as string;
+  return cachedPassphrase;
+}
+
+/** 受付のQRコードを読み取ったときと同じ URL を開く */
+export async function openCheckin(page: Page, user: string) {
+  await openLiff(page, user, `/checkin?k=${checkinPassphrase()}`);
 }
