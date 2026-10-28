@@ -33,3 +33,34 @@ export async function createInvite(
     .run();
   return { code, expiresAt };
 }
+
+export type InviteRow = {
+  id: number;
+  code: string;
+  household_id: number;
+  kind: InviteKind;
+  expires_at: string;
+  used_at: string | null;
+  household_name: string;
+  household_status: string;
+  member_no: string;
+};
+
+export async function findInvite(db: D1Database, code: string): Promise<InviteRow | null> {
+  return db
+    .prepare(
+      `SELECT i.id, i.code, i.household_id, i.kind, i.expires_at, i.used_at,
+              h.display_name AS household_name, h.status AS household_status, h.member_no
+         FROM invites i JOIN households h ON h.id = i.household_id
+        WHERE i.code = ?`,
+    )
+    .bind(code)
+    .first<InviteRow>();
+}
+
+export function inviteStatus(inv: InviteRow, now: Date): 'valid' | 'expired' | 'used' {
+  if (inv.used_at) return 'used';
+  // 招待したおうちが統合・退会でなくなった場合も、使えない
+  if (inv.expires_at < toJstIso(now) || inv.household_status !== 'active') return 'expired';
+  return 'valid';
+}

@@ -1,4 +1,4 @@
-import { Route, Routes } from 'react-router-dom';
+import { Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { AppHeader } from './components/AppHeader';
 import { ErrorNotice } from './components/ErrorNotice';
 import { useMe } from './hooks/useMe';
@@ -11,10 +11,35 @@ import { DogEditPage } from './pages/dogs/DogEditPage';
 import { DogNewPage } from './pages/dogs/DogNewPage';
 import { DogsPage } from './pages/dogs/DogsPage';
 import { FamilyPage } from './pages/family/FamilyPage';
+import { JoinPage } from './pages/family/JoinPage';
 import { SurveyPrompt } from './pages/SurveyPrompt';
 
 export function App() {
   const { me, error, loading, reload } = useMe();
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  // 招待を開いたときは、登録の有無にかかわらず招待の画面を出す(C-12)
+  if (location.pathname.startsWith('/invite/')) {
+    return (
+      <div className="app">
+        <AppHeader />
+        <Routes>
+          <Route
+            path="/invite/:code"
+            element={
+              <JoinPage
+                onJoined={() => {
+                  navigate('/', { replace: true });
+                  void reload();
+                }}
+              />
+            }
+          />
+        </Routes>
+      </div>
+    );
+  }
 
   return (
     <div className="app">
