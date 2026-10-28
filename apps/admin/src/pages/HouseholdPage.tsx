@@ -1,4 +1,5 @@
 import {
+  type HouseholdFamilyMember,
   DOG_SEX_LABELS,
   DOG_SIZE_LABELS,
   DOG_STATUS_LABELS,
@@ -8,6 +9,7 @@ import {
 import { useState, type ReactNode } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { DogFace } from '../components/DogFace';
+import { FamilyInviteDialog, RemoveFamilyDialog } from '../components/FamilyDialogs';
 import { ManualPointsDialog } from '../components/ManualPointsDialog';
 import { ErrorNotice } from '../components/ErrorNotice';
 import { Icon } from '../components/Icon';
@@ -69,6 +71,8 @@ function Detail({
   onChanged: (reload: boolean, message: ReactNode) => void;
 }) {
   const activeDogs = d.dogs.filter((x) => x.status === 'active');
+  const activeFamily = d.family.filter((m) => m.status === 'active').length;
+  const [removing, setRemoving] = useState<HouseholdFamilyMember | null>(null);
   return (
     <>
       <section className="panel hh-head" aria-label="おうちの概要">
@@ -104,7 +108,7 @@ function Detail({
         </div>
       ) : null}
 
-      <Section title="家族" count={d.family.filter((m) => m.status === 'active').length} unit="人">
+      <Section title="家族" count={activeFamily} unit="人">
         <ul className="hh-list" aria-label="家族">
           {d.family.map((m) => (
             <li key={m.id} className={`hh-row${m.status !== 'active' ? ' off' : ''}`}>
@@ -126,11 +130,33 @@ function Detail({
                     {m.leftAt ? `(${formatYmd(m.leftAt)})` : ''}
                   </span>
                 )}
+                {canEdit && m.status === 'active' && activeFamily > 1 && (
+                  <button type="button" className="btn ghost danger-text" aria-label={`${m.name ?? '家族'}さんを外す`} onClick={() => setRemoving(m)}>
+                    外す
+                  </button>
+                )}
               </span>
             </li>
           ))}
         </ul>
+        {canEdit && activeFamily <= 1 && <p className="hh-note sub-text">おうちに残る最後の1人は外せません。</p>}
       </Section>
+      {removing && (
+        <RemoveFamilyDialog
+          d={d}
+          m={removing}
+          onClose={() => setRemoving(null)}
+          onDone={() => {
+            setRemoving(null);
+            onChanged(
+              true,
+              <p>
+                {removing.name ?? '家族'}さんを外しました。間違えたときは、<Link to="/audit">操作ログ</Link>から元に戻せます。
+              </p>,
+            );
+          }}
+        />
+      )}
 
       <Section title="ワンちゃん" count={activeDogs.length} unit="頭">
         <ul className="hh-list" aria-label="ワンちゃん">
@@ -401,13 +427,26 @@ function NameBlock({
 
 /** おうちに対する操作。主なボタンは「ポイント・無料券を登録」 */
 function Actions({ d, onChanged }: { d: HouseholdDetail; onChanged: (reload: boolean, message: ReactNode) => void }) {
-  const [open, setOpen] = useState<'points' | null>(null);
+  const [open, setOpen] = useState<'points' | 'family' | null>(null);
   return (
     <div className="hh-actions">
       <button type="button" className="btn" onClick={() => setOpen('points')}>
         <Icon name="plus" />
         ポイント・無料券を登録
       </button>
+      <button type="button" className="btn sub" onClick={() => setOpen('family')}>
+        家族を追加
+      </button>
+      {open === 'family' && (
+        <FamilyInviteDialog
+          d={d}
+          onClose={() => {
+            setOpen(null);
+            // 読み取った家族が加わっていれば出す
+            onChanged(true, null);
+          }}
+        />
+      )}
       {open === 'points' && (
         <ManualPointsDialog
           d={d}

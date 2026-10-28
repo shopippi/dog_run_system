@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { cancelOnToday, checkinViaLiff, lowContrast } from './households-helpers';
+import { cancelOnToday, checkinViaLiff, joinByReceptionInvite, lowContrast } from './households-helpers';
 import { adminLogin, newLineUser, registerViaUi } from './helpers';
 
 // おうちの詳細と記録(M-06、M-07、M-15)の文字と背景のコントラスト(ライトとダーク)
@@ -19,10 +19,13 @@ for (const scheme of ['light', 'dark'] as const) {
       const user = newLineUser('パパ');
       await registerViaUi(customer, user, ['ルル']);
       await checkinViaLiff(customer, user);
-      await customer.close();
 
       const page = await browser.newPage({ ...TABLET, colorScheme: scheme });
       await adminLogin(page, 'admin');
+      const found = await page.request.get('/admin/api/households?q=' + encodeURIComponent('るる'));
+      const { households } = (await found.json()) as { households: { id: number }[] };
+      await joinByReceptionInvite(page, customer, households[0]!.id, newLineUser('ママ'));
+      await customer.close();
       await cancelOnToday(page, 'ルル');
 
       // M-15 操作ログ(元に戻した行と、戻せる行)
@@ -60,6 +63,17 @@ for (const scheme of ['light', 'dark'] as const) {
       await confirm.getByRole('button', { name: '登録する' }).click();
       await page.getByRole('status').waitFor();
       await check(page, 'M-06 おうちの詳細(登録後)');
+      await page.getByRole('button', { name: '家族を追加' }).click();
+      const fi = page.getByRole('dialog', { name: '家族を追加' });
+      await fi.getByRole('img', { name: '家族の招待のQRコード' }).waitFor();
+      await check(page, 'M-06 家族を追加(招待QR)');
+      await fi.getByRole('button', { name: '閉じる' }).click();
+      await page.getByRole('list', { name: '家族' }).getByRole('button', { name: 'ママさんを外す' }).click();
+      await page.getByRole('dialog', { name: '家族を外す' }).waitFor();
+      await check(page, 'M-06 家族を外すの確認');
+      await page.getByRole('dialog', { name: '家族を外す' }).getByRole('button', { name: '外す' }).click();
+      await page.getByRole('status').getByText(/外しました/).waitFor();
+      await check(page, 'M-06 おうちの詳細(外れた家族)');
 
       // M-07 犬の編集
       await page.getByRole('link', { name: 'ルルの情報を見る・変える' }).click();

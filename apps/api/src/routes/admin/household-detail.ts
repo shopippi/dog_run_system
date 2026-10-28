@@ -12,6 +12,7 @@ import {
   type AdminDogDetail,
   type HouseholdDetail,
   type ManualPointsPreview,
+  type ReceptionInvite,
 } from '@dr/shared';
 import { Hono } from 'hono';
 import type { AppEnv } from '../../env';
@@ -34,6 +35,7 @@ import {
 import { getDog, refreshAutoNameStatement, saveDogPhoto, syncHouseholdSearchName } from '../../services/dogs';
 import { getHouseholdRow, householdNotFound, loadHouseholdDetail } from '../../services/household-detail';
 import { applyManualPoints, previewManualPoints, undoManualPoints } from '../../services/manual-points';
+import { createReceptionInvite, removeFamilyMember, undoFamilyRemove } from '../../services/family-admin';
 import { registerUndo } from '../../services/undo';
 
 // A-02 おうちの詳細・呼び名の変更、A-03 ポイントの手動登録、A-04 犬の情報の変更、A-06 家族の追加・解除
@@ -266,3 +268,33 @@ registerUndo('dog.update', undoDogUpdate);
 registerUndo('dog.photo', undoDogPhoto);
 registerUndo('dog.photo_rotate', undoDogPhoto);
 registerUndo('dog.photo_remove', undoDogPhoto);
+
+// ------------------------------------------------------------
+// A-06 家族の追加・解除(管理者)
+// ------------------------------------------------------------
+
+// 受付での家族の追加。10分間だけ使える招待QRの URL を返す(5.2)
+householdDetailRoutes.post('/households/:id/invite-qr', requireRole('admin'), async (c) => {
+  const db = c.env.DB;
+  const id = Number(c.req.param('id'));
+  await requireActiveHousehold(db, id);
+  const body: ReceptionInvite = await createReceptionInvite(db, {
+    householdId: id,
+    staffId: c.get('staff').id,
+    settings: await loadSettings(db),
+    now: c.get('now'),
+  });
+  return c.json(body, 201);
+});
+
+// 家族を外す(5.4)。最後の1人は外せない。操作ログから元に戻せる
+householdDetailRoutes.delete('/households/:id/family/:fid', requireRole('admin'), async (c) => {
+  const db = c.env.DB;
+  const id = Number(c.req.param('id'));
+  await requireActiveHousehold(db, id);
+  await removeFamilyMember(db, { householdId: id, memberId: Number(c.req.param('fid')) || 0, staffId: c.get('staff').id, now: c.get('now') });
+  return c.json({ ok: true });
+});
+
+registerAuditDetail('family.invite', () => '受付で招待のQRコードを表示');
+registerUndo('family.remove', undoFamilyRemove);

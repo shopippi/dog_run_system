@@ -446,3 +446,20 @@ input::placeholder { color: var(--text-tertiary); }
   .hh-link:hover { background: var(--surface-sunk); }
 }
 .dg-photo-acts input[type="file"] { font-size: var(--fs-input); }
+
+/* ---- M-06 家族の追加・解除(A-06) ---- */
+.hh-note { padding: var(--sp-3) var(--sp-5); border-top: 1px solid var(--border); }
+.fi-qr { display: flex; flex-direction: column; align-items: center; gap: var(--sp-3); }
+.fi-qr-frame { padding: var(--sp-4); border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--paper); }
+.fi-qr-frame .qr { display: block; }
+.fi-left { font-size: var(--fs-14); color: var(--text-secondary); }
+.fi-left b { color: var(--text); font-size: var(--fs-15); }
+.fi-expired { padding: var(--sp-6) 0; text-align: center; color: var(--text-secondary); }
+
+/*
+ * サイドバーの高さが画面に収まらないとき(タブレット横 1024×768 で指の操作。メニューが 44px ずつになる)、
+ * 来場の一覧などで本文が長いと、サイドバーの下のログアウトに届かなくなるため、サイドバーの中だけでスクロールさせる。
+ */
+@media (min-width: 960px) {
+  .side { overflow-y: auto; overscroll-behavior: contain; }
+}

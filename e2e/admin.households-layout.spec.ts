@@ -1,5 +1,5 @@
 import { expect, test, type Browser } from '@playwright/test';
-import { cancelOnToday, checkScreen, checkinViaLiff } from './households-helpers';
+import { cancelOnToday, checkScreen, checkinViaLiff, joinByReceptionInvite } from './households-helpers';
 import { adminLogin, makePhoto, newLineUser, registerViaUi } from './helpers';
 
 // おうちの詳細と記録(M-06、M-07、M-15)の見え方。PC(1280)とタブレット縦(768)で確かめる。
@@ -18,6 +18,12 @@ async function seed(browser: Browser) {
   const page = await browser.newPage();
   await adminLogin(page, 'admin');
   await cancelOnToday(page, 'ココア', 'お客さんの勘違い');
+  // 家族をもう1人(外すの確認を出すため)
+  const household = await page.request.get('/admin/api/households?q=' + encodeURIComponent('ここあ'));
+  const { households } = (await household.json()) as { households: { id: number }[] };
+  const customer2 = await browser.newPage();
+  await joinByReceptionInvite(page, customer2, households[0]!.id, newLineUser('ママ'));
+  await customer2.close();
   await page.close();
 }
 
@@ -37,7 +43,11 @@ test.describe('おうちの詳細と記録の見え方', () => {
 
       // M-15 操作ログ と 元に戻すの確認
       await page.getByRole('link', { name: '操作ログ' }).click();
-      const row = page.getByRole('list', { name: '操作の一覧' }).getByRole('listitem').filter({ hasText: 'ココア・キナコのおうち' }).first();
+      const row = page
+        .getByRole('list', { name: '操作の一覧' })
+        .getByRole('listitem')
+        .filter({ hasText: 'ココア・キナコのおうち' })
+        .filter({ has: page.getByText('チェックインの取り消し', { exact: true }) });
       await expect(row).toBeVisible();
       await checkScreen(page, v.name, 'M-15 操作ログ', v.touch);
       await row.getByRole('button', { name: '元に戻す' }).click();
@@ -74,13 +84,27 @@ test.describe('おうちの詳細と記録の見え方', () => {
       await confirm.getByRole('button', { name: '戻る' }).click();
       await page.getByRole('dialog', { name: 'ポイント・無料券の手動登録' }).getByRole('button', { name: 'やめる' }).click();
 
+      // 家族を追加(招待QR)
+      await page.getByRole('button', { name: '家族を追加' }).click();
+      const fi = page.getByRole('dialog', { name: '家族を追加' });
+      await expect(fi.getByRole('img', { name: '家族の招待のQRコード' })).toBeVisible();
+      await checkScreen(page, v.name, 'M-06 家族を追加(招待QR)', v.touch);
+      await fi.getByRole('button', { name: '閉じる' }).click();
+
+      // 家族を外すの確認
+      await page.getByRole('list', { name: '家族' }).getByRole('button', { name: 'ママさんを外す' }).click();
+      await expect(page.getByRole('dialog', { name: '家族を外す' })).toBeVisible();
+      await checkScreen(page, v.name, 'M-06 家族を外すの確認', v.touch);
+      await page.getByRole('dialog', { name: '家族を外す' }).getByRole('button', { name: 'やめる' }).click();
+
       // M-07 犬の編集(犬種を変えて理由の入力欄を出したところ・写真を選んだところ)
       await page.getByRole('link', { name: 'ココアの情報を見る・変える' }).click();
       await expect(page.getByRole('heading', { name: '登録の内容' })).toBeVisible();
       await checkScreen(page, v.name, 'M-07 犬の編集', v.touch);
       await page.getByRole('combobox', { name: /犬種/ }).selectOption({ label: '柴犬' });
       await page.locator('input[type=file]').setInputFiles({ name: 'a.jpg', mimeType: 'image/jpeg', buffer: await makePhoto(page, 1200, 900) });
-      await expect(page.getByRole('img', { name: 'ココアの写真' })).toBeVisible();
+      // 写真の縮小は端末の中で行うため、混んでいる端末では少し時間がかかる
+      await expect(page.getByRole('img', { name: 'ココアの写真' })).toBeVisible({ timeout: 15_000 });
       await expect(page.getByLabel('犬種・サイズを変える理由')).toBeVisible();
       await checkScreen(page, v.name, 'M-07 犬の編集(変更中)', v.touch);
       await page.getByRole('button', { name: '登録を解除する' }).click();

@@ -1,5 +1,5 @@
 import { expect, type Page } from '@playwright/test';
-import { openCheckin } from './helpers';
+import { openCheckin, openLiff } from './helpers';
 
 // おうちの詳細と記録(A-02〜A-06、A-15)の e2e で使う補助。
 // 見え方の確かめ方は e2e/admin.layout.spec.ts の checkScreen、コントラストは e2e/contrast.spec.ts の lowContrast と同じ。
@@ -139,4 +139,16 @@ export async function cancelOnToday(page: Page, dogName: string, reason = '入�
   await dialog.getByRole('radio', { name: reason }).check();
   await dialog.getByRole('button', { name: '取り消す' }).click();
   await row.getByText(/取り消し済み/).waitFor();
+}
+
+/** 受付の招待QR(A-06)を API で作り、家族として参加させる(画面の確かめに使う準備) */
+export async function joinByReceptionInvite(admin: Page, customer: Page, householdId: number, user: string) {
+  const res = await admin.request.post(`/admin/api/households/${householdId}/invite-qr`, { headers: { 'x-dr-admin': '1' } });
+  const { url } = (await res.json()) as { url: string };
+  await openLiff(customer, user, url.replace('/liff', ''));
+  await customer.getByRole('radiogroup', { name: /年代/ }).getByRole('radio', { name: '40代' }).check();
+  await customer.getByRole('radiogroup', { name: /性別/ }).getByRole('radio', { name: '女性' }).check();
+  await customer.getByLabel('利用規約とプライバシーポリシーに同意します').check();
+  await customer.getByRole('button', { name: '参加する' }).click();
+  await customer.getByText('参加しました').waitFor();
 }

@@ -19,6 +19,8 @@ export const AUDIT_ACTION_LABELS: Record<string, string> = {
   'dog.photo': 'ワンちゃんの写真の差し替え',
   'dog.photo_rotate': 'ワンちゃんの写真の回転',
   'dog.photo_remove': 'ワンちゃんの写真の削除',
+  'family.invite': '受付での家族の招待',
+  'family.remove': '家族を外す',
 };
 
 export function auditActionLabel(action: string): string {
@@ -234,4 +236,17 @@ export type AdminDogDetail = {
   breeds: import('./api-types').Breed[];
   /** 変更の履歴(新しい順) */
   changes: DogChangeEntry[];
+};
+
+// ============================================================
+// A-06 家族の追加・解除
+// ============================================================
+
+/** 受付で出す家族の招待QR(5.2) */
+export type ReceptionInvite = {
+  code: string;
+  /** QR に入れる URL。LIFF ID が設定されていれば https://liff.line.me/<LIFF ID>/invite/<code>、なければ /liff/invite/<code> */
+  url: string;
+  expiresAt: string;
+  ttlMinutes: number;
 };
