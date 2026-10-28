@@ -3,6 +3,8 @@ import type { Bindings } from './env';
 import { recheckDailyStats } from './services/daily-stats';
 import { importHolidays, shouldImportHolidays } from './services/holidays';
 import { runJob } from './services/jobs';
+import { loadSettings } from './lib/settings';
+import { fetchWeather, type WeatherSource } from './services/weather';
 
 /** 日本時間 3:10(UTC 18:10)。日別集計の再計算、有効期限の処理、バックアップ、移行期間終了後の画像削除 */
 export const CRON_NIGHTLY = '10 18 * * *';
@@ -32,8 +34,8 @@ export async function runNightly(env: Bindings, now: Date): Promise<void> {
   if (await shouldImportHolidays(env.DB, now)) await runHolidaysJob(env, now);
 }
 
-export async function runMorning(_env: Bindings, _now: Date): Promise<void> {
-  // B-01 天気の取得はこの後で足す
+export async function runMorning(env: Bindings, now: Date): Promise<void> {
+  await runWeatherJob(env, now);
 }
 
 /** B-03 日別集計の再計算(手動の「今すぐ実行」からも呼ぶ) */
@@ -47,4 +49,12 @@ export function runDailyStatsJob(env: Bindings, now: Date) {
 /** B-02 祝日の取り込み(毎年2月1日と、管理画面の手動の取り込みから呼ぶ) */
 export function runHolidaysJob(env: Bindings, now: Date) {
   return runJob(env.DB, 'holidays', now, () => importHolidays(env.DB, now));
+}
+
+/** B-01 前日の天気の取得(毎朝 5:10 と、管理画面の「今すぐ実行」から呼ぶ) */
+export function runWeatherJob(env: Bindings, now: Date, source?: WeatherSource) {
+  return runJob(env.DB, 'weather', now, async () => {
+    const settings = await loadSettings(env.DB);
+    return fetchWeather(env.DB, now, settings.weather_station, source);
+  });
 }

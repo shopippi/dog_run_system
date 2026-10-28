@@ -14,3 +14,27 @@ export function dayTypeOf(date: string, holidayName: string | null): DayType {
   if (w === 6) return 'saturday';
   return holidayName ? 'holiday' : 'weekday';
 }
+
+/** 天気の3つの区分(13章「天気の影響」) */
+export const WEATHER_KINDS = ['晴れ', '曇り', '雨'] as const;
+export type WeatherKind = (typeof WEATHER_KINDS)[number];
+
+/** 雨の日とする1日の降水量(mm)。気象庁の「雨日」(日降水量 1.0mm 以上)に合わせる */
+export const RAIN_MM = 1.0;
+/** 晴れの日とする日照時間(時間)。昼の長さ(東京で約10〜14.5時間)のおよそ4割 */
+export const SUNNY_HOURS = 4.0;
+
+/**
+ * 1日の降水量と日照時間から、天気(晴れ・曇り・雨)を決める(B-01)。
+ * - 降水量が 1.0mm 以上 → 雨
+ * - そうでなく、日照時間が 4時間以上 → 晴れ
+ * - それ以外 → 曇り
+ * 降水量が分からない日、雨でなく日照時間も分からない日は null(天気の分析に入れない)。
+ */
+export function classifyWeather(input: { precipitation: number | null; sunshineHours: number | null }): WeatherKind | null {
+  const { precipitation, sunshineHours } = input;
+  if (precipitation === null || Number.isNaN(precipitation)) return null;
+  if (precipitation >= RAIN_MM) return '雨';
+  if (sunshineHours === null || Number.isNaN(sunshineHours)) return null;
+  return sunshineHours >= SUNNY_HOURS ? '晴れ' : '曇り';
+}

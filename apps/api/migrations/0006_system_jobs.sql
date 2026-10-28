@@ -10,3 +10,6 @@ CREATE TABLE system_jobs (
   message TEXT                                              -- 画面に出す結果の説明(件数・失敗の理由)
 );
 CREATE INDEX idx_system_jobs_name ON system_jobs(name, started_at);
+
+-- 天気(B-01)の判定に使った日照時間。晴れ・曇りの判定を後から確かめられるように残す
+ALTER TABLE daily_weather ADD COLUMN sunshine_hours REAL;
