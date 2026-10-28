@@ -144,3 +144,32 @@ export type StaffMe = {
   email: string;
   role: import('./constants').StaffRole;
 };
+
+/** 管理画面の来場の1行(S-02) */
+export type AdminVisit = {
+  id: number;
+  /** 来場日(日本時間) */
+  date: string;
+  /** チェックインの時刻 "09:15" */
+  time: string;
+  householdId: number | null;
+  memberNo: string | null;
+  householdName: string | null;
+  dogs: { id: number; name: string; breedName: string; thumbUrl: string | null }[];
+  dogCount: number;
+  usedTicket: boolean;
+  method: import('./constants').VisitMethod;
+  cancelled: boolean;
+  cancelReason: string | null;
+  /** チェックインした家族の LINE の表示名。管理者と製作者だけに返す(15.2) */
+  checkedInBy: string | null;
+};
+
+export type TodayResponse = {
+  date: string;
+  visits: AdminVisit[];
+  /** 取り消しを除いた集計 */
+  totals: { groups: number; memberDogs: number; walkinDogs: number; ticketsUsed: number };
+  /** 確認待ちの件数(管理者と製作者だけ) */
+  pendingRequests: number | null;
+};
