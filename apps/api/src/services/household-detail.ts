@@ -1,3 +1,4 @@
+import { cardBackgroundLabel, parseCardBackground } from '@dr/shared';
 import {
   HOUSEHOLD_SOURCE_LABELS,
   HOUSEHOLD_STATUS_LABELS,
@@ -48,6 +49,8 @@ type HouseholdRow = {
   event_interests: string | null;
   uses_other_runs: number | null;
   wants_news: number | null;
+  /** 会員証の背景(担当I。JSON) */
+  card_background: string | null;
   status: HouseholdStatus;
   merged_into_id: number | null;
 };
@@ -57,7 +60,7 @@ export async function getHouseholdRow(db: D1Database, id: number): Promise<House
   return db
     .prepare(
       `SELECT id, member_no, display_name, display_name_auto, registered_at, source, postal_code, referral, transport,
-              preferred_times, event_interests, uses_other_runs, wants_news, status, merged_into_id
+              preferred_times, event_interests, uses_other_runs, wants_news, card_background, status, merged_into_id
          FROM households WHERE id = ?`,
     )
     .bind(id)
@@ -175,6 +178,7 @@ export async function loadHouseholdDetail(
     status: h.status,
     statusLabel: HOUSEHOLD_STATUS_LABELS[h.status],
     sourceLabel: HOUSEHOLD_SOURCE_LABELS[h.source],
+    cardBackgroundLabel: cardBackgroundLabel(parseCardBackground(h.card_background)),
     mergedInto: mergedInto ?? null,
     balance,
     usableTickets: await unusedTicketCount(db, id, now),

@@ -47,8 +47,12 @@
   --card-gray: #6B7280;
   --card-sand: #E9E2D3;
   --card-white: #F6F6F4;
-  /* 写真の上に重ねる影(下に向かって濃くなる)と、文字の薄い影 */
+  /* 明るい単色(砂・白)の上の文字(墨)と補助の文字 */
+  --on-card-light: #16191D;
+  --on-card-light-secondary: #4A525C;
+  /* 写真の上に重ねる影(下に向かって濃くなる)と、文字の薄い影。上の呼び名のために、上の端にも薄い影を足す */
   --card-scrim: linear-gradient(to top, rgba(0, 0, 0, .62) 0%, rgba(0, 0, 0, .28) 45%, rgba(0, 0, 0, 0) 100%);
+  --card-scrim-top: linear-gradient(to bottom, rgba(0, 0, 0, .38) 0%, rgba(0, 0, 0, 0) 42%);
   --card-text-shadow: 0 1px 2px rgba(0, 0, 0, .45);
   /* 互換のための別名(あとで消す)。新しく使わない */
   --on-accent: var(--on-card);

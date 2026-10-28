@@ -216,31 +216,73 @@ a { color: var(--accent-text); }
 .welcome-id .label { font-size: var(--fs-12); color: var(--text-secondary); }
 .welcome-card .id { font-size: var(--fs-20); font-weight: var(--fw-strong); }
 
-/* ---- L-07 会員証 ---- */
+/* ---- L-07 会員証(docs/design.md 5章)。背景はお客さんが選ぶ(単色 8 色か写真) ---- */
 .member-card {
-  display: flex; flex-direction: column; gap: var(--sp-5);
-  padding: var(--sp-5); border-radius: var(--radius-lg);
-  background: var(--card-ink); color: var(--on-card);
+  --mc-bg: var(--card-ink);
+  --mc-text: var(--on-card);
+  --mc-sub: var(--on-card-85);
+  --mc-shadow: none;
+  position: relative; isolation: isolate; overflow: hidden;
+  display: flex; flex-direction: column; justify-content: space-between; gap: var(--sp-2);
+  aspect-ratio: 1.58 / 1; min-height: 196px;
+  padding: var(--sp-4) var(--sp-4) var(--sp-4) var(--sp-5); border-radius: var(--radius-lg);
+  background: var(--mc-bg); color: var(--mc-text);
 }
-.mc-dogs { display: flex; }
-.mc-dogs > .av { box-shadow: 0 0 0 2px var(--card-ink); }
-.mc-dogs > .av + .av { margin-left: -8px; }
-.mc-who { display: flex; flex-direction: column; gap: 2px; min-width: 0; margin-top: calc(-1 * var(--sp-2)); }
+.mc-preset-ink { --mc-bg: var(--card-ink); }
+.mc-preset-navy { --mc-bg: var(--card-navy); }
+.mc-preset-forest { --mc-bg: var(--card-forest); }
+.mc-preset-brown { --mc-bg: var(--card-brown); }
+.mc-preset-wine { --mc-bg: var(--card-wine); }
+/* 灰は 85% の白だと 4.5:1 に届かないので、補助の文字も白にする */
+.mc-preset-gray { --mc-bg: var(--card-gray); --mc-sub: var(--on-card); }
+.mc-preset-sand { --mc-bg: var(--card-sand); }
+.mc-preset-white { --mc-bg: var(--card-white); }
+/* 明るい単色: 影を重ねず、文字を墨にする。白はページの白と見分けられるよう線を引く */
+.member-card.mc-light { --mc-text: var(--on-card-light); --mc-sub: var(--on-card-light-secondary); box-shadow: inset 0 0 0 1px var(--border); }
+/* 写真: 読み込むまでは墨。写真の上に、下に向かって濃くなる影と、上の文字のための薄い影を重ねる */
+.member-card.mc-photo-bg { --mc-shadow: var(--card-text-shadow); }
+.mc-photo { position: absolute; inset: 0; z-index: -2; width: 100%; height: 100%; max-width: none; object-fit: cover; }
+.member-card.mc-photo-bg::before {
+  content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  background: var(--card-scrim-top), var(--card-scrim);
+}
+.member-card p { text-shadow: var(--mc-shadow); }
+.mc-top { display: flex; align-items: flex-start; gap: var(--sp-2); min-width: 0; }
+.mc-top:has(.mc-change) { padding-right: 26px; }
 .mc-name {
+  flex: 1; min-width: 0;
   font-size: var(--fs-17); font-weight: var(--fw-strong); font-feature-settings: "palt"; line-height: 1.4;
+  overflow-wrap: anywhere;
   display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden;
 }
-.mc-id { font-size: var(--fs-13); color: var(--on-accent-85); }
-.stamps { display: grid; grid-template-columns: repeat(10, 22px); justify-content: space-between; row-gap: var(--sp-2); }
-.stamps span { width: 22px; height: 22px; border-radius: 50%; border: 1.5px solid var(--on-accent-50); }
-.stamps span.on { background: var(--on-accent); border-color: var(--on-accent); }
-.mc-foot {
-  display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--sp-1) var(--sp-3);
-  padding-top: var(--sp-4); border-top: 1px solid var(--on-accent-15);
-  font-size: var(--fs-13); color: var(--on-accent-85);
+.mc-facility { flex: none; max-width: 40%; padding-top: 3px; font-size: var(--fs-12); color: var(--mc-sub); line-height: 1.4; text-align: right; }
+/* 右上の「背景を変える」。指で押せる 44px の中に、小さなアイコンだけを見せる */
+.mc-change {
+  position: absolute; top: 2px; right: 2px; display: grid; place-items: center; width: 44px; height: 44px;
+  border-radius: var(--radius); color: var(--mc-text);
+  filter: drop-shadow(var(--mc-shadow));
+  transition: background-color var(--ease);
 }
-.mc-foot b { font-size: var(--fs-24); line-height: 1.2; color: var(--on-accent); margin-left: var(--sp-1); }
+.mc-change:focus-visible { outline: 2px solid var(--mc-text); outline-offset: -4px; }
+.mc-dogs { display: flex; }
+.mc-dogs > .av { box-shadow: 0 0 0 2px var(--mc-bg); }
+.mc-photo-bg .mc-dogs > .av { box-shadow: 0 0 0 2px var(--on-card-85); }
+.mc-dogs > .av + .av { margin-left: -8px; }
+.mc-bottom { display: flex; align-items: flex-end; justify-content: space-between; gap: var(--sp-3); }
+.mc-id { font-size: var(--fs-13); color: var(--mc-sub); line-height: 1.3; }
+.mc-points { display: flex; align-items: baseline; gap: var(--sp-1); line-height: 1.1; white-space: nowrap; }
+.mc-points b { font-size: var(--fs-24); font-weight: var(--fw-strong); font-variant-numeric: tabular-nums; }
+.mc-points span { font-size: var(--fs-12); color: var(--mc-sub); }
+@media (hover: hover) {
+  .mc-change:hover { background: color-mix(in srgb, var(--mc-text) 14%, transparent); }
+}
 .ticket-exp { margin-left: var(--sp-2); font-size: var(--fs-13); color: var(--text-secondary); }
+
+/* ---- L-07 スタンプ(会員証の下のパネル) ---- */
+.stamps { display: grid; grid-template-columns: repeat(10, 22px); justify-content: space-between; row-gap: var(--sp-2); }
+.stamps span { width: 22px; height: 22px; border-radius: 50%; border: 1.5px solid var(--border-strong); }
+.stamps span.on { background: var(--ink); border-color: var(--ink); }
+.mc-stamp-text { font-size: var(--fs-15); }
 
 /* ---- L-05 チェックイン ---- */
 .pick-list { display: flex; flex-direction: column; gap: var(--sp-2); }
@@ -515,3 +557,27 @@ a { color: var(--accent-text); }
   font: inherit; font-size: var(--fs-14); color: var(--text-secondary); cursor: pointer;
 }
 .pf-nudge-later:focus-visible { outline: 2px solid var(--focus-color); outline-offset: 2px; border-radius: var(--radius-sm); }
+
+/* ================================================================
+ * 担当I: L-07b 会員証の背景を変える(C-06)
+ * ================================================================ */
+.cb-section { gap: var(--sp-3); }
+.cb-swatches { display: flex; flex-wrap: wrap; gap: var(--sp-2) var(--sp-3); }
+/* 色のチップ: 40px の丸。押せる大きさは 44px。選択中は ink の 2px の枠とチェック */
+.cb-swatch { position: relative; display: grid; place-items: center; width: 44px; height: 44px; border-radius: 50%; cursor: pointer; }
+.cb-swatch input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+.cb-dot {
+  display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%;
+  background: var(--mc-bg); color: var(--on-card); box-shadow: inset 0 0 0 1px var(--border);
+  pointer-events: none; transition: box-shadow var(--ease);
+}
+.cb-swatch.mc-preset-sand .cb-dot, .cb-swatch.mc-preset-white .cb-dot { color: var(--on-card-light); }
+.cb-swatch:has(input:checked) .cb-dot { box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--ink); }
+.cb-swatch:has(input:focus-visible) { outline: 2px solid var(--focus-color); outline-offset: 2px; }
+.cb-photo-acts { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2) var(--sp-4); }
+.cb-photo-btn { width: auto; min-height: 44px; font-size: var(--fs-14); cursor: pointer; }
+.cb-photo-btn.is-busy { opacity: .45; cursor: not-allowed; }
+.cb-photo-btn:has(+ input:focus-visible) { outline: 2px solid var(--focus-color); outline-offset: 2px; }
+.cb-file { position: absolute; opacity: 0; width: 1px; height: 1px; pointer-events: none; }
+.cb-stop { width: auto; min-height: 44px; font-size: var(--fs-14); }
+.cb-status { min-height: 1.55em; font-size: var(--fs-13); color: var(--text-secondary); }

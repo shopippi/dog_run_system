@@ -1,8 +1,11 @@
 import type { MeRegistered } from '@dr/shared';
 import { Link, useNavigate } from 'react-router-dom';
-import { DogAvatar } from '../../components/DogAvatar';
 import { ErrorNotice } from '../../components/ErrorNotice';
 import { Icon } from '../../components/Icon';
+import { MemberCard } from '../../components/MemberCard';
+
+/** 施設名(あとで設定から読む) */
+const FACILITY_NAME = 'グリーンドーム';
 import { ProfileNudge } from '../../components/ProfileNudge';
 import { useMe } from '../../hooks/useMe';
 import { canScan, scanCheckinCode } from '../../lib/liff';
@@ -39,35 +42,34 @@ function Card({ me, reload }: { me: MeRegistered; reload: () => Promise<void> })
 
   return (
     <main className="screen">
-      <section className="member-card" aria-label="会員証">
-        <div className="mc-dogs">
-          {card.dogs.map((d) => (
-            <DogAvatar key={d.id} name={d.name} breedName={d.breedName} url={d.thumbUrl} size={32} />
-          ))}
-        </div>
-        <div className="mc-who">
-          <p className="mc-name">{household.displayName}</p>
-          <p className="mc-id mono">{household.memberNo}</p>
-        </div>
-        <div className="stamps" role="img" aria-label={`ポイント ${filled} / ${card.pointsPerTicket}`}>
-          {Array.from({ length: stamps }, (_, i) => (
-            <span key={i} className={i < filled ? 'on' : ''} />
-          ))}
-        </div>
-        <div className="mc-foot">
-          <p>
-            ポイント <b>{card.balance}</b>
-          </p>
-          <p>{canExchange ? '無料券と交換できます' : `あと${card.toNextTicket}ポイントで無料券と交換できます`}</p>
-        </div>
-      </section>
-
-      <TicketPanel card={card} onChanged={reload} />
+      <MemberCard
+        displayName={household.displayName}
+        memberNo={household.memberNo}
+        facilityName={FACILITY_NAME}
+        dogs={card.dogs}
+        balance={card.balance}
+        background={me.cardBackground}
+      />
 
       {/* 交換のボタンが出ているときは、そちらを主ボタンにする(主ボタンは1画面に1つ) */}
       <button type="button" className={canExchange ? 'btn sub' : 'btn'} onClick={startCheckin}>
         {card.todayVisitId ? '今日のチェックインを見る' : 'チェックイン(受付のQRを読む)'}
       </button>
+
+      <section className="panel" aria-label="スタンプ">
+        <div className="stamps" role="img" aria-label={`ポイント ${filled} / ${card.pointsPerTicket}`}>
+          {Array.from({ length: stamps }, (_, i) => (
+            <span key={i} className={i < filled ? 'on' : ''} />
+          ))}
+        </div>
+        <p className="mc-stamp-text">
+          {canExchange ? '無料券と交換できます' : `あと${card.toNextTicket}ポイントで無料券と交換できます`}
+        </p>
+      </section>
+
+      <TicketPanel card={card} onChanged={reload} />
+
+      <ProfileNudge pending={me.optionalSurveyPending} />
 
       <nav className="menu rows" aria-label="メニュー">
         <Link to="/dogs">
@@ -76,6 +78,10 @@ function Card({ me, reload }: { me: MeRegistered; reload: () => Promise<void> })
         </Link>
         <Link to="/family">
           <span>家族を招待</span>
+          <Icon name="chevron-right" />
+        </Link>
+        <Link to="/card/background">
+          <span>背景を変える</span>
           <Icon name="chevron-right" />
         </Link>
         <Link to="/history">
@@ -87,7 +93,6 @@ function Card({ me, reload }: { me: MeRegistered; reload: () => Promise<void> })
           <Icon name="chevron-right" />
         </Link>
       </nav>
-      <ProfileNudge pending={me.optionalSurveyPending} />
       <p className="note">
         1日1ポイント。{card.pointsPerTicket}ポイントで無料券1枚(来場1回分)と交換できます。前のポイントカードは、受付で見せると引き継げます。
       </p>

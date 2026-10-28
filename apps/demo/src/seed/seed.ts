@@ -20,6 +20,8 @@ export type SeedOptions = {
   /** 犬の写真(JPEG)を作る。variant で色や形を変える。なければ写真なしで作る */
   makeDogPhoto?: (variant: number, kind: 'photo' | 'thumb') => Promise<Uint8Array>;
   putMedia?: (key: string, bytes: Uint8Array) => Promise<void>;
+  /** 会員証の背景の写真(JPEG)を作る。なければ写真の背景は作らない */
+  makeCardBackground?: () => Promise<Uint8Array>;
   /** 写真をつけるおうちの数(先頭から) */
   photoHouseholds?: number;
 };
@@ -716,6 +718,14 @@ export async function seedDemo(sql: Database, opts: SeedOptions): Promise<SeedSu
         variant++;
       }
     }
+  }
+
+  // 会員証の背景(C-06)。見比べられるよう、DR-000001 は写真、DR-000002 は紺。ほかは初期値(墨)
+  sql.run('UPDATE households SET card_background = ? WHERE id = ?', [JSON.stringify({ kind: 'preset', color: 'navy' }), FIXED.taka]);
+  if (opts.makeCardBackground && opts.putMedia) {
+    const key = `cards/${FIXED.komugi}/00000000-0000-4000-8000-000000000001.jpg`;
+    await opts.putMedia(key, await opts.makeCardBackground());
+    sql.run('UPDATE households SET card_background = ? WHERE id = ?', [JSON.stringify({ kind: 'photo', key }), FIXED.komugi]);
   }
 
   return {
