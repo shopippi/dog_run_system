@@ -1,6 +1,7 @@
 import { env } from 'cloudflare:test';
 import { describe, expect, it } from 'vitest';
 import { runScheduled } from '../src/cron';
+import { blockNetwork } from './analytics-helpers';
 import { refreshDailyStats } from '../src/services/daily-stats';
 import { addFamily, adminCall, call, checkin, createStaff, dog, givePoints, login, survey } from './helpers';
 
@@ -28,6 +29,8 @@ async function stats(date: string) {
 }
 
 describe('B-03 日別集計', () => {
+  blockNetwork();
+
   it('チェックインのたびに、その日の来場組数・頭数・新規おうち・初来場が更新される', async () => {
     const a = await register(PAPA, [dog('アル'), dog('ニコ')]);
     const b = await register(MAMA);

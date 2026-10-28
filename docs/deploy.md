@@ -62,3 +62,11 @@ curl "http://localhost:8787/__scheduled?cron=10+20+*+*+*"   # 5:10 の処理
 
 - 新しい wrangler では `curl "http://localhost:8787/cdn-cgi/handler/scheduled?cron=10+18+*+*+*"` でも呼べる(`--test-scheduled` は要らない)。古い案内にある `/cdn-cgi/local/scheduled` は、使っている wrangler の版で動かなければ上のどちらかを使う。
 - 管理画面の「システムの状態」の「今すぐ実行」からも、処理ごとに動かせる(管理者のみ)。
+
+## バックアップと復元
+
+- D1 のタイムトラベル(無料プランでは過去7日間)に加え、毎晩 3:10 に全テーブルを JSON にして R2 の `backups/<日付>.json` に保存する(B-04)。今日を含めて30日分を残し、それより前は自動で消す。
+- 管理画面の「システムの状態」から、管理者が手動でも保存できる(`POST /admin/api/system/backup`)。
+- 中身は `{ format: "dog-run-backup", version: 1, createdAt, tables: { 表の名前: { columns: [...], rows: [[...], ...] } } }`。
+- 取り出し: `pnpm --filter @dr/api exec wrangler r2 object get dog-run-production-media/backups/2026-10-28.json --file backup.json --remote`
+- 復元は、まずタイムトラベル(`wrangler d1 time-travel restore DB --timestamp=...`)を使う。7日より前に戻すときは、空のデータベースにマイグレーションを当ててから、JSON の各表の行を INSERT する(表の順番は、外部キーの参照先から: staff_users・households・breeds → family_members・dogs → visits → ほか)。

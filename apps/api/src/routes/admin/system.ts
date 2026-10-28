@@ -1,6 +1,6 @@
 import type { JobRunResult } from '@dr/shared';
 import { Hono, type Context } from 'hono';
-import { runHolidaysJob } from '../../cron';
+import { runBackupJob, runHolidaysJob } from '../../cron';
 import type { AppEnv } from '../../env';
 import { requireRole } from '../../lib/staff-auth';
 import { auditStatement } from '../../services/audit';
@@ -25,5 +25,12 @@ async function auditJob(c: Context<AppEnv>, action: string, result: JobRunResult
 systemRoutes.post('/holidays/import', requireRole('admin'), async (c) => {
   const result: JobRunResult = await runHolidaysJob(c.env, c.get('now'));
   await auditJob(c, 'system.holidays_import', result);
+  return c.json(result);
+});
+
+// バックアップの手動実行(B-04)。管理者
+systemRoutes.post('/system/backup', requireRole('admin'), async (c) => {
+  const result: JobRunResult = await runBackupJob(c.env, c.get('now'));
+  await auditJob(c, 'system.backup', result);
   return c.json(result);
 });

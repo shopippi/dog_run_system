@@ -5,6 +5,7 @@ import { importHolidays, shouldImportHolidays } from './services/holidays';
 import { runJob } from './services/jobs';
 import { loadSettings } from './lib/settings';
 import { fetchWeather, type WeatherSource } from './services/weather';
+import { backupDatabase } from './services/backup';
 
 /** 日本時間 3:10(UTC 18:10)。日別集計の再計算、有効期限の処理、バックアップ、移行期間終了後の画像削除 */
 export const CRON_NIGHTLY = '10 18 * * *';
@@ -31,6 +32,7 @@ function guessKind(now: Date): 'nightly' | 'morning' {
 
 export async function runNightly(env: Bindings, now: Date): Promise<void> {
   await runDailyStatsJob(env, now);
+  await runBackupJob(env, now);
   if (await shouldImportHolidays(env.DB, now)) await runHolidaysJob(env, now);
 }
 
@@ -57,4 +59,9 @@ export function runWeatherJob(env: Bindings, now: Date, source?: WeatherSource) 
     const settings = await loadSettings(env.DB);
     return fetchWeather(env.DB, now, settings.weather_station, source);
   });
+}
+
+/** B-04 バックアップ(毎晩 3:10 と、管理画面の手動の実行から呼ぶ) */
+export function runBackupJob(env: Bindings, now: Date) {
+  return runJob(env.DB, 'backup', now, () => backupDatabase(env.DB, env.MEDIA, now));
 }
