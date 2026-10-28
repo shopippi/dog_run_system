@@ -39,6 +39,11 @@ export const settingsSchema = z.object({
     start: z.string().nullable(),
     end: z.string().nullable(),
   }),
+  /**
+   * おうちの統合で、統合前に同じ日に両方のおうちが来場していた分のポイントを、そのまま残すか(5.3、20章の未決事項。初期案は残す)。
+   * false にすると、その日のまとめる側の来場で付いたポイントを、統合のときに差し引く
+   */
+  merge_keep_same_day_points: z.boolean(),
   /** 「困ったとき」に出す製作者の連絡先 */
   developer_contact: z.string().max(500),
   /** 利用規約とプライバシーポリシーの本文 */
@@ -65,6 +70,7 @@ export const DEFAULT_SETTINGS: Omit<Settings, 'checkin_passphrase'> = {
   invite_ttl_hours: 24,
   reception_invite_ttl_minutes: 10,
   migration_period: { start: null, end: null },
+  merge_keep_same_day_points: true,
   developer_contact: '',
   terms_text: '(利用規約の本文は準備中です。管理画面の設定から差し替えてください)',
   privacy_text: '(プライバシーポリシーの本文は準備中です。管理画面の設定から差し替えてください)',
