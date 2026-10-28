@@ -1,0 +1,788 @@
+<title>ドッグラン会員証デモ</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700&family=Zen+Maru+Gothic:wght@500;700&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Layout: scenario strip on top, then a phone (customer, LINE) beside the reception/admin console; stacks on narrow screens. */
+:root{
+  --bg:#eef2ea; --surface:#ffffff; --sunk:#f6f8f3; --ink:#1c2a21; --muted:#5b6a60; --line:#d9e1d4;
+  --deep:#2e7a4e; --accent:#2e7a4e; --accent-soft:#e1efe5; --on-accent:#ffffff; --gold:#b9741b; --gold-soft:#fbefdc; --bad:#bf3f35; --bad-soft:#f8e3e1; --info:#3d6a9e; --info-soft:#e4edf7;
+  --f-display:"Zen Maru Gothic","Hiragino Maru Gothic ProN","Yu Gothic",sans-serif;
+  --f-body:"Zen Kaku Gothic New","Hiragino Sans","Yu Gothic",system-ui,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  --r:12px; --shadow:0 1px 2px rgba(20,40,25,.06),0 8px 24px rgba(20,40,25,.07);
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#111713; --surface:#1a221d; --sunk:#151c18; --ink:#e5ede7; --muted:#9caaa0; --line:#2b3730;
+  --deep:#2a6b46; --accent:#5db381; --accent-soft:#1f3328; --on-accent:#0d1a12; --gold:#e3a250; --gold-soft:#33281a; --bad:#e2685d; --bad-soft:#3a2120; --info:#86aee0; --info-soft:#1d2a38;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.25); color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#111713; --surface:#1a221d; --sunk:#151c18; --ink:#e5ede7; --muted:#9caaa0; --line:#2b3730;
+  --deep:#2a6b46; --accent:#5db381; --accent-soft:#1f3328; --on-accent:#0d1a12; --gold:#e3a250; --gold-soft:#33281a; --bad:#e2685d; --bad-soft:#3a2120; --info:#86aee0; --info-soft:#1d2a38;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.25); color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:14px;line-height:1.6}
+.wrap{max-width:1220px;margin:0 auto;padding-block:24px 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:20px}
+h1,h2,h3,h4{font-family:var(--f-display);font-weight:700;margin:0;text-wrap:balance}
+h1{font-size:1.6rem;line-height:1.3}
+.lede{color:var(--muted);margin:4px 0 0;max-width:68ch}
+.tag{display:inline-block;font-size:.72rem;letter-spacing:.06em;padding:2px 10px;border-radius:999px;background:var(--gold-soft);color:var(--gold);font-weight:700;vertical-align:middle;margin-left:8px}
+button{font:inherit;cursor:pointer}
+button:disabled{cursor:not-allowed}
+button:focus-visible,input:focus-visible,select:focus-visible,label:focus-within{outline:2px solid var(--accent);outline-offset:2px}
+.mono{font-family:var(--f-mono);letter-spacing:.02em}
+.muted{color:var(--muted)}
+.small{font-size:.8rem}
+
+.script{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px;display:flex;flex-direction:column;gap:10px}
+.script-head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px}
+.script-head h2{font-size:1rem}
+.steps{display:flex;flex-wrap:wrap;gap:8px;margin:0;padding:0;list-style:none}
+.steps button{display:flex;align-items:center;gap:8px;border:1px solid var(--line);background:var(--sunk);color:var(--ink);border-radius:999px;padding:6px 12px 6px 6px;font-size:.82rem}
+.steps button:hover{border-color:var(--accent)}
+.steps .n{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;background:var(--accent);color:var(--on-accent);font-weight:700;font-size:.75rem}
+.ghost{border:1px solid var(--line);background:transparent;color:var(--muted);border-radius:8px;padding:6px 12px;font-size:.82rem}
+.ghost:hover{color:var(--ink);border-color:var(--muted)}
+.hint{background:var(--info-soft);color:var(--ink);border-radius:10px;padding:8px 12px;font-size:.84rem;margin:0}
+
+.stage{display:grid;grid-template-columns:minmax(0,380px) minmax(0,1fr);gap:20px;align-items:start}
+@media (max-width:900px){.stage{grid-template-columns:minmax(0,1fr)}}
+
+.side-label{font-size:.75rem;letter-spacing:.08em;color:var(--muted);font-weight:700;margin-bottom:6px}
+.who{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:10px}
+.who select{font:inherit;padding:6px 8px;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--ink);min-width:0;flex:1}
+.launch{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+.launch button{border:1px dashed var(--accent);background:var(--accent-soft);color:var(--accent);border-radius:10px;padding:8px;font-weight:700;font-size:.82rem}
+.launch .inv{grid-column:1/-1;border-color:var(--gold);background:var(--gold-soft);color:var(--gold)}
+.phone{width:100%;max-width:360px;margin:0 auto;border-radius:34px;border:10px solid #232a26;background:var(--surface);box-shadow:var(--shadow);overflow:hidden}
+.phone-bar{display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid var(--line);background:var(--surface)}
+.phone-bar .dot{width:26px;height:26px;border-radius:50%;background:var(--accent);display:grid;place-items:center;color:var(--on-accent);font-size:.7rem;font-weight:700;font-family:var(--f-display)}
+.phone-bar b{font-family:var(--f-display);font-size:.9rem}
+.phone-bar small{color:var(--muted);font-size:.7rem;display:block;line-height:1.2}
+.screen{height:620px;overflow-y:auto;padding:18px 16px 24px;display:flex;flex-direction:column;gap:14px;background:var(--sunk)}
+.screen h3{font-size:1.15rem}
+.screen p{margin:0}
+.field{display:flex;flex-direction:column;gap:4px}
+.field label{font-size:.8rem;font-weight:700}
+.field input,.field select{font:inherit;padding:9px 10px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--ink);width:100%}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.btn{border:0;border-radius:12px;padding:12px 14px;font-weight:700;background:var(--accent);color:var(--on-accent);width:100%}
+.btn:disabled{opacity:.45}
+.btn.sub{background:var(--surface);color:var(--ink);border:1px solid var(--line)}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:10px}
+.check{display:flex;gap:8px;align-items:flex-start;font-size:.85rem}
+.check input{margin-top:4px;accent-color:var(--accent)}
+.av{border-radius:50%;object-fit:cover;flex:none;background:var(--sunk);border:2px solid var(--surface);box-shadow:0 0 0 1px var(--line)}
+.dogpick{display:flex;flex-direction:column;gap:8px}
+.dogpick label{display:flex;align-items:center;gap:12px;background:var(--surface);border:1.5px solid var(--line);border-radius:12px;padding:8px 12px}
+.dogpick label:has(input:checked){border-color:var(--accent);background:var(--accent-soft)}
+.dogpick input{accent-color:var(--accent);width:18px;height:18px}
+.meta{font-size:.75rem;color:var(--muted)}
+.photo-pick{display:flex;align-items:center;gap:12px}
+.photo-pick label.up{display:inline-flex;align-items:center;gap:6px;border:1px dashed var(--accent);color:var(--accent);border-radius:10px;padding:8px 12px;font-weight:700;font-size:.82rem;cursor:pointer}
+.photo-pick input{position:absolute;opacity:0;width:1px;height:1px}
+.card{border-radius:16px;padding:16px;background:linear-gradient(135deg,var(--deep),color-mix(in oklab,var(--deep) 70%,#0b2a17));color:#fff;display:flex;flex-direction:column;gap:10px}
+.card .id{font-family:var(--f-mono);font-size:1.05rem}
+.card .name{font-family:var(--f-display);font-size:1.25rem;line-height:1.3}
+.card small{opacity:.85}
+.card .dogs{display:flex;gap:-6px}
+.card .dogs img{margin-right:-8px}
+.pts{display:grid;grid-template-columns:repeat(10,1fr);gap:5px}
+.pts span{aspect-ratio:1;border-radius:50%;border:1.5px solid rgba(255,255,255,.7)}
+.pts span.on{background:#fff}
+.qr{display:flex;gap:12px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px}
+.qr canvas{width:84px;height:84px;image-rendering:pixelated;border-radius:6px;background:#fff;flex:none}
+.ticket{display:flex;align-items:center;justify-content:space-between;background:var(--gold-soft);color:var(--gold);border-radius:12px;padding:10px 12px;font-weight:700}
+.menu{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.menu button{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px;color:var(--ink);font-size:.82rem;font-weight:700}
+.list{display:flex;flex-direction:column}
+.list>div{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 0;border-bottom:1px solid var(--line);font-size:.85rem}
+.list>div:last-child{border-bottom:0}
+.note-box{background:var(--info-soft);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:6px}
+.done{border-radius:16px;padding:20px 16px;color:#fff;position:relative;overflow:hidden;background:var(--deep);display:flex;flex-direction:column;gap:8px;text-align:center;align-items:center}
+.done::before{content:"";position:absolute;inset:-40%;background:repeating-linear-gradient(115deg,rgba(255,255,255,0) 0 22px,rgba(255,255,255,.13) 22px 44px)}
+@media (prefers-reduced-motion:no-preference){.done::before{animation:slide 2.4s linear infinite}}
+@keyframes slide{to{transform:translateX(66px)}}
+.done>*{position:relative}
+.done .clock{font-family:var(--f-mono);font-size:2rem;letter-spacing:.04em}
+.done .big{font-family:var(--f-display);font-size:1.3rem}
+.done .chips{display:flex;flex-wrap:wrap;gap:6px;justify-content:center}
+.done .chips span{background:rgba(255,255,255,.2);border-radius:999px;padding:2px 10px;font-size:.85rem}
+.done .faces{display:flex;gap:6px}
+.issued{background:var(--gold);color:#fff;border-radius:12px;padding:10px;font-weight:700;text-align:center}
+.photo{width:100%;max-height:140px;object-fit:cover;border-radius:10px;border:1px solid var(--line)}
+.invite-card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px;display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center}
+
+.console{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);min-width:0;display:flex;flex-direction:column}
+.con-head{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--line)}
+.role{display:inline-flex;flex-wrap:wrap;border:1px solid var(--line);border-radius:999px;padding:2px}
+.role button{border:0;background:transparent;color:var(--muted);border-radius:999px;padding:4px 12px;font-size:.8rem;font-weight:700}
+.role button[aria-pressed="true"]{background:var(--accent);color:var(--on-accent)}
+.ro{background:var(--info-soft);color:var(--info);font-weight:700;font-size:.82rem;padding:8px 16px;border-bottom:1px solid var(--line)}
+.tabs{display:flex;gap:4px;padding:0 12px;border-bottom:1px solid var(--line);overflow-x:auto}
+.tabs button{border:0;background:transparent;color:var(--muted);padding:10px 10px;border-bottom:2px solid transparent;font-weight:700;font-size:.85rem;white-space:nowrap}
+.tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+.tabs .badge{display:inline-block;min-width:18px;padding:0 5px;margin-left:4px;border-radius:999px;background:var(--gold);color:#fff;font-size:.7rem;text-align:center}
+.con-body{padding:16px;display:flex;flex-direction:column;gap:14px;min-height:600px}
+.howto{font-size:.8rem;color:var(--muted);border-left:3px solid var(--line);padding-left:10px;margin:0}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px}
+.kpi{background:var(--sunk);border-radius:10px;padding:10px 12px}
+.kpi .l{font-size:.75rem;color:var(--muted)}
+.kpi .v{font-family:var(--f-display);font-size:1.5rem;font-variant-numeric:tabular-nums}
+.visits{display:flex;flex-direction:column;gap:8px}
+.visit{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:12px;align-items:center;border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+.visit.new{animation:flash 2.2s ease-out}
+@keyframes flash{from{background:var(--accent-soft)}to{background:transparent}}
+@media (prefers-reduced-motion:reduce){.visit.new{animation:none}}
+.visit.cancelled{opacity:.55}
+.visit .faces{display:flex}
+.visit .faces img{margin-right:-10px}
+.visit .t{font-family:var(--f-mono);font-size:.8rem;color:var(--muted)}
+.visit b{font-family:var(--f-display);font-size:1rem}
+.pill{display:inline-block;font-size:.72rem;font-weight:700;border-radius:999px;padding:1px 8px;background:var(--sunk);color:var(--muted);white-space:nowrap}
+.pill.g{background:var(--accent-soft);color:var(--accent)}
+.pill.o{background:var(--gold-soft);color:var(--gold)}
+.pill.r{background:var(--bad-soft);color:var(--bad)}
+.mini{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:8px;padding:6px 12px;font-size:.8rem;font-weight:700;min-height:34px}
+.mini.primary{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.mini.danger{color:var(--bad)}
+.mini:disabled{opacity:.4}
+.inline-form{display:flex;flex-wrap:wrap;gap:8px;align-items:end;background:var(--sunk);border-radius:10px;padding:10px 12px}
+.inline-form .field{min-width:120px;flex:1}
+.inline-form .field input,.inline-form .field select{padding:7px 8px;border-radius:8px}
+.search{display:flex;gap:8px}
+.search input{flex:1;min-width:0;font:inherit;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--ink)}
+.hgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.hcard{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:12px;padding:10px;display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center}
+.hcard[aria-current="true"]{border-color:var(--accent);background:var(--accent-soft)}
+.hcard .faces{display:flex;justify-content:center}
+.hcard .faces img{margin:0 -6px}
+.hcard b{font-family:var(--f-display);font-size:.92rem;line-height:1.3}
+.hcard .pill{margin-top:2px}
+.detail{display:flex;flex-direction:column;gap:14px;min-width:0;border-top:1px solid var(--line);padding-top:14px}
+.dhead{display:flex;flex-wrap:wrap;align-items:center;gap:10px;justify-content:space-between}
+.dhead h3{font-size:1.2rem}
+.facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px}
+.facts div{background:var(--sunk);border-radius:8px;padding:6px 10px}
+.facts span{display:block;font-size:.72rem;color:var(--muted)}
+.sec{display:flex;flex-direction:column;gap:8px}
+.sec h4{font-size:.95rem}
+.dogrow{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:12px;align-items:center;border:1px solid var(--line);border-radius:12px;padding:10px}
+.dogrow .acts{display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end}
+.fam{display:flex;flex-wrap:wrap;gap:8px}
+.fam span{display:inline-flex;align-items:center;gap:6px;background:var(--sunk);border-radius:999px;padding:4px 6px 4px 12px;font-size:.82rem}
+.fam button{border:0;background:transparent;color:var(--bad);font-size:.75rem;font-weight:700;padding:2px 6px}
+.lock{background:var(--sunk);border:1px dashed var(--line);border-radius:10px;padding:18px;color:var(--muted);text-align:center}
+.req{display:grid;grid-template-columns:96px minmax(0,1fr);gap:12px;align-items:start;border:1px solid var(--line);border-radius:10px;padding:10px}
+.req img,.req .noimg{width:96px;height:72px;object-fit:cover;border-radius:8px;background:var(--sunk);display:grid;place-items:center;font-size:.7rem;color:var(--muted)}
+.req .acts{display:flex;gap:6px;margin-top:6px;flex-wrap:wrap;align-items:center}
+.merge{display:flex;flex-direction:column;gap:12px;background:var(--sunk);border-radius:12px;padding:14px}
+.pair{display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px;align-items:center;background:var(--surface);border-radius:10px;padding:8px 10px}
+.pair select{font:inherit;padding:6px 8px;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--ink);max-width:100%}
+.preview{border:2px solid var(--accent);border-radius:12px;padding:12px;background:var(--surface);display:flex;flex-direction:column;gap:8px}
+.tbl-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:10px}
+table{width:100%;border-collapse:collapse;font-size:.84rem;font-variant-numeric:tabular-nums}
+th{text-align:left;font-size:.75rem;color:var(--muted);font-weight:700;padding:8px 10px;background:var(--sunk);border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:middle}
+tr:last-child td{border-bottom:0}
+.note{font-size:.78rem;color:var(--muted)}
+.qrbox{display:flex;gap:14px;align-items:center;flex-wrap:wrap;background:var(--surface);border:2px dashed var(--accent);border-radius:12px;padding:12px}
+.qrbox canvas{width:110px;height:110px;image-rendering:pixelated;background:#fff;border-radius:6px}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:14px;font-weight:700;font-size:.85rem;box-shadow:var(--shadow);max-width:calc(100% - 32px);z-index:20;text-align:center}
+.dash-link{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;background:var(--sunk);border-radius:10px;padding:10px 12px}
+.dash-link a{color:var(--accent);font-weight:700}
+.bars{display:flex;flex-direction:column;gap:6px}
+.bars div{display:grid;grid-template-columns:minmax(0,9rem) 1fr 3rem;gap:8px;align-items:center;font-size:.8rem}
+.bars i{height:12px;border-radius:6px;background:var(--accent);display:block}
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>ドッグラン会員証デモ<span class="tag">デモ用の架空データ</span></h1>
+    <p class="lede">左がお客さんのLINEの画面、右が受付・管理画面です。ポイントは「おうち」ごとにたまり、家族のLINEアカウントをつなげられます。左上の「LINEのアカウント」を切り替えると、家族それぞれのスマホとして操作できます。データはこのページの中だけで動き、再読み込みすると元に戻ります。</p>
+  </header>
+
+  <section class="script" aria-labelledby="script-h">
+    <div class="script-head">
+      <h2 id="script-h">打ち合わせ用の手順</h2>
+      <button class="ghost" id="reset">最初からやり直す</button>
+    </div>
+    <ol class="steps">
+      <li><button data-step="1"><span class="n">1</span>はじめてのお客さんが写真つきで登録</button></li>
+      <li><button data-step="2"><span class="n">2</span>9ポイントのおうちがチェックイン</button></li>
+      <li><button data-step="3"><span class="n">3</span>ママがパパを家族に招待</button></li>
+      <li><button data-step="4"><span class="n">4</span>パパも同じ日にチェックイン</button></li>
+      <li><button data-step="5"><span class="n">5</span>別々のおうちを管理者がまとめる</button></li>
+      <li><button data-step="6"><span class="n">6</span>名前・写真・ポイントを管理者が変更</button></li>
+      <li><button data-step="7"><span class="n">7</span>旧カードの引き継ぎ申請と承認</button></li>
+      <li><button data-step="8"><span class="n">8</span>受付・製作者の権限</button></li>
+    </ol>
+    <p class="hint" id="step-hint">手順のボタンを押すと、その場面に切り替わります。どこからでも自由に操作できます。</p>
+  </section>
+
+  <div class="stage">
+    <section aria-labelledby="cust-h">
+      <div class="side-label" id="cust-h">お客さんのスマホ(LINEの中で開く画面)</div>
+      <div class="who">
+        <label for="who" class="small muted">LINEのアカウント</label>
+        <select id="who"></select>
+      </div>
+      <div class="launch" id="launch"></div>
+      <div class="phone">
+        <div class="phone-bar"><span class="dot">DR</span><div><b>ドッグラン会員証</b><small>LINEミニアプリ(LIFF)</small></div></div>
+        <div class="screen" id="screen" aria-live="polite"></div>
+      </div>
+    </section>
+
+    <section class="console" aria-labelledby="con-h">
+      <div class="con-head">
+        <h2 id="con-h" style="font-size:1.05rem">受付・管理画面</h2>
+        <div class="role" role="group" aria-label="ログインしている人">
+          <button data-role="staff" aria-pressed="false">受付スタッフ</button>
+          <button data-role="admin" aria-pressed="true">管理者</button>
+          <button data-role="builder" aria-pressed="false">製作者</button>
+        </div>
+      </div>
+      <div class="ro" id="ro" hidden>製作者のアカウントは閲覧のみです。変更のボタンは押せません。</div>
+      <div class="tabs" role="tablist" id="tabs"></div>
+      <div class="con-body" id="con"></div>
+    </section>
+  </div>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+(() => {
+const NEED = 10;
+const BREEDS = [['トイプードル','小型'],['チワワ','小型'],['ミニチュアダックスフンド','小型'],['ポメラニアン','小型'],['柴犬','中型'],['フレンチブルドッグ','中型'],['ボーダーコリー','中型'],['ゴールデンレトリバー','大型'],['ラブラドールレトリバー','大型'],['ミックス','小型'],['その他','小型']];
+const ADJ_REASONS = ['イベントの特典','お詫び','入力ミスの修正','その他'];
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const ymd = (d) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+const today = () => ymd(new Date());
+const ago = (n) => { const d = new Date(); d.setDate(d.getDate() - n); return d; };
+const hm = (t) => { const d = new Date(t); return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`; };
+const now = () => new Date().toISOString();
+const kana = (s) => String(s).replace(/[ァ-ヶ]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0x60)).toLowerCase();
+const clone = (o) => JSON.parse(JSON.stringify(o));
+
+/* placeholder face for dogs without a photo: initial on a colored circle */
+const HUES = [28, 145, 200, 330, 48, 265, 12, 175];
+const face = (dog, size = 44) => {
+  if (dog.photo) return `<img class="av" src="${dog.photo}" width="${size}" height="${size}" alt="${esc(dog.name)}の写真">`;
+  let h = 0; for (const c of dog.name + dog.breed) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+  const hue = HUES[h % HUES.length];
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><circle cx="32" cy="32" r="32" fill="hsl(${hue} 55% 82%)"/><text x="32" y="41" font-size="26" text-anchor="middle" font-family="sans-serif" font-weight="700" fill="hsl(${hue} 45% 28%)">${esc([...dog.name][0] || '?')}</text></svg>`;
+  return `<img class="av" src="data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}" width="${size}" height="${size}" alt="${esc(dog.name)}(写真なし)">`;
+};
+
+/* resize a picked image to max 800px, like the real app does on the phone */
+const resize = (file) => new Promise((ok, ng) => {
+  const r = new FileReader();
+  r.onload = () => { const im = new Image(); im.onload = () => { const s = Math.min(1, 800 / Math.max(im.width, im.height)); const c = document.createElement('canvas'); c.width = Math.round(im.width * s); c.height = Math.round(im.height * s); c.getContext('2d').drawImage(im, 0, 0, c.width, c.height); ok(c.toDataURL('image/jpeg', .82)); }; im.onerror = ng; im.src = r.result; };
+  r.onerror = ng; r.readAsDataURL(file);
+});
+
+let S;
+const seed = () => {
+  S = { nextH: 104, role: 'admin', tab: 'today', who: 'F1', screen: null, ctx: {}, sel: 'DR-000101', merge: null, q: '',
+    households: [], family: [], dogs: [], visits: [], ledger: [], tickets: [], requests: [], invites: [], audit: [] };
+  const H = (id, joinedAgo, area, ref) => S.households.push({id, nick: '', auto: true, joined: ymd(ago(joinedAgo)), area, ref, status: '有効', into: null, migrated: {}});
+  const F = (fid, line, hid, age, gender) => S.family.push({fid, line, hid, age, gender});
+  const D = (id, hid, name, breed, size) => S.dogs.push({id, hid, name, breed, size, photo: null, active: true, into: null});
+  H('DR-000101', 120, '世田谷区', 'Instagram'); F('F1', 'こむぎママ', 'DR-000101', '30代', '女性'); D('DR-000101-1', 'DR-000101', 'こむぎ', 'トイプードル', '小型');
+  H('DR-000102', 90, '目黒区', '通りがかり'); F('F2', 'taka_papa', 'DR-000102', '40代', '男性'); D('DR-000102-1', 'DR-000102', 'アル', '柴犬', '中型');
+  H('DR-000103', 45, '目黒区', '知人の紹介'); F('F3', 'nico.mama', 'DR-000103', '40代', '女性'); D('DR-000103-1', 'DR-000103', 'アル', '柴犬', '中型'); D('DR-000103-2', 'DR-000103', 'ニコ', 'トイプードル', '小型');
+  F('F4', 'こむぎパパ', null, '', ''); F('F5', 'はじめてさん', null, '', '');
+  const past = (hid, fid, dogIds, n) => { const at = ago(n); at.setHours(10 + (n % 6), 15); const v = {id: 'V' + (S.visits.length + 1), hid, fid, dogs: dogIds, date: ymd(at), at: at.toISOString(), ticket: false, by: '本人', cancelled: false}; S.visits.push(v); S.ledger.push({hid, delta: 1, kind: '来場', visit: v.id, at: v.at}); };
+  [60,52,44,37,30,22,15,8,2].forEach((n) => past('DR-000101', 'F1', ['DR-000101-1'], n));
+  [70,50,35,28,20,12,4].forEach((n) => past('DR-000102', 'F2', ['DR-000102-1'], n));
+  [40,26,18,9,3].forEach((n) => past('DR-000103', 'F3', ['DR-000103-1','DR-000103-2'], n));
+  const w = new Date(Date.now() - 50 * 60e3);
+  S.visits.push({id: 'V' + (S.visits.length + 1), hid: null, fid: null, dogs: [], count: 2, date: today(), at: w.toISOString(), ticket: false, by: '非会員入力', cancelled: false});
+};
+
+/* ---------- lookups ---------- */
+const HH = (id) => S.households.find((h) => h.id === id);
+const FM = (fid) => S.family.find((f) => f.fid === fid);
+const DG = (id) => S.dogs.find((d) => d.id === id);
+const dogsOf = (hid) => S.dogs.filter((d) => d.hid === hid && d.active && !d.into);
+const famOf = (hid) => S.family.filter((f) => f.hid === hid);
+const nick = (h) => h.auto || !h.nick ? `${dogsOf(h.id).map((d) => d.name).join('・') || '名前なし'}のおうち` : h.nick;
+const pts = (hid) => S.ledger.filter((l) => l.hid === hid).reduce((a, l) => a + l.delta, 0);
+const openT = (hid) => S.tickets.filter((t) => t.hid === hid && t.status === '未使用');
+const visitedToday = (hid) => S.visits.find((v) => !v.cancelled && v.date === today() && v.hid === hid);
+const me = () => FM(S.who);
+const myH = () => { const f = me(); return f && f.hid ? HH(f.hid) : null; };
+const actor = () => ({staff: '受付スタッフ', admin: '管理者', builder: '製作者'})[S.role];
+const ro = () => S.role === 'builder';
+
+const issue = (hid, origin) => { let n = 0; while (pts(hid) >= NEED) { S.ledger.push({hid, delta: -NEED, kind: '無料券の発行', visit: null, origin, at: now()}); S.tickets.push({id: 'T' + (S.tickets.length + 1), hid, status: '未使用', origin, usedVisit: null, at: now()}); n++; } return n; };
+const unissue = (hid, origin) => { S.tickets.filter((t) => t.origin === origin && t.status === '未使用').forEach((t) => { t.status = '取り消し'; S.ledger.push({hid, delta: NEED, kind: '発行の取り消し', visit: null, at: now()}); }); };
+const log = (action, target, detail, undo) => S.audit.unshift({id: 'A' + (S.audit.length + 1), at: now(), actor: actor(), action, target, detail, undo: undo || null, undone: false});
+
+const checkin = (hid, fid, dogIds, useT, by = '本人') => {
+  const prev = visitedToday(hid);
+  if (prev) return {already: prev};
+  const v = {id: 'V' + (S.visits.length + 1), hid, fid, dogs: dogIds, date: today(), at: now(), ticket: !!useT, by, cancelled: false};
+  S.visits.push(v);
+  if (useT) { const t = openT(hid)[0]; t.status = '使用済'; t.usedVisit = v.id; }
+  else S.ledger.push({hid, delta: 1, kind: '来場', visit: v.id, at: v.at});
+  const made = issue(hid, v.id);
+  return {visit: v, earn: useT ? 0 : 1, made};
+};
+const cancelVisit = (vid) => {
+  const v = S.visits.find((x) => x.id === vid); if (!v || v.cancelled) return;
+  v.cancelled = true;
+  if (v.hid) {
+    unissue(v.hid, vid);
+    const e = S.ledger.filter((l) => l.visit === vid && l.kind === '来場').reduce((a, l) => a + l.delta, 0);
+    if (e) S.ledger.push({hid: v.hid, delta: -e, kind: '取り消し', visit: vid, at: now()});
+    S.tickets.filter((t) => t.usedVisit === vid).forEach((t) => { t.status = '未使用'; t.usedVisit = null; });
+  }
+  log('チェックインの取り消し', v.hid || '非会員', '受付で取り消し');
+};
+const migrate = (hid, source, n, how) => {
+  const h = HH(hid); if (h.migrated[source]) return false;
+  h.migrated[source] = n; const origin = 'M' + Date.now();
+  S.ledger.push({hid, delta: n, kind: `移行(${source})`, visit: null, at: now()});
+  issue(hid, origin);
+  log('旧カードの移行', hid, `${source} ${n}ポイント(${how})`);
+  return true;
+};
+
+/* merge: B into A. pairs = {dogIdOfB: dogIdOfA | ''} */
+const mergePreview = (a, b, pairs) => {
+  const total = pts(a) + pts(b);
+  const dogsA = dogsOf(a), dogsB = dogsOf(b).filter((d) => !pairs[d.id]);
+  return {total, newT: Math.floor(Math.max(0, total) / NEED), left: total - Math.floor(Math.max(0, total) / NEED) * NEED, tickets: openT(a).length + openT(b).length, family: [...famOf(a), ...famOf(b)], dogs: [...dogsA, ...dogsB]};
+};
+const doMerge = (a, b, pairs) => {
+  const keys = ['households','family','dogs','visits','ledger','tickets'];
+  const snap = {}; keys.forEach((k) => { snap[k] = clone(S[k].filter((x) => x.hid === a || x.hid === b || x.id === a || x.id === b)); });
+  const origin = 'G' + Date.now();
+  famOf(b).forEach((f) => { f.hid = a; });
+  dogsOf(b).forEach((d) => { if (pairs[d.id]) { d.into = pairs[d.id]; S.visits.forEach((v) => { v.dogs = [...new Set(v.dogs.map((x) => x === d.id ? pairs[d.id] : x))]; }); } d.hid = a; });
+  S.visits.filter((v) => v.hid === b).forEach((v) => { v.hid = a; });
+  const bp = pts(b);
+  S.ledger.filter((l) => l.hid === b).forEach((l) => { l.hid = a; l.from = b; });
+  S.tickets.filter((t) => t.hid === b).forEach((t) => { t.hid = a; });
+  S.ledger.push({hid: a, delta: 0, kind: `統合(${b}から${bp}ポイント)`, visit: null, at: now()});
+  const hb = HH(b); hb.status = '統合済み'; hb.into = a;
+  const made = issue(a, origin);
+  const label = `${b} を ${a} にまとめた(合計${pts(a) + made * NEED}ポイント → 無料券${made}枚)`;
+  log('おうちの統合', a, label, () => { keys.forEach((k) => { const ids = new Set(snap[k].map((x) => x.id || x.fid || (x.hid + x.at + x.kind))); S[k] = S[k].filter((x) => !(x.hid === a || x.hid === b || x.id === a || x.id === b) || (k === 'households' && false)); S[k].push(...clone(snap[k])); }); return '統合を元に戻しました'; });
+  return made;
+};
+
+/* ---------- toast ---------- */
+let tt; const toast = (m) => { const t = document.getElementById('toast'); t.textContent = m; t.hidden = false; clearTimeout(tt); tt = setTimeout(() => { t.hidden = true; }, 3200); };
+
+/* ---------- QR (decorative) ---------- */
+const qrDraw = (canvas, text) => {
+  const n = 21, c = canvas.getContext('2d'); canvas.width = n; canvas.height = n;
+  let h = 2166136261; for (const ch of text) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619); }
+  c.fillStyle = '#fff'; c.fillRect(0, 0, n, n); c.fillStyle = '#1c2a21';
+  for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) { h ^= h << 13; h ^= h >>> 17; h ^= h << 5; if ((h >>> 0) % 2) c.fillRect(x, y, 1, 1); }
+  const f = (x, y) => { c.fillStyle = '#1c2a21'; c.fillRect(x, y, 7, 7); c.fillStyle = '#fff'; c.fillRect(x + 1, y + 1, 5, 5); c.fillStyle = '#1c2a21'; c.fillRect(x + 2, y + 2, 3, 3); };
+  c.fillStyle = '#fff'; c.fillRect(0, 0, 8, 8); c.fillRect(n - 8, 0, 8, 8); c.fillRect(0, n - 8, 8, 8); f(0, 0); f(n - 7, 0); f(0, n - 7);
+};
+const breedOpts = (sel) => BREEDS.map(([b]) => `<option ${b === sel ? 'selected' : ''}>${b}</option>`).join('');
+
+/* ================= customer phone ================= */
+const scr = document.getElementById('screen');
+let clock;
+const go = (name, ctx = {}) => { S.screen = name; S.ctx = ctx; renderPhone(); };
+const pendingInvite = () => S.invites.find((i) => i.to === S.who && !i.used);
+
+function renderLaunch() {
+  const inv = pendingInvite();
+  document.getElementById('launch').innerHTML = `<button id="scan">受付のQRを読み取る</button><button id="menu">リッチメニューから開く</button>${inv ? `<button class="inv" id="open-inv">LINEに届いた招待を開く(${esc(nick(HH(inv.hid)))})</button>` : ''}`;
+  document.getElementById('scan').onclick = () => { if (!myH()) go('welcome'); else go('checkin'); };
+  document.getElementById('menu').onclick = () => { if (!myH()) go('welcome'); else go('card'); };
+  const oi = document.getElementById('open-inv'); if (oi) oi.onclick = () => go('invite');
+}
+function renderWho() {
+  const sel = document.getElementById('who');
+  sel.innerHTML = S.family.map((f) => { const h = f.hid ? HH(f.hid) : null; return `<option value="${f.fid}">${esc(f.line)}(${h ? `${esc(nick(h))}・${pts(h.id)}ポイント` : '未登録'})</option>`; }).join('');
+  sel.value = S.who;
+  renderLaunch();
+}
+document.getElementById('who').addEventListener('change', (e) => { S.who = e.target.value; S.screen = null; renderWho(); renderPhone(); });
+
+function renderPhone() {
+  clearInterval(clock);
+  const f = me(), h = myH();
+  let x = '';
+  switch (S.screen) {
+    case 'welcome':
+      x = `<h3>はじめての方へ</h3>
+        <p class="muted small">来場のたびに、おうちごとに1日1ポイントたまります。10ポイントで入場が1回無料になります。家族のLINEをつなげると、いっしょにためられます。</p>
+        <div class="panel"><div class="small"><b>登録すること</b><br>① 同意 ② 犬の写真と登録 ③ かんたんなアンケート</div>
+          <label class="check"><input type="checkbox" id="agree"> <span><u>利用規約</u>と<u>プライバシーポリシー</u>に同意します。アンケートの回答は運営の改善に使います。</span></label></div>
+        <button class="btn" id="w-next" disabled>同意して登録をはじめる</button>`;
+      break;
+    case 'dog': {
+      const dr = S.ctx.draft;
+      x = `<h3>犬を登録してください</h3>
+        <p class="muted small">写真があると、受付のスタッフがすぐに分かります。犬種はあとから変えられないので、間違えたら受付にお声がけください。</p>
+        ${dr.dogs.length ? `<div class="panel list">${dr.dogs.map((d) => `<div><span style="display:flex;align-items:center;gap:10px">${face(d, 40)}<b>${esc(d.name)}</b></span><span class="meta">${esc(d.breed)}・${d.size}</span></div>`).join('')}</div>` : ''}
+        <div class="panel">
+          <div class="photo-pick"><span id="d-face">${face({name: '?', breed: '', photo: S.ctx.photo || null}, 64)}</span><label class="up">写真を撮る・選ぶ<input type="file" accept="image/*" id="d-photo"></label></div>
+          <div class="field"><label for="d-name">名前</label><input id="d-name" maxlength="20" placeholder="例:もも"></div>
+          <div class="field"><label for="d-breed">犬種</label><select id="d-breed">${breedOpts('トイプードル')}</select></div>
+          <div class="field" id="d-other-wrap" hidden><label for="d-other">犬種(その他)</label><input id="d-other" placeholder="例:ビーグル"></div>
+          <div class="row2"><div class="field"><label for="d-size">サイズ</label><select id="d-size"><option>小型</option><option>中型</option><option>大型</option></select></div>
+          <div class="field"><label for="d-sex">性別(任意)</label><select id="d-sex"><option value="">選ばない</option><option>オス</option><option>メス</option></select></div></div>
+          <button class="btn sub" id="d-add">この犬を登録</button>
+        </div>
+        <button class="btn" id="d-next" ${dr.dogs.length ? '' : 'disabled'}>次へ(アンケート)</button>`;
+      break;
+    }
+    case 'survey':
+      x = `<h3>かんたんなアンケート</h3><p class="muted small">最初の1回だけです(約30秒)。</p>
+        <div class="panel">
+          <div class="row2"><div class="field"><label for="s-age">年代</label><select id="s-age">${['10代','20代','30代','40代','50代','60代','70代以上'].map((a) => `<option ${a === '30代' ? 'selected' : ''}>${a}</option>`).join('')}</select></div>
+          <div class="field"><label for="s-gen">性別</label><select id="s-gen"><option>女性</option><option>男性</option><option>答えない</option></select></div></div>
+          ${S.ctx.joinOnly ? '' : `<div class="field"><label for="s-area">お住まいの市区町村</label><input id="s-area" value="世田谷区"></div>
+          <div class="field"><label for="s-ref">このドッグランを知ったきっかけ</label><select id="s-ref"><option>Instagram</option><option>Googleマップ</option><option>知人の紹介</option><option>通りがかり</option><option>ほかのドッグランで聞いた</option><option>その他</option></select></div>
+          <div class="field"><label for="s-way">ふだんの来場手段(任意)</label><select id="s-way"><option value="">答えない</option><option>車</option><option>徒歩</option><option>自転車</option><option>電車やバス</option></select></div>`}
+        </div>
+        <button class="btn" id="s-next">${S.ctx.joinOnly ? 'おうちに参加する' : '登録を完了する'}</button>`;
+      break;
+    case 'registered':
+      x = `<h3>${S.ctx.joined ? 'おうちに参加しました' : '登録が完了しました'}</h3>
+        <div class="card"><small>会員ID</small><div class="id">${h.id}</div><div class="name">${esc(nick(h))}</div><div class="dogs">${dogsOf(h.id).map((d) => face(d, 40)).join('')}</div></div>
+        <p class="small muted">${S.ctx.joined ? '家族とポイントがいっしょにたまります。' : '会員IDは変わりません。家族のLINEも、会員証の「家族」からつなげられます。'}</p>
+        <button class="btn" id="r-go">${S.ctx.joined ? '会員証を見る' : 'このままチェックインする'}</button>`;
+      break;
+    case 'checkin': {
+      const prev = visitedToday(h.id);
+      if (prev) {
+        const who = FM(prev.fid);
+        const rest = dogsOf(h.id).filter((d) => !prev.dogs.includes(d.id));
+        x = `<div class="note-box"><h3>今日は${who ? esc(who.line) + 'さん' : '家族の方'}がチェックイン済みです</h3><p class="small">おうちのポイントは1日1ポイントです。今日のポイントはもう付いています。</p></div>
+          <div class="panel"><b class="small">チェックイン済みの犬</b><div style="display:flex;gap:8px;flex-wrap:wrap">${prev.dogs.map((id) => `<span style="display:flex;align-items:center;gap:6px">${face(DG(id), 36)}${esc(DG(id).name)}</span>`).join('')}</div></div>
+          ${rest.length ? `<div class="panel"><b class="small">いっしょに来た犬を追加する(ポイントは増えません)</b><div class="dogpick">${rest.map((d) => `<label>${face(d, 40)}<span style="flex:1"><b>${esc(d.name)}</b><br><span class="meta">${esc(d.breed)}</span></span><input type="checkbox" class="pick" value="${d.id}"></label>`).join('')}</div><button class="btn sub" id="add-dogs">犬を追加する</button></div>` : ''}
+          <button class="btn sub" id="to-card">会員証を見る</button>`;
+        break;
+      }
+      const t = openT(h.id).length;
+      x = `<h3>チェックイン</h3><p class="muted small">今日いっしょに来た犬を選んでください。</p>
+        <div class="dogpick">${dogsOf(h.id).map((d) => `<label>${face(d, 44)}<span style="flex:1"><b>${esc(d.name)}</b><br><span class="meta">${esc(d.breed)}・${d.size}</span></span><input type="checkbox" class="pick" value="${d.id}" checked></label>`).join('')}</div>
+        ${t ? `<div class="panel"><label class="check"><input type="checkbox" id="use-t"> <span><b>無料券を使う</b>(${t}枚あります)<br><span class="muted">今日の入場が無料になります。使った日はポイントが付きません。</span></span></label></div>` : ''}
+        <div class="panel small" id="ci-sum"></div>
+        <button class="btn" id="ci-go">チェックインする</button>`;
+      break;
+    }
+    case 'done': {
+      const r = S.ctx;
+      x = `<div class="done"><div class="small">チェックイン完了・受付でこの画面を見せてください</div>
+          <div class="clock" id="clock">--:--:--</div>
+          <div class="faces">${r.visit.dogs.map((id) => face(DG(id), 48)).join('')}</div>
+          <div class="big">${r.visit.dogs.map((id) => esc(DG(id).name)).join('・')}</div>
+          <div class="chips"><span class="mono">${h.id}</span><span>${r.visit.dogs.length}頭</span>${r.visit.ticket ? '<span>無料券を使用</span>' : '<span>+1ポイント</span>'}</div></div>
+        ${r.made ? `<div class="issued">10ポイントたまったので、無料券を${r.made}枚発行しました</div>` : ''}
+        <p class="small muted">時計と背景の動きで、スクリーンショットではないことを受付で確認できます。</p>
+        <button class="btn sub" id="to-card">会員証を見る</button>`;
+      break;
+    }
+    case 'card': {
+      const p = pts(h.id), t = openT(h.id).length;
+      x = `<div class="card"><div style="display:flex;justify-content:space-between;gap:8px"><small>会員ID <span class="mono">${h.id}</span></small><small>家族 ${famOf(h.id).length}人</small></div>
+          <div class="name">${esc(nick(h))}</div><div class="dogs">${dogsOf(h.id).map((d) => face(d, 44)).join('')}</div>
+          <div class="pts">${Array.from({length: NEED}, (_, i) => `<span class="${i < p ? 'on' : ''}"></span>`).join('')}</div>
+          <small>${p}ポイント・無料券まであと${NEED - p}ポイント</small></div>
+        ${t ? `<div class="ticket"><span>無料券(来場1回分)</span><span>${t}枚</span></div>` : ''}
+        <div class="menu"><button id="m-ci">チェックイン</button><button id="m-fam">家族</button><button id="m-dogs">犬の写真・名前</button><button id="m-hist">来場履歴</button><button id="m-mig" style="grid-column:1/-1">旧カードのポイントを引き継ぐ</button></div>
+        <div class="qr"><canvas id="qr" aria-label="会員証のQRコード(デモ用の図)"></canvas><div class="small"><b>会員証のQRコード</b><br><span class="muted">スタッフがおうちを探すときに使います。デモ用の図のため読み取れません。</span></div></div>`;
+      break;
+    }
+    case 'family': {
+      const fam = famOf(h.id);
+      x = `<h3>家族</h3><p class="small muted">家族のLINEをつなげると、ポイントをいっしょにためられます。</p>
+        <div class="panel list">${fam.map((m) => `<div><span>${esc(m.line)}${m.fid === S.who ? ' <span class="pill g">あなた</span>' : ''}</span><span class="meta">${m.age || ''}</span></div>`).join('')}</div>
+        ${S.ctx.sent ? `<div class="invite-card"><b>招待を送りました</b><p class="small muted">${esc(FM(S.ctx.sent).line)}さんのLINEに届きました。上の「LINEのアカウント」で${esc(FM(S.ctx.sent).line)}さんに切り替えて、「LINEに届いた招待を開く」を押してください。</p></div>` :
+          `<div class="panel"><div class="field"><label for="inv-to">LINEのトークで招待を送る相手(デモでは選びます)</label><select id="inv-to">${S.family.filter((m) => m.hid !== h.id).map((m) => `<option value="${m.fid}">${esc(m.line)}${m.hid ? '(別のおうちに登録済み)' : ''}</option>`).join('')}</select></div>
+          <button class="btn" id="inv-send">LINEで家族を招待する</button><p class="small muted">招待は24時間有効で、1回だけ使えます。家族を招待用のQRで読み取ってもらうこともできます。</p></div>`}
+        <button class="btn sub" id="to-card">会員証にもどる</button>`;
+      break;
+    }
+    case 'invite': {
+      const inv = pendingInvite(); const ih = HH(inv.hid);
+      const mine = myH();
+      x = `<div class="invite-card"><small class="muted">${esc(FM(inv.from).line)}さんからの招待</small><div style="display:flex">${dogsOf(ih.id).map((d) => face(d, 56)).join('')}</div><h3>${esc(nick(ih))}に参加しますか?</h3>
+          <p class="small muted">参加すると、ポイントと犬の情報をいっしょに使えます。</p></div>
+        ${mine ? `<div class="note-box"><b>あなたは「${esc(nick(mine))}」(${mine.id})でポイントをためています</b><p class="small">2つのおうちをまとめるには、管理者が犬の情報を確認します。申請を送ると、管理者がまとめてポイントを合算します。</p></div>
+          <button class="btn" id="inv-req">おうちをまとめる申請を送る</button>` : `<button class="btn" id="inv-join">参加する</button>`}
+        <button class="btn sub" id="inv-no">参加しない</button>`;
+      break;
+    }
+    case 'dogs':
+      x = `<h3>犬の写真・名前</h3><p class="small muted">写真と名前は、いつでも変えられます。犬種は受付で変更します。</p>
+        ${dogsOf(h.id).map((d) => `<div class="panel"><div class="photo-pick">${face(d, 64)}<div style="display:flex;flex-direction:column;gap:6px;min-width:0"><b>${esc(d.name)}</b><span class="meta">${esc(d.breed)}・${d.size}・<span class="mono">${d.id}</span></span><label class="up">写真を変える<input type="file" accept="image/*" data-photo="${d.id}"></label></div></div></div>`).join('')}
+        <button class="btn sub" id="to-card">会員証にもどる</button>`;
+      break;
+    case 'history': {
+      const vs = S.visits.filter((v) => v.hid === h.id).slice().reverse();
+      x = `<h3>来場履歴</h3><div class="panel list">${vs.map((v) => `<div><span>${v.date.slice(5).replace('-', '/')}</span><span style="display:flex;align-items:center;gap:6px">${v.dogs.map((id) => face(DG(id), 26)).join('')}<span class="meta">${esc(FM(v.fid)?.line || '')}</span>${v.cancelled ? '<span class="pill r">取り消し</span>' : ''}</span></div>`).join('') || '<p class="small muted">まだ来場はありません</p>'}</div><button class="btn sub" id="to-card">会員証にもどる</button>`;
+      break;
+    }
+    case 'migrate': {
+      const done = Object.keys(h.migrated); const pend = S.requests.filter((r) => r.hid === h.id && r.type === 'migrate' && r.status === '確認待ち');
+      x = `<h3>旧カードのポイントを引き継ぐ</h3><p class="muted small">LINEのショップカードか紙のスタンプカードの写真を添付してください。管理者が確認して反映します。受付でカードを見せていただいても引き継げます。</p>
+        ${done.length ? `<div class="panel small">引き継ぎ済み:${done.map((s) => `${s} ${h.migrated[s]}ポイント`).join('、')}</div>` : ''}
+        ${pend.length ? `<div class="panel small">確認待ち:${pend.map((r) => `${r.source} ${r.n}ポイント`).join('、')}</div>` : ''}
+        <div class="panel"><div class="field"><label for="g-src">引き継ぐカード</label><select id="g-src"><option>LINEショップカード</option><option>紙のスタンプカード</option></select></div>
+          <div class="field"><label for="g-n">たまっているポイント(スタンプ)の数</label><input id="g-n" type="number" min="1" max="99" value="6" inputmode="numeric"></div>
+          <div class="photo-pick"><label class="up">カードの写真を撮る・選ぶ<input id="g-img" type="file" accept="image/*"></label></div><img id="g-prev" class="photo" alt="添付した写真" hidden>
+          <p class="small muted">デモでは写真がなくても申請できます。</p></div>
+        <button class="btn" id="g-go">申請する</button><button class="btn sub" id="to-card">会員証にもどる</button>`;
+      break;
+    }
+    case 'sent':
+      x = `<div class="panel"><h3>${esc(S.ctx.title)}</h3><p class="small muted">${esc(S.ctx.body)}</p></div><button class="btn sub" id="to-card">会員証にもどる</button>`;
+      break;
+    default:
+      x = `<div class="panel"><h3>LINEのトーク画面</h3><p class="small muted">上のボタンで、受付のQRを読み取るか、リッチメニューから会員証を開いてください。${pendingInvite() ? '招待が届いています。' : ''}</p></div>`;
+  }
+  scr.innerHTML = x; scr.scrollTop = 0; bindPhone();
+}
+
+function bindPhone() {
+  const $ = (id) => document.getElementById(id);
+  const f = me(), h = myH();
+  $('to-card')?.addEventListener('click', () => go('card'));
+  if (S.screen === 'welcome') { $('agree').onchange = (e) => { $('w-next').disabled = !e.target.checked; }; $('w-next').onclick = () => go('dog', {draft: {dogs: []}, photo: null}); }
+  if (S.screen === 'dog') {
+    const sync = () => { const b = $('d-breed').value; $('d-other-wrap').hidden = b !== 'その他'; const m = BREEDS.find((r) => r[0] === b); if (m) $('d-size').value = m[1]; };
+    $('d-breed').onchange = sync; sync();
+    $('d-photo').onchange = async (e) => { const fl = e.target.files[0]; if (!fl) return; try { S.ctx.photo = await resize(fl); $('d-face').innerHTML = face({name: '?', breed: '', photo: S.ctx.photo}, 64); toast('写真を縮小して取り込みました'); } catch { toast('この写真は読み込めませんでした。別の写真を選んでください'); } };
+    $('d-add').onclick = () => { const name = $('d-name').value.trim(); if (!name) { toast('犬の名前を入力してください'); $('d-name').focus(); return; }
+      let breed = $('d-breed').value; if (breed === 'その他') breed = $('d-other').value.trim() || 'その他';
+      S.ctx.draft.dogs.push({name, breed, size: $('d-size').value, photo: S.ctx.photo}); S.ctx.photo = null; toast(`${name}を登録しました`); renderPhone(); };
+    $('d-next').onclick = () => go('survey', {draft: S.ctx.draft});
+  }
+  if (S.screen === 'survey') $('s-next').onclick = () => {
+    f.age = $('s-age').value; f.gender = $('s-gen').value;
+    if (S.ctx.joinOnly) { const inv = S.ctx.inv; inv.used = true; f.hid = inv.hid; renderAll(); go('registered', {joined: true}); return; }
+    const id = 'DR-' + String(S.nextH++).padStart(6, '0');
+    S.households.push({id, nick: '', auto: true, joined: today(), area: $('s-area').value, ref: $('s-ref').value, status: '有効', into: null, migrated: {}});
+    S.ctx.draft.dogs.forEach((d, i) => S.dogs.push({...d, id: `${id}-${i + 1}`, hid: id, active: true, into: null}));
+    f.hid = id; S.sel = id; renderAll(); go('registered');
+  };
+  if (S.screen === 'registered') $('r-go').onclick = () => go(S.ctx.joined ? 'card' : 'checkin');
+  if (S.screen === 'checkin') {
+    if (!$('ci-go')) { if (!$('add-dogs')) return; $('add-dogs').onclick = () => { const v = visitedToday(h.id); const add = [...document.querySelectorAll('.pick:checked')].map((c) => c.value); if (!add.length) { toast('追加する犬を選んでください'); return; } v.dogs.push(...add); toast('犬を追加しました。ポイントは変わりません'); renderAll(v.id); go('card'); }; return; }
+    const sum = () => { const k = document.querySelectorAll('.pick:checked').length; const ut = $('use-t')?.checked; const after = pts(h.id) + (ut ? 0 : 1);
+      $('ci-sum').innerHTML = k ? `<b>${k}頭</b>でチェックイン・${ut ? '<b>無料券を使用</b>(ポイントなし)' : '<b>+1ポイント</b>'}<br><span class="muted">ポイント:${pts(h.id)} → ${after}${after >= NEED ? '(無料券がもらえます)' : ''}</span>` : '<span class="muted">犬を1頭以上選んでください</span>';
+      $('ci-go').disabled = !k; };
+    document.querySelectorAll('.pick').forEach((c) => { c.onchange = sum; }); if ($('use-t')) $('use-t').onchange = sum; sum();
+    $('ci-go').onclick = () => { const ids = [...document.querySelectorAll('.pick:checked')].map((c) => c.value); const r = checkin(h.id, f.fid, ids, $('use-t')?.checked); if (r.already) { go('checkin'); return; } S.tab = 'today'; renderAll(r.visit.id); go('done', r); };
+  }
+  if (S.screen === 'done') { const tick = () => { const d = new Date(), c = $('clock'); if (c) c.textContent = [d.getHours(), d.getMinutes(), d.getSeconds()].map((n) => String(n).padStart(2, '0')).join(':'); }; tick(); clock = setInterval(tick, 1000); }
+  if (S.screen === 'card') { qrDraw($('qr'), h.id); $('m-ci').onclick = () => go('checkin'); $('m-fam').onclick = () => go('family'); $('m-dogs').onclick = () => go('dogs'); $('m-hist').onclick = () => go('history'); $('m-mig').onclick = () => go('migrate'); }
+  if (S.screen === 'family' && $('inv-send')) $('inv-send').onclick = () => { const to = $('inv-to').value; S.invites.push({id: 'I' + (S.invites.length + 1), hid: h.id, from: f.fid, to, used: false, at: now()}); renderWho(); go('family', {sent: to}); };
+  if (S.screen === 'invite') {
+    const inv = pendingInvite();
+    $('inv-no').onclick = () => { inv.used = true; renderWho(); go(myH() ? 'card' : null); };
+    if ($('inv-join')) $('inv-join').onclick = () => go('survey', {joinOnly: true, inv});
+    if ($('inv-req')) $('inv-req').onclick = () => { inv.used = true; S.requests.push({id: 'R' + (S.requests.length + 1), type: 'merge', hid: inv.hid, other: h.id, by: f.fid, status: '確認待ち', at: now()}); S.tab = 'requests'; renderAll(); go('sent', {title: '申請を送りました', body: '管理者が犬の情報を確認して、2つのおうちをまとめます。まとまると、ポイントが合算されます。'}); };
+  }
+  if (S.screen === 'dogs') document.querySelectorAll('[data-photo]').forEach((inp) => { inp.onchange = async (e) => { const fl = e.target.files[0]; if (!fl) return; try { DG(inp.dataset.photo).photo = await resize(fl); toast('写真を変更しました。管理画面にもすぐ反映されます'); renderAll(); renderPhone(); } catch { toast('この写真は読み込めませんでした'); } }; });
+  if (S.screen === 'migrate') {
+    let img = null;
+    $('g-img').onchange = async (e) => { const fl = e.target.files[0]; if (!fl) return; try { img = await resize(fl); $('g-prev').src = img; $('g-prev').hidden = false; } catch { toast('この写真は読み込めませんでした'); } };
+    $('g-go').onclick = () => { const src = $('g-src').value, n = Math.max(1, Math.min(99, Number($('g-n').value) || 0));
+      if (h.migrated[src]) { toast(`${src}はすでに引き継ぎ済みです`); return; }
+      if (S.requests.some((r) => r.hid === h.id && r.type === 'migrate' && r.source === src && r.status === '確認待ち')) { toast('同じカードの申請が確認待ちです'); return; }
+      S.requests.push({id: 'R' + (S.requests.length + 1), type: 'migrate', hid: h.id, source: src, n, img, status: '確認待ち', at: now()}); S.tab = 'requests'; renderAll();
+      go('sent', {title: '申請を受け付けました', body: '管理者が写真を確認すると、会員証のポイントに反映されます。'}); };
+  }
+}
+
+/* ================= console ================= */
+const con = document.getElementById('con');
+const TABS = [['today', '今日の来場', ['staff','admin','builder']], ['houses', 'おうちを探す', ['staff','admin','builder']], ['requests', '確認待ち', ['admin','builder']], ['dash', '分析', ['staff','admin','builder']], ['log', '操作ログ', ['admin','builder']], ['help', '困ったとき', ['staff','admin','builder']]];
+const HOWTO = {
+  today: '今日チェックインしたおうちが、新しい順に並びます。間違いがあれば「取り消す」を押してください。',
+  houses: '犬の名前・おうちの呼び名・会員IDで探せます。写真を押すと、そのおうちの詳細が開きます。',
+  requests: 'お客さんからの申請です。写真や犬の情報を見て、承認するか、まとめる画面に進んでください。',
+  log: '誰がいつ何を変えたかの一覧です。「元に戻す」で、その操作を取り消せます。',
+  dash: '本番では、ここにリピート率や天気・曜日の分析が表示されます。',
+  help: 'よくある質問と、製作者への連絡方法です。'
+};
+
+function renderAll(flash) { renderWho(); renderConsole(flash); }
+
+function renderConsole(flash) {
+  const pend = S.requests.filter((r) => r.status === '確認待ち').length;
+  const tabs = TABS.filter((t) => t[2].includes(S.role));
+  if (!tabs.some((t) => t[0] === S.tab)) S.tab = 'today';
+  document.getElementById('tabs').innerHTML = tabs.map(([k, l]) => `<button role="tab" aria-selected="${S.tab === k}" data-tab="${k}">${l}${k === 'requests' && pend ? `<span class="badge">${pend}</span>` : ''}</button>`).join('');
+  document.querySelectorAll('[data-role]').forEach((b) => b.setAttribute('aria-pressed', b.dataset.role === S.role));
+  document.getElementById('ro').hidden = !ro();
+  const admin = S.role === 'admin', dis = ro() ? 'disabled' : '';
+  let x = `<p class="howto">${HOWTO[S.tab] || ''}</p>`;
+
+  if (S.tab === 'today') {
+    const vs = S.visits.filter((v) => v.date === today()).slice().reverse(), live = vs.filter((v) => !v.cancelled);
+    x += `<div class="kpis"><div class="kpi"><div class="l">今日の来場頭数</div><div class="v">${live.reduce((a, v) => a + (v.hid ? v.dogs.length : v.count), 0)}頭</div></div><div class="kpi"><div class="l">来場組数</div><div class="v">${live.length}組</div></div><div class="kpi"><div class="l">無料券の使用</div><div class="v">${live.filter((v) => v.ticket).length}枚</div></div></div>
+      <div class="visits">${vs.map((v) => { const h = v.hid ? HH(v.hid) : null; return `<div class="visit ${v.cancelled ? 'cancelled' : ''} ${v.id === flash ? 'new' : ''}">
+        <div class="faces">${h ? v.dogs.map((id) => face(DG(id), 44)).join('') : '<span class="pill">非会員</span>'}</div>
+        <div><b>${h ? esc(nick(h)) : `非会員 ${v.count}頭`}</b><br><span class="t">${hm(v.at)}</span> ${h ? `<span class="meta">${v.dogs.map((id) => esc(DG(id).name)).join('・')}・${esc(FM(v.fid)?.line || '')}</span>` : ''} ${v.ticket ? '<span class="pill o">無料券</span>' : ''} ${v.by !== '本人' ? `<span class="pill">${v.by}</span>` : ''}</div>
+        <div>${v.cancelled ? '<span class="pill r">取り消し済み</span>' : `<button class="mini danger" data-cancel="${v.id}" ${dis}>取り消す</button>`}</div></div>`; }).join('')}</div>
+      <form class="inline-form" id="walkin"><div class="field"><label for="wk-n">LINEを使わないお客さんの頭数</label><input id="wk-n" type="number" min="1" max="9" value="1"></div><button class="mini primary" type="submit" ${dis}>非会員として記録</button></form>`;
+  }
+
+  if (S.tab === 'houses') {
+    const q = kana(S.q.trim());
+    const list = S.households.filter((h) => h.status === '有効' || (q && h.id.toLowerCase().includes(q))).filter((h) => !q || kana(nick(h)).includes(q) || h.id.toLowerCase().includes(q) || dogsOf(h.id).some((d) => kana(d.name).includes(q)) || (admin || ro()) && famOf(h.id).some((m) => kana(m.line).includes(q)));
+    x += `<div class="search"><input id="q" placeholder="犬の名前・おうちの呼び名・会員IDで探す" value="${esc(S.q)}" aria-label="おうちを探す"></div>
+      <div class="hgrid">${list.map((h) => h.status === '統合済み' ? `<div class="hcard"><b class="mono">${h.id}</b><span class="small muted">${h.into} にまとめ済み</span><button class="mini" data-open="${h.into}">統合先を開く</button></div>` : `<button class="hcard" data-open="${h.id}" aria-current="${S.sel === h.id}"><span class="faces">${dogsOf(h.id).map((d) => face(d, 52)).join('')}</span><b>${esc(nick(h))}</b><span class="mono small muted">${h.id}</span><span class="pill g">${pts(h.id)}ポイント${openT(h.id).length ? `・券${openT(h.id).length}` : ''}</span></button>`).join('') || '<div class="lock">見つかりませんでした。ひらがな・カタカナどちらでも探せます。</div>'}</div>`;
+    const h = HH(S.sel);
+    if (h && h.status === '有効') x += detailHTML(h, admin, dis);
+  }
+
+  if (S.tab === 'requests') {
+    const rs = S.requests.slice().reverse();
+    x += rs.map((r) => {
+      if (r.type === 'migrate') return `<div class="req">${r.img ? `<img src="${r.img}" alt="${r.source}の写真">` : '<div class="noimg">写真なし</div>'}<div><b>${esc(nick(HH(r.hid)))}</b> <span class="mono small muted">${r.hid}</span> <span class="pill ${r.status === '確認待ち' ? 'o' : r.status === '承認' ? 'g' : 'r'}">${r.status}</span><br><span class="small">旧カードの引き継ぎ・${r.source}・申告 ${r.n}ポイント</span>
+        ${r.status === '確認待ち' ? `<div class="acts"><label class="small" for="ap-${r.id}">反映するポイント</label><input id="ap-${r.id}" type="number" value="${r.n}" min="1" max="99" style="width:64px;padding:4px 6px;border:1px solid var(--line);border-radius:6px;background:var(--surface);color:var(--ink)"><button class="mini primary" data-approve="${r.id}" ${dis}>承認する</button><button class="mini danger" data-reject="${r.id}" ${dis}>却下する</button></div>` : ''}</div></div>`;
+      const a = HH(r.hid), b = HH(r.other);
+      return `<div class="req"><div class="noimg" style="display:flex;gap:2px">${b ? dogsOf(b.id).slice(0, 2).map((d) => face(d, 36)).join('') : ''}</div><div><b>おうちをまとめる申請</b> <span class="pill ${r.status === '確認待ち' ? 'o' : 'g'}">${r.status}</span><br><span class="small">${esc(FM(r.by)?.line || '')}さんが「${esc(nick(a))}」(${a.id})への参加を希望。いまは「${b ? esc(nick(b)) : ''}」(${r.other})でポイントをためています。</span>
+        ${r.status === '確認待ち' ? `<div class="acts"><button class="mini primary" data-tomerge="${r.id}" ${dis}>まとめる画面へ進む</button><button class="mini danger" data-reject="${r.id}" ${dis}>却下する</button></div>` : ''}</div></div>`;
+    }).join('') || '<div class="lock">確認待ちはありません。</div>';
+  }
+
+  if (S.tab === 'dash') {
+    const c = {}; S.visits.filter((v) => !v.cancelled && v.hid).forEach((v) => v.dogs.forEach((id) => { const b = DG(id).breed; c[b] = (c[b] || 0) + 1; }));
+    const rows = Object.entries(c).sort((a, b) => b[1] - a[1]), mx = Math.max(1, ...rows.map((r) => r[1]));
+    const multi = S.households.filter((h) => h.status === '有効' && famOf(h.id).length > 1).length;
+    x += `<div class="dash-link"><span class="small">本番のダッシュボードの試作(サンプル1年分)は別ページで見られます。</span><a href="https://claude.ai/artifact/PFmWuCepGowzHdx1o7HXeC" target="_blank" rel="noopener">分析ダッシュボードを開く</a></div>
+      <div class="kpis"><div class="kpi"><div class="l">有効なおうち</div><div class="v">${S.households.filter((h) => h.status === '有効').length}</div></div><div class="kpi"><div class="l">家族が2人以上のおうち</div><div class="v">${multi}</div></div></div>
+      <div class="sec"><h4>このデモの来場を、登録時の犬種で集計</h4><div class="bars">${rows.map(([b, n]) => `<div><span>${esc(b)}</span><i style="width:${n / mx * 100}%"></i><span style="text-align:right">${n}頭</span></div>`).join('')}</div></div>`;
+  }
+
+  if (S.tab === 'log') {
+    x += S.audit.length ? `<div class="tbl-wrap"><table><thead><tr><th>時刻</th><th>操作した人</th><th>操作</th><th>内容</th><th></th></tr></thead><tbody>${S.audit.map((a) => `<tr><td>${hm(a.at)}</td><td>${a.actor}</td><td>${a.action}</td><td>${esc(a.detail)}</td><td>${a.undo ? (a.undone ? '<span class="pill">元に戻し済み</span>' : `<button class="mini" data-undo="${a.id}" ${dis}>元に戻す</button>`) : ''}</td></tr>`).join('')}</tbody></table></div>` : '<div class="lock">ポイントの手動登録、名前・写真の変更、統合などをすると、ここに記録されます。</div>';
+  }
+
+  if (S.tab === 'help') {
+    x += `<div class="sec"><h4>よくある質問</h4>
+      <div class="panel list"><div><span>家族のポイントがまとまっていない</span><span class="meta">確認待ち → まとめる申請、または おうちを探す → 「ほかのおうちとまとめる」</span></div>
+      <div><span>犬種を間違えて登録した</span><span class="meta">おうちを探す → 犬の「犬種を直す」</span></div>
+      <div><span>ポイントを付け忘れた</span><span class="meta">おうちを探す → ポイントの手動登録</span></div>
+      <div><span>間違えて操作した</span><span class="meta">操作ログ → 「元に戻す」</span></div></div></div>
+      <div class="sec"><h4>システムの状態</h4><div class="panel list"><div><span>天気の取得</span><span class="pill g">正常(今朝 5:10)</span></div><div><span>バックアップ</span><span class="pill g">正常(今朝 3:10)</span></div></div></div>
+      <div class="sec"><h4>製作者への連絡</h4><p class="small muted">状態が赤になったときや、画面が動かないときだけ連絡してください。本番では連絡先をここに表示します。</p></div>`;
+  }
+  con.innerHTML = x; bindConsole();
+}
+
+function detailHTML(h, admin, dis) {
+  const fam = famOf(h.id), led = S.ledger.filter((l) => l.hid === h.id).slice().reverse().slice(0, 8);
+  const visitsN = new Set(S.visits.filter((v) => v.hid === h.id && !v.cancelled).map((v) => v.date)).size;
+  const can = admin && !ro();
+  if (S.merge && S.merge.a === h.id) return mergeHTML(h);
+  return `<div class="detail">
+    <div class="dhead"><h3>${esc(nick(h))}</h3>${admin || ro() ? `<button class="mini" data-rename="${h.id}" ${dis}>呼び名を変える</button>` : ''}</div>
+    <div class="facts"><div><span>会員ID</span><b class="mono">${h.id}</b></div><div><span>ポイント</span>${pts(h.id)}</div><div><span>無料券</span>${openT(h.id).length}枚</div><div><span>来場回数</span>${visitsN}回</div><div><span>登録日</span>${h.joined}</div></div>
+    <div class="sec"><h4>犬</h4>${dogsOf(h.id).map((d) => `<div class="dogrow">${face(d, 56)}<div><b>${esc(d.name)}</b><br><span class="meta">${esc(d.breed)}・${d.size}・<span class="mono">${d.id}</span></span></div>
+      ${admin || ro() ? `<div class="acts"><label class="mini" style="cursor:pointer">写真を変える<input type="file" accept="image/*" data-aphoto="${d.id}" style="position:absolute;opacity:0;width:1px;height:1px" ${dis}></label><button class="mini" data-dname="${d.id}" ${dis}>名前を変える</button><button class="mini" data-breed="${d.id}" ${dis}>犬種を直す</button></div>` : ''}</div>`).join('')}</div>
+    ${admin || ro() ? `
+    <div class="sec"><h4>家族(LINE)</h4><div class="fam">${fam.map((m) => `<span>${esc(m.line)} <span class="meta">${m.age} ${m.gender}</span>${fam.length > 1 ? `<button data-unfam="${m.fid}" ${dis}>外す</button>` : ''}</span>`).join('')}</div>
+      <div><button class="mini" data-famqr="${h.id}" ${dis}>受付で家族を追加する(招待QRを表示)</button></div><div id="famqr"></div></div>
+    <div class="sec"><h4>ポイントの手動登録</h4><form class="inline-form" id="adj"><div class="field"><label for="aj-n">増やす・減らす</label><select id="aj-n"><option value="1">1ポイント増やす</option><option value="2">2ポイント増やす</option><option value="-1">1ポイント減らす</option><option value="t1">無料券を1枚増やす</option></select></div><div class="field"><label for="aj-r">理由</label><select id="aj-r">${ADJ_REASONS.map((r) => `<option>${r}</option>`).join('')}</select></div><button class="mini primary" type="submit" ${dis}>登録する</button></form></div>
+    <div class="sec"><h4>旧カードの移行(受付で直接入力)</h4><form class="inline-form" id="mig"><div class="field"><label for="mg-src">移行元</label><select id="mg-src"><option>LINEショップカード</option><option>紙のスタンプカード</option></select></div><div class="field"><label for="mg-n">ポイント数</label><input id="mg-n" type="number" min="1" max="99" value="5"></div><button class="mini primary" type="submit" ${dis}>移行する</button></form><p class="note">移行元ごとに1回まで。済み:${Object.keys(h.migrated).map((s) => `${s}(${h.migrated[s]}ポイント)`).join('、') || 'なし'}</p></div>
+    <div class="sec"><h4>ほかのおうちとまとめる</h4><p class="note">パパとママが別々にポイントをためていた場合などに使います。ポイントは合算され、同じ犬は1頭にまとまります。30日以内なら操作ログから元に戻せます。</p><div><button class="mini primary" data-startmerge="${h.id}" ${dis}>まとめる相手を選ぶ</button></div></div>
+    <div class="sec"><h4>アンケートの回答</h4><div class="facts"><div><span>地域</span>${esc(h.area)}</div><div><span>知ったきっかけ</span>${esc(h.ref)}</div>${fam.map((m) => `<div><span>${esc(m.line)}</span>${m.age} ${m.gender}</div>`).join('')}</div></div>
+    <div class="sec"><h4>ポイント台帳(新しい順)</h4><div class="tbl-wrap"><table><thead><tr><th>日付</th><th>内容</th><th>増減</th></tr></thead><tbody>${led.map((l) => `<tr><td>${l.at.slice(5, 10).replace('-', '/')}</td><td>${esc(l.kind)}${l.reason ? `(${esc(l.reason)})` : ''}</td><td>${l.delta > 0 ? '+' : ''}${l.delta}</td></tr>`).join('')}</tbody></table></div></div>`
+    : `<div class="lock">家族のLINE表示名、アンケートの回答、ポイントの変更は管理者だけが使えます。</div>`}
+  </div>`;
+}
+
+function mergeHTML(a) {
+  const M = S.merge;
+  const others = S.households.filter((h) => h.status === '有効' && h.id !== a.id);
+  let x = `<div class="detail"><div class="dhead"><h3>「${esc(nick(a))}」とまとめる</h3><button class="mini" id="mg-cancel">やめる</button></div><div class="merge">
+    <div class="field"><label for="mg-b">① まとめる相手のおうち</label><select id="mg-b"><option value="">選んでください</option>${others.map((h) => `<option value="${h.id}" ${M.b === h.id ? 'selected' : ''}>${esc(nick(h))}(${h.id}・${pts(h.id)}ポイント)</option>`).join('')}</select></div>`;
+  if (M.b) {
+    const b = HH(M.b);
+    x += `<div class="sec"><b class="small">② 同じ犬どうしを組み合わせてください(写真で確認)</b>${dogsOf(b.id).map((d) => `<div class="pair">${face(d, 48)}<div><b>${esc(d.name)}</b> <span class="meta">${esc(d.breed)}</span><br><label class="small muted" for="pr-${d.id}">この犬は</label> <select id="pr-${d.id}" data-pair="${d.id}"><option value="">別の犬(そのまま残す)</option>${dogsOf(a.id).map((ad) => `<option value="${ad.id}" ${M.pairs[d.id] === ad.id ? 'selected' : ''}>「${esc(nick(a))}」の${esc(ad.name)}と同じ犬</option>`).join('')}</select></div></div>`).join('')}</div>`;
+    const p = mergePreview(a.id, b.id, M.pairs);
+    x += `<div class="preview"><b>③ まとめた後</b>
+      <div class="facts"><div><span>残す会員ID</span><b class="mono">${a.id}</b></div><div><span>ポイント</span>${pts(a.id)} + ${pts(b.id)} = ${p.total}</div><div><span>無料券</span>${p.tickets}枚${p.newT ? ` + 新しく${p.newT}枚` : ''}</div><div><span>残るポイント</span>${p.left}</div></div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">${p.dogs.map((d) => `<span style="display:flex;align-items:center;gap:6px">${face(d, 36)}${esc(d.name)}</span>`).join('')}</div>
+      <span class="small muted">家族:${p.family.map((m) => esc(m.line)).join('、')}</span>
+      <button class="mini primary" id="mg-go" style="align-self:flex-start">この内容でまとめる</button></div>`;
+  }
+  return x + '</div></div>';
+}
+
+function bindConsole() {
+  const $ = (id) => document.getElementById(id);
+  document.querySelectorAll('[data-tab]').forEach((b) => { b.onclick = () => { S.tab = b.dataset.tab; S.merge = null; renderConsole(); }; });
+  con.querySelectorAll('[data-cancel]').forEach((b) => { b.onclick = () => { if (b.dataset.armed) { cancelVisit(b.dataset.cancel); toast('取り消しました。ポイントと無料券を元に戻しました'); renderAll(); if (S.screen) renderPhone(); return; } b.dataset.armed = '1'; b.textContent = 'もう一度押すと取り消します'; }; });
+  $('walkin')?.addEventListener('submit', (e) => { e.preventDefault(); const n = Math.max(1, Number($('wk-n').value) || 1); const v = {id: 'V' + (S.visits.length + 1), hid: null, fid: null, dogs: [], count: n, date: today(), at: now(), ticket: false, by: '非会員入力', cancelled: false}; S.visits.push(v); toast(`非会員 ${n}頭を記録しました`); renderConsole(v.id); });
+  const q = $('q'); if (q) { q.oninput = () => { S.q = q.value; const pos = q.selectionStart; renderConsole(); const n = $('q'); n.focus(); n.setSelectionRange(pos, pos); }; }
+  con.querySelectorAll('[data-open]').forEach((b) => { b.onclick = () => { S.sel = b.dataset.open; S.merge = null; S.q = ''; S.tab = 'houses'; renderConsole(); }; });
+  con.querySelectorAll('[data-rename]').forEach((b) => { b.onclick = () => { const h = HH(b.dataset.rename); const wrap = b.parentElement; wrap.innerHTML = `<input id="rn" value="${esc(nick(h))}" style="font:inherit;padding:6px 8px;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--ink);flex:1;min-width:0"><button class="mini primary" id="rn-ok">保存</button>`; $('rn').focus();
+    $('rn-ok').onclick = () => { const v = $('rn').value.trim(); if (!v) return; const old = {nick: h.nick, auto: h.auto}; const oldLabel = nick(h); h.nick = v; h.auto = false; log('呼び名の変更', h.id, `${oldLabel} → ${v}`, () => { h.nick = old.nick; h.auto = old.auto; return '呼び名を元に戻しました'; }); toast('呼び名を変更しました'); renderAll(); if (S.screen) renderPhone(); }; }; });
+  con.querySelectorAll('[data-aphoto]').forEach((inp) => { inp.onchange = async (e) => { const fl = e.target.files[0]; if (!fl) return; const d = DG(inp.dataset.aphoto); const old = d.photo; try { d.photo = await resize(fl); log('写真の変更', d.id, `${d.name}の写真を差し替え`, () => { d.photo = old; return '写真を元に戻しました'; }); toast('写真を変更しました。お客さんの会員証にも反映されます'); renderAll(); if (S.screen) renderPhone(); } catch { toast('この写真は読み込めませんでした'); } }; });
+  con.querySelectorAll('[data-dname]').forEach((b) => { b.onclick = () => { const d = DG(b.dataset.dname); const wrap = b.parentElement; wrap.innerHTML = `<input id="dn" value="${esc(d.name)}" maxlength="20" style="font:inherit;padding:6px 8px;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--ink);width:8rem"><button class="mini primary" id="dn-ok">保存</button>`; $('dn').focus();
+    $('dn-ok').onclick = () => { const v = $('dn').value.trim(); if (!v) return; const old = d.name; d.name = v; log('犬の名前の変更', d.id, `${old} → ${v}`, () => { d.name = old; return '名前を元に戻しました'; }); toast('名前を変更しました'); renderAll(); if (S.screen) renderPhone(); }; }; });
+  con.querySelectorAll('[data-breed]').forEach((b) => { b.onclick = () => { const d = DG(b.dataset.breed); const wrap = b.parentElement; wrap.innerHTML = `<select id="br" style="font:inherit;padding:6px;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--ink)">${breedOpts(d.breed)}</select><button class="mini primary" id="br-ok">保存</button>`;
+    $('br-ok').onclick = () => { const v = $('br').value; if (v === d.breed) { renderConsole(); return; } const old = d.breed; d.breed = v; log('犬種の修正', d.id, `${d.name}:${old} → ${v}`, () => { d.breed = old; return '犬種を元に戻しました'; }); toast('犬種を修正し、履歴に残しました'); renderAll(); if (S.screen) renderPhone(); }; }; });
+  con.querySelectorAll('[data-unfam]').forEach((b) => { b.onclick = () => { if (!b.dataset.armed) { b.dataset.armed = 1; b.textContent = '本当に外す'; return; } const m = FM(b.dataset.unfam); const old = m.hid; m.hid = null; log('家族を外す', old, `${m.line}をおうちから外した`, () => { m.hid = old; return '家族を元に戻しました'; }); toast(`${m.line}さんを外しました。ポイントはおうちに残ります`); renderAll(); if (S.who === m.fid) { S.screen = null; renderPhone(); } }; });
+  con.querySelectorAll('[data-famqr]').forEach((b) => { b.onclick = () => { const h = HH(b.dataset.famqr); const box = $('famqr'); const cands = S.family.filter((m) => m.hid !== h.id);
+    box.innerHTML = `<div class="qrbox"><canvas id="fq"></canvas><div class="small" style="flex:1;min-width:12rem"><b>家族にこのQRをLINEで読み取ってもらいます</b><br><span class="muted">10分間だけ有効です。</span><div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;align-items:center"><label for="fq-who" class="muted">デモ:読み取る人</label><select id="fq-who" style="font:inherit;padding:4px 6px;border-radius:6px;border:1px solid var(--line);background:var(--surface);color:var(--ink)">${cands.map((m) => `<option value="${m.fid}">${esc(m.line)}</option>`).join('')}</select><button class="mini primary" id="fq-go">読み取ったことにする</button></div></div></div>`;
+    qrDraw($('fq'), h.id + 'family');
+    $('fq-go').onclick = () => { const fid = $('fq-who').value; S.invites.push({id: 'I' + (S.invites.length + 1), hid: h.id, from: famOf(h.id)[0].fid, to: fid, used: false, at: now()}); S.who = fid; renderWho(); go('invite'); toast('左のスマホに、招待の画面が開きました'); }; }; });
+  $('adj')?.addEventListener('submit', (e) => { e.preventDefault(); const v = $('aj-n').value, r = $('aj-r').value, hid = S.sel; const origin = 'J' + Date.now();
+    if (v === 't1') { S.tickets.push({id: 'T' + (S.tickets.length + 1), hid, status: '未使用', origin, usedVisit: null, at: now()}); log('無料券の手動登録', hid, `無料券を1枚増やした(${r})`, () => { const t = S.tickets.find((x) => x.origin === origin && x.status === '未使用'); if (!t) return '無料券がすでに使われているため、元に戻せません'; t.status = '取り消し'; return '無料券を元に戻しました'; }); }
+    else { const n = Number(v); S.ledger.push({hid, delta: n, kind: '手動の登録', reason: r, visit: null, at: now(), origin}); issue(hid, origin); log('ポイントの手動登録', hid, `${n > 0 ? '+' : ''}${n}ポイント(${r})`, () => { unissue(hid, origin); S.ledger.push({hid, delta: -n, kind: '手動の登録を元に戻す', visit: null, at: now()}); return 'ポイントを元に戻しました'; }); }
+    toast('登録しました。操作ログから元に戻せます'); renderAll(); if (S.screen) renderPhone(); });
+  $('mig')?.addEventListener('submit', (e) => { e.preventDefault(); const src = $('mg-src').value, n = Math.max(1, Number($('mg-n').value) || 0); if (!migrate(S.sel, src, n, '受付で直接入力')) { toast(`${src}は、このおうちではすでに移行済みです`); return; } toast(`${src}から${n}ポイントを移行しました`); renderAll(); if (S.screen) renderPhone(); });
+  con.querySelectorAll('[data-startmerge]').forEach((b) => { b.onclick = () => { S.merge = {a: b.dataset.startmerge, b: '', pairs: {}}; renderConsole(); }; });
+  $('mg-cancel')?.addEventListener('click', () => { S.merge = null; renderConsole(); });
+  $('mg-b')?.addEventListener('change', (e) => { S.merge.b = e.target.value; S.merge.pairs = {}; const a = S.merge.a; if (S.merge.b) dogsOf(S.merge.b).forEach((d) => { const same = dogsOf(a).find((x) => x.name === d.name && x.breed === d.breed); if (same) S.merge.pairs[d.id] = same.id; }); renderConsole(); });
+  con.querySelectorAll('[data-pair]').forEach((s) => { s.onchange = () => { S.merge.pairs[s.dataset.pair] = s.value; renderConsole(); }; });
+  $('mg-go')?.addEventListener('click', () => { const {a, b, pairs} = S.merge; const made = doMerge(a, b, pairs); S.requests.filter((r) => r.type === 'merge' && r.status === '確認待ち' && [r.hid, r.other].includes(a) && [r.hid, r.other].includes(b)).forEach((r) => { r.status = '完了'; }); S.merge = null; S.sel = a; toast(`まとめました。${made ? `無料券を${made}枚発行しました。` : ''}操作ログから元に戻せます`); renderAll(); if (S.screen) renderPhone(); });
+  con.querySelectorAll('[data-approve]').forEach((b) => { b.onclick = () => { const r = S.requests.find((x) => x.id === b.dataset.approve); const n = Math.max(1, Number($('ap-' + r.id).value) || r.n); if (!migrate(r.hid, r.source, n, 'お客さんの申請を承認')) { toast('このおうちはすでに移行済みです'); r.status = '却下'; renderConsole(); return; } r.status = '承認'; toast(`${n}ポイントを反映しました`); renderAll(); if (S.screen) renderPhone(); }; });
+  con.querySelectorAll('[data-reject]').forEach((b) => { b.onclick = () => { const r = S.requests.find((x) => x.id === b.dataset.reject); r.status = '却下'; log('申請の却下', r.hid, r.type === 'migrate' ? r.source : 'おうちをまとめる申請'); toast('申請を却下しました'); renderConsole(); }; });
+  con.querySelectorAll('[data-tomerge]').forEach((b) => { b.onclick = () => { const r = S.requests.find((x) => x.id === b.dataset.tomerge); S.tab = 'houses'; S.sel = r.hid; S.merge = {a: r.hid, b: r.other, pairs: {}}; dogsOf(r.other).forEach((d) => { const same = dogsOf(r.hid).find((x) => x.name === d.name && x.breed === d.breed); if (same) S.merge.pairs[d.id] = same.id; }); renderConsole(); }; });
+  con.querySelectorAll('[data-undo]').forEach((b) => { b.onclick = () => { const a = S.audit.find((x) => x.id === b.dataset.undo); const msg = a.undo(); a.undone = true; log('元に戻す', a.target, `「${a.action}」を元に戻した`); toast(msg); renderAll(); if (S.screen) renderPhone(); }; });
+}
+
+document.querySelectorAll('[data-role]').forEach((b) => { b.onclick = () => { S.role = b.dataset.role; S.merge = null; renderConsole(); toast(`${actor()}として表示しています`); }; });
+
+/* ---------- scenario ---------- */
+const hint = document.getElementById('step-hint');
+const HINTS = {
+  1: '「はじめてさん」のLINEで受付のQRを読み取った場面です。同意 → 犬の写真と登録(「写真を撮る・選ぶ」で手元の画像を使えます) → アンケートで会員IDが発行されます。',
+  2: '「こむぎママ」(9ポイント)のチェックイン画面です。チェックインすると10ポイントになり、無料券が自動で発行されます。右の一覧には犬の写真つきで入ります。',
+  3: 'こむぎママの「家族」画面です。「こむぎパパ」を選んで招待を送り、LINEのアカウントを「こむぎパパ」に切り替えて「LINEに届いた招待を開く」を押してください。',
+  4: '「こむぎパパ」のLINEでチェックインします。手順2でママがチェックイン済みなら「今日はこむぎママさんがチェックイン済み」と出て、ポイントは増えません。先に手順2・3を行ってください。',
+  5: '「taka_papa」(アル・7ポイント)と「nico.mama」(アルとニコ・5ポイント)は、同じ家族が別々にためていたおうちです。右の画面で相手を選び、同じ犬(アル)を組み合わせてまとめてください。合計12ポイントで無料券が1枚出て、2ポイント残ります。',
+  6: '管理者がおうちの詳細で、呼び名・犬の名前・写真・犬種・ポイントを変更できます。変更したら「操作ログ」タブで「元に戻す」も試してください。',
+  7: '「nico.mama」のLINEで、紙のスタンプカードの写真を添付して引き継ぎを申請します。申請後、右の「確認待ち」で写真を見て承認します。',
+  8: '受付スタッフに切り替えました。LINEの表示名・アンケート・ポイントの変更が見えなくなります。「製作者」に切り替えると、すべて見えますが変更はできません。'
+};
+document.querySelectorAll('[data-step]').forEach((b) => { b.onclick = () => {
+  const s = Number(b.dataset.step); hint.textContent = HINTS[s]; S.merge = null;
+  if (s === 1) { S.who = 'F5'; renderWho(); go(myH() ? 'card' : 'welcome'); }
+  if (s === 2) { S.who = 'F1'; S.role = 'admin'; S.tab = 'today'; renderAll(); go('checkin'); }
+  if (s === 3) { S.who = 'F1'; renderWho(); go('family'); setTimeout(() => { const sel = document.getElementById('inv-to'); if (sel) sel.value = 'F4'; }, 0); }
+  if (s === 4) { S.who = 'F4'; renderWho(); if (myH()) go('checkin'); else if (pendingInvite()) go('invite'); else { S.screen = null; renderPhone(); toast('こむぎパパはまだ家族になっていません。手順3を先に行ってください'); } }
+  if (s === 5) { S.role = 'admin'; S.tab = 'houses'; S.sel = 'DR-000102'; S.merge = HH('DR-000103').status === '有効' && HH('DR-000102').status === '有効' ? {a: 'DR-000102', b: '', pairs: {}} : null; S.who = 'F2'; renderAll(); go('card'); }
+  if (s === 6) { S.role = 'admin'; S.tab = 'houses'; S.sel = 'DR-000101'; renderAll(); }
+  if (s === 7) { S.who = 'F3'; renderWho(); go('migrate'); setTimeout(() => { const sel = document.getElementById('g-src'); if (sel) sel.value = '紙のスタンプカード'; }, 0); S.role = 'admin'; renderConsole(); }
+  if (s === 8) { S.role = 'staff'; S.tab = 'houses'; renderConsole(); }
+  document.querySelector('.stage').scrollIntoView({behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start'});
+}; });
+document.getElementById('reset').onclick = () => { seed(); hint.textContent = '最初の状態に戻しました。手順のボタンから始めてください。'; renderAll(); renderPhone(); };
+
+seed(); renderAll(); renderPhone();
+})();
+</script>
