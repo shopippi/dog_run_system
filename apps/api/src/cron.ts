@@ -52,14 +52,21 @@ export function runDailyStatsJob(env: Bindings, now: Date) {
   });
 }
 
+/** インターネットにつながらない環境(デモ)で、外に取りに行く処理を飛ばしたときの結果 */
+export const OFFLINE_SKIP_MESSAGE = 'スキップしました(インターネットにつながらない環境のため)。';
+const isOffline = (env: Bindings) => env.OFFLINE === '1';
+
 /** B-02 祝日の取り込み(毎年2月1日と、管理画面の手動の取り込みから呼ぶ) */
 export function runHolidaysJob(env: Bindings, now: Date) {
-  return runJob(env.DB, 'holidays', now, () => importHolidays(env.DB, now));
+  return runJob(env.DB, 'holidays', now, async () =>
+    isOffline(env) ? { message: OFFLINE_SKIP_MESSAGE } : importHolidays(env.DB, now),
+  );
 }
 
 /** B-01 前日の天気の取得(毎朝 5:10 と、管理画面の「今すぐ実行」から呼ぶ) */
 export function runWeatherJob(env: Bindings, now: Date, source?: WeatherSource) {
   return runJob(env.DB, 'weather', now, async () => {
+    if (isOffline(env) && !source) return { message: OFFLINE_SKIP_MESSAGE };
     const settings = await loadSettings(env.DB);
     return fetchWeather(env.DB, now, settings.weather_station, source);
   });

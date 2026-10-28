@@ -1,4 +1,5 @@
 import { nameInitial, placeholderColor } from '@dr/shared';
+import { usePhotoSrc } from '../hooks/usePhotoSrc';
 
 /**
  * 犬の写真。写真がなければ犬種の色と名前の頭文字の絵(6.2)。写真はログインのクッキーで読む。
@@ -18,8 +19,10 @@ export function DogFace({
   shape?: 'circle' | 'square';
 }) {
   const cls = shape === 'square' ? 'av sq' : 'av';
-  if (url) {
-    return <img className={cls} src={url} width={size} height={size} alt={name} style={{ width: size, height: size }} />;
+  // デモでは写真を fetch で読んでから出す(読み込み中は頭文字の絵)
+  const src = usePhotoSrc(url);
+  if (src) {
+    return <img className={cls} src={src} width={size} height={size} alt={name} style={{ width: size, height: size }} />;
   }
   return (
     <svg className={`${cls} av-ph`} width={size} height={size} viewBox="0 0 100 100" role="img" aria-label={`${name}(写真なし)`}>

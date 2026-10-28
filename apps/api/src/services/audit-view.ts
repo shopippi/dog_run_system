@@ -1,4 +1,4 @@
-import { AUDIT_PAGE_SIZE, auditActionLabel, type AuditEntry, type AuditQuery, type StaffRole } from '@dr/shared';
+import { AUDIT_PAGE_SIZE, auditActionLabel, mergeUndoDeadline, type AuditEntry, type AuditQuery, type StaffRole } from '@dr/shared';
 import { canUndo, type AuditRow } from './undo';
 
 /**
@@ -59,6 +59,14 @@ const TYPE_LABELS: Record<string, string> = {
   closure: '臨時休業日',
   breed: '犬種の選択肢',
   survey_question: 'アンケートの質問',
+  calendar: '臨時休業日',
+  export: 'CSV出力',
+  system: '自動処理',
+  audit: '操作ログ',
+  household: 'おうち',
+  dog: 'ワンちゃん',
+  visit: '来場',
+  family_member: '家族',
 };
 
 const keyOf = (type: string, id: string | null) => `${type}:${id ?? ''}`;
@@ -142,7 +150,11 @@ export async function resolveTargets(db: D1Database, targets: { type: string; id
 
   for (const t of targets) {
     const k = keyOf(t.type, t.id);
-    if (!out.has(k)) out.set(k, { label: TYPE_LABELS[t.type] ?? '—', code: null, householdId: null });
+    if (out.has(k)) continue;
+    // 臨時休業日は日付で分かるようにする(対象の ID が日付)
+    const label =
+      t.type === 'calendar' && t.id && /^\d{4}-\d{2}-\d{2}$/.test(t.id) ? `${md(t.id)}(臨時休業日)` : (TYPE_LABELS[t.type] ?? '—');
+    out.set(k, { label, code: null, householdId: null });
   }
   return out;
 }
@@ -153,7 +165,17 @@ function actorNameOf(r: { actor_type: string; actor_name: string | null }) {
   return r.actor_name ?? '(停止したスタッフ)';
 }
 
-export async function listAudit(db: D1Database, q: AuditQuery, role: StaffRole) {
+/**
+ * 「元に戻す」を出してよいか。まだ戻しておらず、戻し方が登録されている操作だけ。
+ * 統合は 30日以内のときだけ(5.3。30日を過ぎたら製作者に依頼する)
+ */
+export function auditCanUndo(r: { action: string; created_at: string; undone_at: string | null }, role: StaffRole, now: Date): boolean {
+  if (role !== 'admin' || r.undone_at || !canUndo(r.action)) return false;
+  if (r.action === 'household.merge') return now.getTime() <= mergeUndoDeadline(r.created_at).getTime();
+  return true;
+}
+
+export async function listAudit(db: D1Database, q: AuditQuery, role: StaffRole, now: Date) {
   const where: string[] = [];
   const args: unknown[] = [];
   if (q.from) {
@@ -236,7 +258,7 @@ export async function listAudit(db: D1Database, q: AuditQuery, role: StaffRole) 
       target: targets.get(keyOf(t.type, t.id)) ?? { label: '—', code: null, householdId: null },
       detail,
       reason: r.reason,
-      canUndo: role === 'admin' && !r.undone_at && canUndo(r.action),
+      canUndo: auditCanUndo(r, role, now),
       undone: r.undone_at ? { at: r.undone_at, byName: r.undone_by_name ?? '' } : null,
     };
   });

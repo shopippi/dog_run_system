@@ -8,6 +8,7 @@ import {
   type SystemJobRun,
   type SystemStatusResponse,
 } from '@dr/shared';
+import { splitJobMessage } from './jobs';
 
 // A-17・D-02 システムの状態。system_jobs の記録から、処理ごとに緑・黄・赤を決める。
 
@@ -37,8 +38,10 @@ const toRun = (r: Row): SystemJobRun => ({
   startedAt: r.started_at,
   finishedAt: r.finished_at,
   status: r.status,
-  message: r.message,
+  // 画面に出すのは日本語の文だけ(元の例外の文は detail。製作者の詳細のときだけ返す)
+  message: splitJobMessage(r.message).message,
 });
+const toRunWithDetail = (r: Row): SystemJobRun => ({ ...toRun(r), detail: splitJobMessage(r.message).detail });
 
 /**
  * 1つの処理の色を決める。
@@ -96,7 +99,7 @@ const TABLE_LABELS: Record<string, string> = {
   staff_sessions: 'ログイン状態',
   audit_log: '操作ログ',
   system_jobs: '自動処理の記録',
-  d1_migrations: 'データベースの版',
+  d1_migrations: '記録の形の版',
 };
 
 /** 写真1枚の大きさの見込み(6.2) */
@@ -158,8 +161,8 @@ export async function systemStatus(
     const photoCount = (counts[tables.length]!.results[0] as { n: number }).n;
     const sizeAfter = (counts[0]?.meta as { size_after?: number } | undefined)?.size_after;
     detail = {
-      recentFailures: (counts[tables.length + 1]!.results as Row[]).map(toRun),
-      history: (counts[tables.length + 2]!.results as Row[]).map(toRun),
+      recentFailures: (counts[tables.length + 1]!.results as Row[]).map(toRunWithDetail),
+      history: (counts[tables.length + 2]!.results as Row[]).map(toRunWithDetail),
       tables: tables.map((t, i) => ({
         name: t.name,
         label: TABLE_LABELS[t.name] ?? t.name,

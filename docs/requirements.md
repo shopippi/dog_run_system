@@ -387,7 +387,7 @@ flowchart TD
 
 ## 11. データ設計
 
-データベースはCloudflare D1(SQLite互換)で、テーブルは22個です(11.5 の staff\_sessions を含む)。犬の写真などの画像はCloudflare R2に保存し、データベースには保存先のキーだけを持ちます。日時はすべて日本時間で扱います。
+データベースはCloudflare D1(SQLite互換)で、テーブルは23個です(11.5 の staff\_sessions と system\_jobs を含む)。犬の写真などの画像はCloudflare R2に保存し、データベースには保存先のキーだけを持ちます。日時はすべて日本時間で扱います。
 
 ### 11.1 おうち・家族・犬
 
@@ -406,64 +406,68 @@ flowchart TD
 | --- | --- | --- |
 | visits | 来場(1回のチェックインで1行) | 来場ID、会員ID(非会員は空)、チェックインした家族ID、来場日、日時、頭数、無料券を使ったか、登録方法(本人/代理/非会員入力)、取り消し日時・理由。「会員ID+来場日」を一意にする(非会員と取り消し済みを除く) |
 | visit\_dogs | 来場した犬 | 来場ID、犬ID、来場日 |
-| point\_ledger | ポイント台帳 | 会員ID、増減、種類(来場/無料券の発行/取り消し/移行/手動/統合/失効)、関係する来場ID、理由、操作した人、日時、有効期限 |
-| tickets | 無料券 | 券ID、会員ID、発行日時、有効期限、使った来場ID、状態(未使用/使用済/失効) |
+| point\_ledger | ポイント台帳 | 会員ID、増減、種類(来場/無料券の発行/取り消し/移行/手動/統合/失効)、関係する来場ID・無料券・統合、移行元(LINEのショップカード/紙のスタンプカード)、理由、操作した人、日時、有効期限、打ち消した元の行(元に戻したとき)、同じ操作の印(手動登録を元に戻すため) |
+| tickets | 無料券 | 券ID、会員ID、発行日時、有効期限、発行のもと(ポイント/手動/統合/移行)、発行した来場ID、使った来場ID・日時、状態(未使用/使用済/失効/取り消しで回収)、メモ、同じ操作の印(手動登録を元に戻すため) |
 | merges | おうちの統合 | 統合ID、残した会員ID、まとめた会員ID、犬の組み合わせ、統合前の状態の記録(元に戻すため)、実行した人、日時、元に戻した日時 |
-| requests | 確認待ち | 種類(旧カードの移行/おうちをまとめる)、会員ID、内容、添付画像のキー、状態(確認待ち/承認/却下)、処理した人、日時 |
+| requests | 確認待ち | 種類(旧カードの移行/おうちをまとめる)、会員ID、まとめる相手の会員ID、申請した家族、内容、添付画像のキー、添付画像を消した日時、状態(確認待ち/承認/却下)、処理した人、日時、処理のメモ |
 
 ### 11.3 アンケート
 
 | テーブル | 役割 | 主な項目 |
 | --- | --- | --- |
-| survey\_questions | 質問 | 質問ID、聞く相手(家族/おうち)、形式(選択/自由記述)、選択肢、並び順、表示するか、固定の質問か |
-| survey\_answers | 回答 | 質問ID、家族IDまたは会員ID、回答、日時 |
+| survey\_questions | 質問 | 質問ID、聞く相手(家族/おうち)、形式(選択/自由記述)、選択肢、必須か、並び順、表示するか、固定の質問か |
+| survey\_answers | 回答 | 質問ID、家族IDまたは会員ID、回答、答えなかったか、日時 |
 
 ### 11.4 分析用
 
 | テーブル | 役割 | 主な項目 |
 | --- | --- | --- |
 | daily\_stats | 日別の集計 | 日付、来場組数、来場頭数(会員/非会員)、新規おうち数、初来場のおうち数、使われた無料券の枚数 |
-| daily\_weather | 日別の天気 | 日付、天気、最高気温、最低気温、降水量、観測地点、出典 |
-| calendar | 日付の属性 | 日付、曜日、祝日名、曜日区分(平日/土曜/日曜/祝日)、臨時休業 |
-| events | イベント | 日付、名前、種類、メモ |
+| daily\_weather | 日別の天気 | 日付、天気、最高気温、最低気温、降水量、日照時間、観測地点、出典 |
+| calendar | 日付の属性 | 日付、曜日、祝日名、曜日区分(平日/土曜/日曜/祝日)、臨時休業、休業の理由 |
+| events | イベント | 日付、名前、種類、メモ、消した日時(行は消さない) |
 
 ### 11.5 管理用
 
 | テーブル | 役割 | 主な項目 |
 | --- | --- | --- |
-| settings | 設定 | 無料券に必要なポイント数、1日の上限ポイント数、有効期限、判定日数、受付QRの合言葉、移行期間、製作者の連絡先 |
-| staff\_users | 管理画面の利用者 | メールアドレス、パスワードのハッシュ、権限(受付スタッフ/管理者/製作者・閲覧のみ)、状態、最終ログイン、ログインの失敗回数、ロックの解除日時 |
+| settings | 設定(項目名と値の組) | 無料券に必要なポイント数、1日の上限ポイント数、無料券を使った日のポイント、有効期限、判定日数、受付QRの合言葉、招待の有効時間、移行期間、統合で同じ日のポイントを残すか、製作者の連絡先、利用規約・プライバシーポリシーの本文、天気の観測地点、LINEミニアプリの番号 |
+| staff\_users | 管理画面の利用者 | メールアドレス、名前、パスワードのハッシュ、権限(受付スタッフ/管理者/製作者・閲覧のみ)、状態、最終ログイン、ログインの失敗回数、ロックの解除日時 |
 | staff\_sessions | ログイン状態 | ログインの印(ハッシュ)、利用者、ログイン日時、有効期限(30日)、ログアウト日時 |
-| audit\_log | 操作ログ | 操作した人、操作の種類、対象、変更前後、理由、日時、元に戻すための情報 |
+| audit\_log | 操作ログ | 操作した人、操作の種類、対象、変更前後、理由、日時、元に戻すための情報、元に戻した日時・人 |
+| system\_jobs | 自動処理の実行の記録 | 処理の種類(天気/祝日/日別集計/バックアップ/有効期限/移行用の画像の削除)、始まりと終わりの日時、結果(実行中/成功/一部だけ/失敗)、結果の説明 |
 
 売上の項目は今回は持ちません。将来追加する場合は、visitsに料金の列を足すだけで対応できる形にしておきます。
 
 ## 12. API一覧
 
-APIは、メソッドごとに数えて全66本です(お客さん向け21本、管理画面向け45本)。お客さん向けはLINEのIDトークンをサーバー側で毎回検証し、管理画面向けはログインのセッションで認証します。権限はすべてサーバー側で確認します。
+APIは、メソッドごとに数えて全88本です(お客さん向け26本、管理画面向け62本。動作確認用の /api/health は数えない)。お客さん向けはLINEのIDトークンをサーバー側で毎回検証し、管理画面向けはログインのセッションで認証します。権限はすべてサーバー側で確認します。
 
 ### 12.1 お客さん向け(認証:LINE IDトークン)
 
 | メソッド | パス | 内容 | 機能ID |
 | --- | --- | --- | --- |
 | GET | /api/me | 登録済みか、所属するおうち、会員証の情報 | C-01、C-06 |
+| GET | /api/breeds | 犬種の選択肢 | C-02、C-08 |
 | POST | /api/register | 同意・アンケート・犬を受け取り、おうちと会員IDを作る | C-01〜C-03 |
 | GET / POST | /api/dogs | 犬の一覧、犬の追加 | C-08 |
 | PATCH | /api/dogs/:id | 犬の名前などの変更 | C-08 |
 | POST | /api/dogs/:id/photo | 犬の写真の登録・差し替え | C-02、C-08 |
 | POST | /api/dogs/:id/retire | 犬の登録解除 | C-08 |
 | GET / POST | /api/survey | 未回答の質問の取得、回答 | C-03 |
-| PATCH | /api/me/profile | 自分のアンケート回答の変更 | C-09 |
+| GET / PATCH | /api/me/profile | 自分のアンケート回答の表示・変更 | C-09 |
+| GET | /api/checkins/today | チェックイン画面の表示内容(今日すでにおうちの誰かがチェックインしていれば、その来場) | C-04 |
 | POST | /api/checkins | 受付QRの合言葉・犬ID・無料券を使うかを受け取り、チェックインする | C-04 |
 | GET | /api/checkins/:id | 完了画面の表示内容 | C-05 |
 | POST | /api/checkins/:id/dogs | 同じ日に家族が来たとき、犬を追加する | C-04 |
 | GET | /api/me/visits | 来場履歴 | C-07 |
 | POST | /api/invites | 家族の招待を作る | C-11 |
 | GET | /api/invites/:code | 招待の内容(おうちの呼び名・犬の写真) | C-12 |
+| GET | /api/invites/:code/photos/:dogId | 招待の画面に出す犬の写真(一覧用の小さな写真) | C-12 |
 | POST | /api/invites/:code/accept | 招待を受けて参加する。別のおうちがある場合は、まとめる申請を作る | C-12 |
 | GET | /api/family | 家族の一覧 | C-13 |
 | POST | /api/family/leave | 自分がおうちから抜ける | C-13 |
-| POST | /api/requests | 旧カードの引き継ぎ申請(写真つき) | C-10 |
+| GET / POST | /api/requests | 自分のおうちの申請の状態、旧カードの引き継ぎ申請(写真つき) | C-10 |
 | GET | /api/media/:key | 自分のおうちの犬の写真 | C-06 |
 
 ### 12.2 管理画面向け(認証:ログインのセッション)
@@ -471,34 +475,46 @@ APIは、メソッドごとに数えて全66本です(お客さん向け21本、
 | メソッド | パス | 内容 | 機能ID | 権限 |
 | --- | --- | --- | --- | --- |
 | POST | /admin/api/login、/admin/api/logout | ログイン・ログアウト | S-01 | 全員 |
+| GET | /admin/api/me | ログイン中の利用者 | S-01 | 全員 |
 | GET | /admin/api/today | 今日の来場一覧 | S-02 | 全員 |
 | POST | /admin/api/checkins/:id/cancel | チェックインの取り消し | S-03 | 受付・管理者 |
+| GET | /admin/api/checkins/proxy/status | 代理チェックインの前に、その日のチェックインと使える無料券を確かめる | S-04 | 受付・管理者 |
 | POST | /admin/api/checkins/proxy | 代理チェックイン | S-04 | 受付・管理者 |
 | POST | /admin/api/walkins | 非会員の頭数の記録 | S-05 | 受付・管理者 |
 | GET | /admin/api/households | おうちの検索(犬の名前・呼び名・会員ID・表示名) | S-06 | 全員 |
 | GET / PATCH | /admin/api/households/:id | おうちの詳細、呼び名の変更 | A-02 | 管理者(製作者は閲覧のみ) |
-| POST | /admin/api/households/:id/points | ポイント・無料券の手動登録 | A-03 | 管理者 |
+| POST | /admin/api/households/:id/points/preview、/admin/api/households/:id/points | 変更後の残高の確認、ポイント・無料券の手動登録 | A-03 | 管理者 |
 | POST | /admin/api/households/:id/invite-qr | 受付での家族追加用の招待QRを作る | A-06 | 管理者 |
 | DELETE | /admin/api/households/:id/family/:fid | 家族を外す | A-06 | 管理者 |
+| GET | /admin/api/households/:id/migration | 旧カードの移行の状態(引き継ぎ済みの移行元・いまのポイント・移行期間) | A-05 | 管理者 |
 | POST | /admin/api/households/:id/migrate | 旧カードの移行の直接入力 | A-05 | 管理者 |
 | POST | /admin/api/merges/preview、/admin/api/merges | 統合結果の確認、統合の実行 | A-07 | 管理者 |
+| GET | /admin/api/merges、/admin/api/merges/:id | 統合の記録(元に戻せるかを含む) | A-07 | 管理者 |
 | POST | /admin/api/merges/:id/undo | 統合を元に戻す | A-07 | 管理者 |
-| PATCH | /admin/api/dogs/:id | 犬の情報の変更 | A-04 | 管理者 |
-| POST | /admin/api/dogs/:id/photo | 犬の写真の差し替え・回転・削除 | A-04 | 管理者 |
-| GET | /admin/api/requests | 確認待ちの一覧 | A-05、A-08 | 管理者 |
+| GET / PATCH | /admin/api/dogs/:id | 犬の編集画面の内容(変更の履歴を含む)、犬の情報の変更 | A-04 | 管理者 |
+| POST / DELETE | /admin/api/dogs/:id/photo | 犬の写真の差し替え・回転(POST)、削除(DELETE) | A-04 | 管理者 |
+| GET | /admin/api/requests、/admin/api/requests/count | 確認待ちの一覧、件数(メニューの印) | A-05、A-08 | 管理者 |
 | POST | /admin/api/requests/:id/approve、/reject | 承認・却下 | A-05、A-08 | 管理者 |
 | GET / POST / DELETE | /admin/api/events | イベント | A-09 | 管理者 |
 | GET / POST / DELETE | /admin/api/closures | 臨時休業日 | A-09 | 管理者 |
 | GET / POST / PATCH | /admin/api/survey-questions | アンケートの質問 | A-10 | 管理者 |
+| POST | /admin/api/survey-questions/order | アンケートの質問の並べ替え | A-10 | 管理者 |
+| GET | /admin/api/survey-questions/:id/summary | 追加した質問の回答の集計 | A-10 | 管理者 |
 | GET / POST / PATCH | /admin/api/breeds | 犬種の選択肢 | A-11 | 管理者 |
+| POST | /admin/api/breeds/order | 犬種の選択肢の並べ替え | A-11 | 管理者 |
 | GET / PATCH | /admin/api/settings | ルールの設定 | A-12 | 管理者 |
+| POST | /admin/api/settings/checkin-passphrase | 受付のQRコードの合言葉を作り直す | A-12 | 管理者 |
+| GET | /admin/api/settings/public | 製作者の連絡先(「困ったとき」に出す) | A-16 | 全員 |
 | GET / POST / PATCH | /admin/api/staff | スタッフの管理 | A-13 | 管理者 |
+| POST | /admin/api/staff/:id/password | パスワードの再発行 | A-13 | 管理者 |
 | GET | /admin/api/dashboard | 期間を指定した分析データ | A-01 | 全員(受付は集計値のみ) |
 | GET | /admin/api/export/:name | CSV出力 | A-14 | 管理者 |
 | GET | /admin/api/audit | 操作ログ | A-15 | 管理者・製作者 |
 | POST | /admin/api/audit/:id/undo | 操作を元に戻す | A-15 | 管理者 |
 | GET | /admin/api/system-status | システムの状態 | A-17、D-02 | 管理者(簡易)・製作者(詳細) |
 | POST | /admin/api/holidays/import | 祝日データの手動取り込み | B-02 | 管理者 |
+| POST | /admin/api/system/backup | バックアップの手動実行 | B-04 | 管理者 |
+| POST | /admin/api/system/run/:job | 自動処理(天気・祝日・バックアップ・日別集計)を今すぐ実行する | A-17 | 管理者 |
 | GET | /admin/api/media/:key | 犬の写真・添付画像 | S-02 | 全員 |
 
 ### 12.3 自動処理(Cron Triggers)
@@ -641,8 +657,8 @@ LINE標準ショップカードのポイントは、自動での一括移管は�
 | --- | --- |
 | 機能 | 44個(必須32・推奨12) |
 | 画面 | 31画面(お客さん向け13・受付/管理者向け18) |
-| API | 66本 |
-| テーブル | 21個 |
+| API | 88本 |
+| テーブル | 23個 |
 | 自動処理 | 6種類 |
 | 外部連携 | LINEログイン・LIFF(シェア機能を含む)、Cloudflare R2(写真)、気象庁データ、内閣府の祝日データ |
 

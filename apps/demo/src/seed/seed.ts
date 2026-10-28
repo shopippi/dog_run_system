@@ -43,6 +43,9 @@ function mulberry32(seed: number) {
 
 // ---------------------------------------------------------------- 固定の値
 
+/** 自動処理の履歴に書く、祝日の件数(HOLIDAYS の数) */
+const holidayCount = () => Object.keys(HOLIDAYS).length;
+
 /** 2026年の祝日(内閣府の発表どおり)と、2027年の1月の祝日 */
 export const HOLIDAYS: Record<string, string> = {
   '2026-01-01': '元日',
@@ -649,6 +652,26 @@ export async function seedDemo(sql: Database, opts: SeedOptions): Promise<SeedSu
       'デモ用の連絡先です(製作者 山本 / 090-0000-0000)',
       nowIso,
     ]);
+
+    // 自動処理の実行の履歴(システムの状態の画面が緑になるように、直近3日分の成功を入れる)
+    const job = (name: string, startedAt: string, message: string) =>
+      run(`INSERT INTO system_jobs (name, started_at, finished_at, status, message) VALUES (?, ?, ?, 'ok', ?)`, [
+        name,
+        startedAt,
+        startedAt,
+        message,
+      ]);
+    job('holidays', at(addDays(today, -60), 3 * 60 + 10), `${holidayCount()}件の祝日を取り込みました(デモ用の値)。`);
+    for (let i = 3; i >= 0; i--) {
+      const d = addDays(today, -i);
+      if (i === 0 && nowMinutes < 3 * 60 + 10) break;
+      job('daily_stats', at(d, 3 * 60 + 10), `${addDays(d, -399)}〜${d} の日別の集計を作り直しました。`);
+      job('expiry', at(d, 3 * 60 + 10), '期限が切れたポイントと無料券はありませんでした。');
+      job('backup', at(d, 3 * 60 + 11), 'バックアップを保存しました(デモ用の値)。');
+      job('migration_images', at(d, 3 * 60 + 11), '消す写真はありませんでした。');
+      if (i === 0 && nowMinutes < 5 * 60 + 10) break;
+      job('weather', at(d, 5 * 60 + 10), `${addDays(d, -1)} の天気(東京)を取得しました(デモ用の値)。`);
+    }
 
     sql.run('COMMIT');
   } catch (e) {

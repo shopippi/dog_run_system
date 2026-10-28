@@ -75,3 +75,16 @@ test('A-12 製作者は見るだけ(入力欄は押せず、保存のボタン�
   await expect(staff.getByRole('alert')).toContainText('この操作をする権限がありません');
   await staff.close();
 });
+
+test('A-12 LINEミニアプリの番号の形がちがうと、保存の前に入れ方を日本語で出す', async ({ page }) => {
+  await adminLogin(page, 'admin', '/settings');
+  const section = page.getByRole('region', { name: '受付のQRコード' });
+  await section.getByLabel('LINEミニアプリの番号').fill('abc def');
+  await section.getByRole('button', { name: '保存する' }).click();
+  await expect(section.getByRole('alert')).toContainText(
+    '「LINEミニアプリの番号」は、「1234567890-AbCdEfGh」のような形(数字・ハイフン・英数字)で入れてください。製作者から伝えられた番号をそのまま貼り付けてください。',
+  );
+  // 保存はしていない(ほかのテストが使う受付のQRコードの中身は変わらない)
+  await page.reload();
+  await expect(page.getByRole('region', { name: '受付のQRコード' }).getByLabel('LINEミニアプリの番号')).toHaveValue('');
+});

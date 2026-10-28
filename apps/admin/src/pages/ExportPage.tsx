@@ -86,12 +86,12 @@ export function ExportPage() {
     <div className="page cfg-page">
       <PageHead
         title="CSV出力"
-        howto="出したいデータを選んで「ダウンロード」を押してください。Excelでそのまま開けます。LINEの名前やアンケートの回答が入るので、ファイルは外に渡さないでください。出力したことは操作ログに残ります。"
+        howto="出したい内容を選んで「ダウンロード」を押してください。Excelでそのまま開けます。LINEの名前やアンケートの回答が入るので、ファイルは外に渡さないでください。出力したことは操作ログに残ります。"
       />
       <section className="panel cfg-add" aria-label="CSVを作る">
         <div className="field">
           <span className="label" id={labelId}>
-            出すデータ
+            出す内容
           </span>
           <div className="chips" role="radiogroup" aria-labelledby={labelId}>
             {EXPORT_NAMES.map((n) => (
@@ -116,7 +116,7 @@ export function ExportPage() {
             <p className="hint cfg-period-hint">空欄のときは、すべての期間を出します。</p>
           </div>
         ) : (
-          <p className="sub-text">このデータは、いまの内容をすべて出します(期間の指定はありません)。</p>
+          <p className="sub-text">この内容は、いまの状態をすべて出します(期間の指定はありません)。</p>
         )}
         {error ? <ErrorNotice error={error} /> : null}
         <div className="cfg-acts">

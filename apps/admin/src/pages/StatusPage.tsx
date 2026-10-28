@@ -159,7 +159,7 @@ function Detail({ detail }: { detail: NonNullable<SystemStatusResponse['detail']
             </span>
           </div>
           <div className="kpi">
-            <span className="l">データベース</span>
+            <span className="l">記録の保存場所</span>
             <span className="v">{detail.databaseBytes === null ? '—' : bytes(detail.databaseBytes)}</span>
             <span className="dash-kpi-note">
               上限{bytes(detail.databaseLimitBytes)}
@@ -177,8 +177,8 @@ function Detail({ detail }: { detail: NonNullable<SystemStatusResponse['detail']
         </div>
       </section>
 
-      <section className="panel status-panel" aria-label="エラーの記録">
-        <h2>エラーの記録(直近10件)</h2>
+      <section className="panel status-panel" aria-label="うまくいかなかった処理">
+        <h2>うまくいかなかった処理(直近10件)</h2>
         {detail.recentFailures.length === 0 ? (
           <p className="empty">うまくいかなかった処理はありません。</p>
         ) : (
@@ -191,14 +191,14 @@ function Detail({ detail }: { detail: NonNullable<SystemStatusResponse['detail']
         {detail.history.length === 0 ? <p className="empty">まだ動いていません。</p> : <RunTable runs={detail.history} />}
       </section>
 
-      <section className="panel status-panel" aria-label="データ量">
-        <h2>データ量</h2>
+      <section className="panel status-panel" aria-label="記録の件数">
+        <h2>記録の件数</h2>
         <div className="dash-table-wrap">
           <table className="dash-table">
             <thead>
               <tr>
                 <th scope="col">中身</th>
-                <th scope="col">表の名前</th>
+                <th scope="col">表の名前(製作者向け)</th>
                 <th scope="col" className="n">
                   件数
                 </th>

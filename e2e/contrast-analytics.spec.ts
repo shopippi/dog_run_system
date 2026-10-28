@@ -123,7 +123,7 @@ for (const scheme of ['light', 'dark'] as const) {
 
       const dev = await browser.newPage({ ...TABLET, colorScheme: scheme });
       await adminLogin(dev, 'developer', '/status');
-      await dev.getByRole('region', { name: 'データ量' }).waitFor();
+      await dev.getByRole('region', { name: '記録の件数' }).waitFor();
       await check(dev, 'M-17 システムの状態(製作者)');
       await dev.close();
     });

@@ -54,7 +54,7 @@ familyRoutes.post('/family/leave', async (c) => {
     db
       .prepare(
         `INSERT INTO audit_log (actor_type, actor_id, action, target_type, target_id, before_value, after_value, created_at)
-         SELECT 'member', ?1, 'family.leave', 'family_member', CAST(?1 AS TEXT), ?4, ?5, ?3
+         SELECT 'member', ?1, 'family.leave', 'family_member', ?6, ?4, ?5, ?3
           WHERE changes() = 1`,
       )
       .bind(
@@ -63,6 +63,8 @@ familyRoutes.post('/family/leave', async (c) => {
         nowIso,
         JSON.stringify({ status: 'active', householdId: member.householdId, memberNo: member.memberNo }),
         JSON.stringify({ status: 'left' }),
+        // 対象の ID は整数の文字列にする(数値のまま CAST すると "5.0" になることがある)
+        String(Math.trunc(member.memberId)),
       ),
   ]);
   if (update!.meta.changes !== 1) throw lastMember();
