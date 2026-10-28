@@ -7,6 +7,7 @@ import { parseJson } from '../../lib/validate';
 import { findActiveMember, refreshDisplayName } from '../../services/members';
 import { insertDogStatements, listHouseholdDogs, normalizeDogInputs } from '../../services/dogs';
 import { alreadyRegistered, registerHousehold } from '../../services/register';
+import { customAnswerStatements, loadVisibleQuestions, splitAnswers } from '../../services/survey';
 import { MEDIA_BASE } from './media';
 
 export const meRoutes = new Hono<AppEnv>();
@@ -39,12 +40,25 @@ meRoutes.post('/register', async (c) => {
   const input = await parseJson(c, registerSchema);
   if (await findActiveMember(c.env.DB, lineUser.userId)) throw alreadyRegistered();
   const dogs = await normalizeDogInputs(c.env.DB, input.dogs);
+  const survey = splitAnswers(await loadVisibleQuestions(c.env.DB), input.survey, true);
   const result = await registerHousehold(
     c.env.DB,
     c.get('now'),
     lineUser,
-    { dogNames: dogs.map((d) => d.name) },
-    ({ householdId, memberNo, nowIso }) => insertDogStatements(c.env.DB, householdId, memberNo, 1, dogs, nowIso),
+    { dogNames: dogs.map((d) => d.name), ...survey.member, ...survey.household },
+    ({ householdId, memberNo, nowIso }) => [
+      ...insertDogStatements(c.env.DB, householdId, memberNo, 1, dogs, nowIso),
+      ...customAnswerStatements(
+        c.env.DB,
+        survey.custom,
+        {
+          memberIdSql: "SELECT id FROM family_members WHERE line_user_id = ? AND status = 'active'",
+          memberIdArgs: [lineUser.userId],
+          householdId,
+        },
+        nowIso,
+      ),
+    ],
   );
   const body: RegisterResponse = {
     memberNo: result.memberNo,

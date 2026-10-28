@@ -5,10 +5,10 @@ import { nextHouseholdId } from './members';
 
 export type HouseholdDraft = {
   dogNames: string[];
-  postalCode?: string | null;
+  postal_code?: string | null;
   referral?: string | null;
   transport?: string | null;
-  ageGroup?: string | null;
+  age_group?: string | null;
   gender?: string | null;
 };
 
@@ -47,7 +47,7 @@ export async function registerHousehold(
           householdName,
           normalizeForSearch(householdName),
           nowIso,
-          draft.postalCode ?? null,
+          draft.postal_code ?? null,
           draft.referral ?? null,
           draft.transport ?? null,
           nowIso,
@@ -64,7 +64,7 @@ export async function registerHousehold(
           lineUser.userId,
           lineUser.displayName,
           normalizeForSearch(lineUser.displayName),
-          draft.ageGroup ?? null,
+          draft.age_group ?? null,
           draft.gender ?? null,
           nowIso,
           nowIso,

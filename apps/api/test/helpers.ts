@@ -50,7 +50,15 @@ export const dog = (name: string, extra: Record<string, unknown> = {}) => ({
 
 /** お客さんを登録する。会員IDと犬を返す。 */
 export async function registerUser(user: string, dogs = [dog('アル')], extra: Record<string, unknown> = {}) {
-  const res = await call('/api/register', { user, body: { consent: true, dogs, ...extra } });
+  const res = await call('/api/register', { user, body: { consent: true, dogs, survey: survey(), ...extra } });
   if (res.status !== 201) throw new Error(`登録に失敗: ${res.status} ${JSON.stringify(res.body)}`);
   return res.body as { memberNo: string; householdName: string; dogs: { id: number; dogNo: string; name: string }[] };
 }
+
+/** 固定のアンケートの必須の回答(1 = 年代、2 = 性別、4 = 知ったきっかけ) */
+export const survey = (extra: { questionId: number; value: string | null }[] = []) => [
+  { questionId: 1, value: '30代' },
+  { questionId: 2, value: '女性' },
+  { questionId: 4, value: 'Instagram' },
+  ...extra,
+];

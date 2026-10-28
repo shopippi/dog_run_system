@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { makePhoto, newLineUser, openLiff } from './helpers';
+import { answerSurvey, makePhoto, newLineUser, openLiff } from './helpers';
 
 test('C-02 2頭を写真つきで登録すると、写真は長い辺 800px 以下に縮小されて保存される', async ({ page }) => {
   const user = newLineUser('ママ');
@@ -9,7 +9,7 @@ test('C-02 2頭を写真つきで登録すると、写真は長い辺 800px 以�
   await expect(page.getByRole('heading', { name: 'ワンちゃんの登録' })).toBeVisible();
 
   // 入力が足りないと、何が足りないかを表示する
-  await page.getByRole('button', { name: '登録する' }).click();
+  await page.getByRole('button', { name: '次へ' }).click();
   await expect(page.getByRole('alert')).toContainText('名前を入力してください');
 
   const first = page.locator('fieldset.dog-form').nth(0);
@@ -31,6 +31,8 @@ test('C-02 2頭を写真つきで登録すると、写真は長い辺 800px 以�
   await second.getByRole('textbox', { name: /犬種を入力/ }).fill('甲斐犬');
   await second.getByRole('radio', { name: '中型' }).check();
 
+  await page.getByRole('button', { name: '次へ' }).click();
+  await answerSurvey(page);
   const upload = page.waitForResponse((r) => /\/api\/dogs\/\d+\/photo$/.test(r.url()) && r.status() === 200);
   await page.getByRole('button', { name: '登録する' }).click();
   const uploaded = await (await upload).json();
