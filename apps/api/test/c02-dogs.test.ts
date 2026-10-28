@@ -1,6 +1,6 @@
 import { env } from 'cloudflare:test';
 import { describe, expect, it } from 'vitest';
-import { call, dog, fakeJpeg, registerUser } from './helpers';
+import { call, dog, fakeJpeg, registerUser, survey } from './helpers';
 
 const PAPA = 'U001:パパ';
 const OTHER = 'U900:よその人';
@@ -21,7 +21,7 @@ describe('C-02 犬の登録', () => {
   });
 
   it('初回は1頭以上の登録が必要', async () => {
-    const res = await call('/api/register', { user: PAPA, body: { consent: true, dogs: [] } });
+    const res = await call('/api/register', { user: PAPA, body: { consent: true, dogs: [], survey: survey() } });
     expect(res.status).toBe(400);
     expect(res.body.error.message).toMatch(/1頭以上/);
   });
@@ -45,13 +45,13 @@ describe('C-02 犬の登録', () => {
   });
 
   it('名前は20文字まで', async () => {
-    const res = await call('/api/register', { user: PAPA, body: { consent: true, dogs: [dog('あ'.repeat(21))] } });
+    const res = await call('/api/register', { user: PAPA, body: { consent: true, dogs: [dog('あ'.repeat(21))], survey: survey() } });
     expect(res.status).toBe(400);
     expect(res.body.error.message).toMatch(/20文字/);
   });
 
   it('「その他」を選んだら犬種の入力が必要。入力した犬種を表示に使う', async () => {
-    const ng = await call('/api/register', { user: PAPA, body: { consent: true, dogs: [dog('ポチ', { breedId: 11 })] } });
+    const ng = await call('/api/register', { user: PAPA, body: { consent: true, dogs: [dog('ポチ', { breedId: 11 })], survey: survey() } });
     expect(ng.status).toBe(400);
     expect(ng.body.error.message).toMatch(/犬種を入力/);
 
@@ -65,7 +65,7 @@ describe('C-02 犬の登録', () => {
   });
 
   it('ない犬種を選ぶと 400 で、選び直すよう案内する', async () => {
-    const res = await call('/api/register', { user: PAPA, body: { consent: true, dogs: [dog('アル', { breedId: 999 })] } });
+    const res = await call('/api/register', { user: PAPA, body: { consent: true, dogs: [dog('アル', { breedId: 999 })], survey: survey() } });
     expect(res.status).toBe(400);
     expect(res.body.error.message).toMatch(/選び直して/);
     const n = await env.DB.prepare('SELECT COUNT(*) AS n FROM households').first<{ n: number }>();

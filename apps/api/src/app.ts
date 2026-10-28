@@ -5,6 +5,7 @@ import { nowMiddleware, requireLineUser } from './lib/middleware';
 import { dogRoutes } from './routes/customer/dogs';
 import { meRoutes } from './routes/customer/me';
 import { mediaRoutes } from './routes/customer/media';
+import { surveyRoutes } from './routes/customer/survey';
 
 export function createApp() {
   const app = new Hono<AppEnv>();
@@ -34,6 +35,7 @@ export function createApp() {
   customer.route('/', meRoutes);
   customer.route('/', dogRoutes);
   customer.route('/', mediaRoutes);
+  customer.route('/', surveyRoutes);
   app.route('/api', customer);
 
   app.all('/api/*', (c) =>

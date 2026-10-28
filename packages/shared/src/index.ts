@@ -7,3 +7,4 @@ export * from './api-types';
 export * from './schemas/register';
 export * from './schemas/dog';
 export * from './image';
+export * from './schemas/survey';

@@ -45,7 +45,17 @@ export async function registerViaUi(page: Page, user: string, dogNames: string[]
     await form.getByLabel('名前').fill(name);
     await form.getByRole('combobox', { name: /犬種/ }).selectOption({ label: 'トイプードル' });
   }
+  await page.getByRole('button', { name: '次へ' }).click();
+  await answerSurvey(page);
   await page.getByRole('button', { name: '登録する' }).click();
   await page.getByText('登録が完了しました').waitFor();
   return (await page.locator('.welcome-card .id').textContent())!;
+}
+
+/** 登録のアンケートの必須の質問に答える。 */
+export async function answerSurvey(page: Page) {
+  await page.getByRole('heading', { name: 'かんたんなアンケート' }).waitFor();
+  await page.getByRole('radiogroup', { name: /年代/ }).getByRole('radio', { name: '30代' }).check();
+  await page.getByRole('radiogroup', { name: /性別/ }).getByRole('radio', { name: '女性' }).check();
+  await page.getByRole('radiogroup', { name: /きっかけ/ }).getByRole('radio', { name: 'Instagram' }).check();
 }
