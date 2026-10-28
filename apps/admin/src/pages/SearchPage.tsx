@@ -1,10 +1,12 @@
 import type { HouseholdHit, HouseholdSearchResponse } from '@dr/shared';
 import { useEffect, useState, type ReactNode } from 'react';
+import { Link } from 'react-router-dom';
 import { DogFace } from '../components/DogFace';
 import { ErrorNotice } from '../components/ErrorNotice';
 import { Icon } from '../components/Icon';
 import { PageHead } from '../components/PageHead';
 import { adminApi } from '../lib/api';
+import { useAuth } from '../lib/auth';
 
 type Mode = 'name' | 'photo';
 
@@ -32,6 +34,9 @@ export function SearchPage({
   const [hits, setHits] = useState<HouseholdHit[] | null>(null);
   const [error, setError] = useState<unknown>(null);
   const [selected, setSelected] = useState<HouseholdHit | null>(null);
+  // おうちの詳細(A-02)は管理者と製作者だけが開ける
+  const { staff } = useAuth();
+  const canOpenDetail = staff?.role === 'admin' || staff?.role === 'developer';
 
   useEffect(() => {
     const query = mode === 'photo' ? '' : q.trim();
@@ -132,7 +137,7 @@ export function SearchPage({
         <section className="panel list-panel">
           <ul className="results" aria-label="見つかったおうち">
             {hits.map((h) => (
-              <li key={h.id}>
+              <li key={h.id} className={canOpenDetail ? 'result-item' : undefined}>
                 <button
                   type="button"
                   className="result-row"
@@ -157,6 +162,11 @@ export function SearchPage({
                   )}
                   <Icon name="chevron-right" />
                 </button>
+                {canOpenDetail && (
+                  <Link className="btn ghost result-open" to={`/households/${h.id}`} aria-label={`${h.displayName}の詳細を開く`}>
+                    詳しく
+                  </Link>
+                )}
               </li>
             ))}
           </ul>
