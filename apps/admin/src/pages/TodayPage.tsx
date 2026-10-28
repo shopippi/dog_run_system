@@ -1,7 +1,10 @@
 import { CANCEL_REASONS, type AdminVisit, type TodayResponse } from '@dr/shared';
 import { useEffect, useRef, useState } from 'react';
+import { Dialog } from '../components/Dialog';
 import { DogFace } from '../components/DogFace';
 import { ErrorNotice } from '../components/ErrorNotice';
+import { Icon } from '../components/Icon';
+import { PageHead } from '../components/PageHead';
 import { WalkinForm } from '../components/WalkinForm';
 import { usePolling } from '../hooks/usePolling';
 import { adminApi, adminPost } from '../lib/api';
@@ -27,50 +30,58 @@ export function TodayPage() {
   }, [data]);
 
   return (
-    <main className="con-body">
-      <p className="howto">
-        今日チェックインしたお客さんの一覧です。30秒ごとに新しい来場が上に出ます。無料券を使ったおうちは、料金を調整してください。
-      </p>
+    <div className="page">
+      <PageHead
+        title="今日の来場"
+        sub={data ? formatDate(data.date) : undefined}
+        howto="今日チェックインしたお客さんの一覧です。30秒ごとに新しい来場が上に出ます。無料券を使ったおうちは、料金を調整してください。"
+        aside={
+          data?.pendingRequests ? (
+            <p className="pending" role="status">
+              確認待ちが <b>{data.pendingRequests}件</b> あります(旧カードの引き継ぎ・おうちをまとめる申請)
+            </p>
+          ) : null
+        }
+      />
       {error ? <ErrorNotice error={error} onRetry={reload} /> : null}
       {!data ? (
         <p className="loading">読み込んでいます…</p>
       ) : (
         <>
-          {data.pendingRequests ? (
-            <div className="notice gold-notice" role="status">
-              確認待ちが <b>{data.pendingRequests}件</b> あります(旧カードの引き継ぎ・おうちをまとめる申請)
+          <section className="panel summary" aria-label="今日の集計">
+            <div className="kpis">
+              <Kpi label="来場組数" value={data.totals.groups} unit="組" />
+              <Kpi label="ワンちゃん" value={data.totals.memberDogs + data.totals.walkinDogs} unit="頭" />
+              <Kpi label="うち会員以外" value={data.totals.walkinDogs} unit="頭" />
+              <Kpi label="無料券の使用" value={data.totals.ticketsUsed} unit="枚" />
             </div>
-          ) : null}
-          <div className="today-head">
-            <h2>{formatDate(data.date)}の来場</h2>
-          </div>
-          {!readOnly && <WalkinForm onDone={reload} />}
-          <div className="kpis">
-            <Kpi label="来場組数" value={`${data.totals.groups}組`} />
-            <Kpi label="ワンちゃん" value={`${data.totals.memberDogs + data.totals.walkinDogs}頭`} />
-            <Kpi label="うち会員以外" value={`${data.totals.walkinDogs}頭`} />
-            <Kpi label="無料券の使用" value={`${data.totals.ticketsUsed}枚`} />
-          </div>
-          {data.visits.length === 0 ? (
-            <p className="empty">まだ来場はありません。</p>
-          ) : (
-            <ul className="visits" aria-label="今日の来場">
-              {data.visits.map((v) => (
-                <VisitRow key={v.id} v={v} fresh={fresh.has(v.id)} canEdit={!readOnly} onChanged={reload} />
-              ))}
-            </ul>
-          )}
+            {!readOnly && <WalkinForm onDone={reload} />}
+          </section>
+          <section className="panel list-panel">
+            {data.visits.length === 0 ? (
+              <p className="empty">まだ来場はありません。</p>
+            ) : (
+              <ul className="visits" aria-label="今日の来場">
+                {data.visits.map((v) => (
+                  <VisitRow key={v.id} v={v} fresh={fresh.has(v.id)} canEdit={!readOnly} onChanged={reload} />
+                ))}
+              </ul>
+            )}
+          </section>
         </>
       )}
-    </main>
+    </div>
   );
 }
 
-function Kpi({ label, value }: { label: string; value: string }) {
+function Kpi({ label, value, unit }: { label: string; value: number; unit: string }) {
   return (
     <div className="kpi">
       <span className="l">{label}</span>
-      <span className="v">{value}</span>
+      <span className="v">
+        {value}
+        <small>{unit}</small>
+      </span>
     </div>
   );
 }
@@ -92,36 +103,46 @@ function VisitRow({
   return (
     <li className={`visit${v.cancelled ? ' cancelled' : ''}${fresh ? ' new' : ''}`} aria-label={`${v.time} ${label}`}>
       <span className="t mono">{v.time}</span>
-      <span className="faces">
+      <span className="stack">
         {walkin ? (
           <span className="walkin-mark" aria-hidden="true">
-            {v.dogCount}
+            <Icon name="users" size={18} />
           </span>
         ) : (
-          v.dogs.map((d) => <DogFace key={d.id} name={d.name} breedName={d.breedName} url={d.thumbUrl} size={56} />)
+          v.dogs.map((d) => <DogFace key={d.id} name={d.name} breedName={d.breedName} url={d.thumbUrl} size={40} />)
         )}
       </span>
       <span className="visit-body">
         {walkin ? (
-          <b>会員以外 {v.dogCount}頭</b>
+          <>
+            <b>会員以外 {v.dogCount}頭</b>
+            <span className="sub-text">受付で頭数を記録</span>
+          </>
         ) : (
           <>
             <b>{v.dogs.map((d) => d.name).join('・')}</b>
-            <span className="small muted">
-              {v.householdName}・<span className="mono">{v.memberNo}</span>
-              {v.checkedInBy ? `・${v.checkedInBy}さん` : ''}
+            <span className="sub-text">
+              {v.householdName}
+              <span aria-hidden="true"> · </span>
+              <span className="mono">{v.memberNo}</span>
+              {v.checkedInBy ? (
+                <>
+                  <span aria-hidden="true"> · </span>
+                  {v.checkedInBy}さん
+                </>
+              ) : null}
             </span>
           </>
         )}
-        <span className="pills">
-          {v.usedTicket && !v.cancelled && <span className="pill o">無料券を使用</span>}
-          {v.method === 'proxy' && <span className="pill">受付で代理</span>}
-          {v.cancelled && <span className="pill r">取り消し済み{v.cancelReason ? `(${v.cancelReason})` : ''}</span>}
-        </span>
+      </span>
+      <span className="badges">
+        {v.usedTicket && !v.cancelled && <span className="badge warning">無料券を使用</span>}
+        {v.method === 'proxy' && <span className="badge info">受付で代理</span>}
+        {v.cancelled && <span className="badge">取り消し済み{v.cancelReason ? `(${v.cancelReason})` : ''}</span>}
       </span>
       <span className="visit-acts">
-        {canEdit && !v.cancelled && !confirming && (
-          <button type="button" className="btn sub small" onClick={() => setConfirming(true)}>
+        {canEdit && !v.cancelled && (
+          <button type="button" className="btn ghost" onClick={() => setConfirming(true)}>
             取り消す
           </button>
         )}
@@ -168,32 +189,45 @@ function CancelConfirm({
     }
   };
   return (
-    <div className="confirm" role="group" aria-label="取り消しの確認">
+    <Dialog
+      title="チェックインを取り消す"
+      onClose={() => !busy && onClose()}
+      footer={
+        <>
+          <button type="button" className="btn sub" disabled={busy} onClick={onClose}>
+            やめる
+          </button>
+          <button type="button" className="btn danger-fill" disabled={busy} onClick={submit}>
+            {busy ? '取り消しています…' : '取り消す'}
+          </button>
+        </>
+      }
+    >
       <p>
-        <b>{v.time} {label}</b> のチェックインを取り消します。
+        <b>
+          {v.time} {label}
+        </b>{' '}
+        のチェックインを取り消します。
       </p>
-      <ul className="small">
+      <ul className="plain-list">
         {v.method !== 'walkin' && <li>付けたポイントを戻します(その来場で発行された無料券も回収します)</li>}
         {v.usedTicket && <li>使った無料券を、使う前に戻します</li>}
         <li>来場の記録は「取り消し済み」として残ります</li>
       </ul>
-      <div className="choices" role="radiogroup" aria-label="取り消す理由">
-        {CANCEL_REASONS.map((r) => (
-          <label key={r}>
-            <input type="radio" name={`reason-${v.id}`} checked={reason === r} onChange={() => setReason(r)} />
-            {r}
-          </label>
-        ))}
+      <div className="field">
+        <span className="label" id={`reason-${v.id}`}>
+          取り消す理由
+        </span>
+        <div className="chips" role="radiogroup" aria-labelledby={`reason-${v.id}`}>
+          {CANCEL_REASONS.map((r) => (
+            <label key={r}>
+              <input type="radio" name={`reason-${v.id}`} checked={reason === r} onChange={() => setReason(r)} />
+              <span>{r}</span>
+            </label>
+          ))}
+        </div>
       </div>
       {error ? <ErrorNotice error={error} /> : null}
-      <div className="confirm-acts">
-        <button type="button" className="btn danger" disabled={busy} onClick={submit}>
-          {busy ? '取り消しています…' : '取り消す'}
-        </button>
-        <button type="button" className="btn sub" disabled={busy} onClick={onClose}>
-          やめる
-        </button>
-      </div>
-    </div>
+    </Dialog>
   );
 }

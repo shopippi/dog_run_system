@@ -25,8 +25,10 @@ export function LoginPage() {
   return (
     <main className="login">
       <form className="panel login-box" onSubmit={submit}>
-        <h1>ドッグラン 受付・管理</h1>
-        <p className="howto">メールアドレスとパスワードを入れて「ログイン」を押してください。一度ログインすると、30日間はそのまま使えます。</p>
+        <div className="login-head">
+          <h1>ドッグラン 受付・管理</h1>
+          <p className="howto">メールアドレスとパスワードを入れて「ログイン」を押してください。一度ログインすると、30日間はそのまま使えます。</p>
+        </div>
         <div className="field">
           <label htmlFor="email">メールアドレス</label>
           <input id="email" type="email" autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} required />
@@ -46,7 +48,7 @@ export function LoginPage() {
         <button type="submit" className="btn" disabled={busy}>
           {busy ? 'ログインしています…' : 'ログイン'}
         </button>
-        <p className="small muted">パスワードを忘れたときは、管理者にパスワードの再発行を頼んでください。</p>
+        <p className="note">パスワードを忘れたときは、管理者にパスワードの再発行を頼んでください。</p>
       </form>
     </main>
   );

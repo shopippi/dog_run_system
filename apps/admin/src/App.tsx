@@ -20,8 +20,10 @@ function Gate() {
   if (loading && !staff) return <p className="loading">読み込んでいます…</p>;
   if (error) {
     return (
-      <main className="con-body">
-        <ErrorNotice error={error} onRetry={() => location.reload()} />
+      <main className="login">
+        <div className="login-box">
+          <ErrorNotice error={error} onRetry={() => location.reload()} />
+        </div>
       </main>
     );
   }
@@ -36,6 +38,7 @@ function Gate() {
           element={
             <SearchPage
               key="proxy"
+              title="代理チェックイン"
               howto="スマホを持っていないお客さんを、犬の名前や会員IDで探して選び、来たワンちゃんを選んで「代理でチェックインする」を押してください。紙に書いた分は、来場日を選んで入力できます。"
               actions={(h) => <ProxyCheckin h={h} />}
             />
@@ -49,8 +52,10 @@ function Gate() {
 
 function Placeholder() {
   return (
-    <main className="con-body">
-      <p className="muted">準備中です。</p>
-    </main>
+    <div className="page">
+      <div className="panel">
+        <p className="empty">この画面は準備中です。メニューから別の画面を選んでください。</p>
+      </div>
+    </div>
   );
 }

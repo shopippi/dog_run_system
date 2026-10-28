@@ -13,7 +13,7 @@ test('S-03 受付で今日のチェックインを取り消すと、お客さん
   await adminLogin(page, 'staff');
   const row = page.getByRole('listitem', { name: /ポチ/ });
   await row.getByRole('button', { name: '取り消す' }).click();
-  const confirm = row.getByRole('group', { name: '取り消しの確認' });
+  const confirm = page.getByRole('dialog', { name: 'チェックインを取り消す' });
   await expect(confirm).toContainText('付けたポイントを戻します');
   await confirm.getByRole('radio', { name: '二重のチェックイン' }).check();
   await confirm.getByRole('button', { name: '取り消す' }).click();
