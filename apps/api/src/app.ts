@@ -8,6 +8,7 @@ import { inviteRoutes } from './routes/customer/invites';
 import { joinRoutes } from './routes/customer/join';
 import { meRoutes } from './routes/customer/me';
 import { authRoutes } from './routes/admin/auth';
+import { todayRoutes } from './routes/admin/today';
 import { requireStaff } from './lib/staff-auth';
 import { mediaRoutes } from './routes/customer/media';
 import { surveyRoutes } from './routes/customer/survey';
@@ -50,6 +51,7 @@ export function createApp() {
   app.route('/admin/api', authRoutes);
   const admin = new Hono<AppEnv>();
   admin.use('*', requireStaff);
+  admin.route('/', todayRoutes);
   app.route('/admin/api', admin);
 
   app.all('/api/*', (c) =>

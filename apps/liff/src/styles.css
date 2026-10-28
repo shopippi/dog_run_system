@@ -50,7 +50,7 @@
 .check { display: flex; gap: 10px; align-items: flex-start; font-size: .9rem; }
 .check input { margin-top: 4px; width: 20px; height: 20px; accent-color: var(--accent); flex: none; }
 .loading { padding: 40px 0; text-align: center; color: var(--muted); }
-.av { border-radius: 50%; object-fit: cover; flex: none; background: var(--sunk); border: 2px solid var(--surface); box-shadow: 0 0 0 1px var(--line); }
+.av { max-width: none; border-radius: 50%; object-fit: cover; flex: none; background: var(--sunk); border: 2px solid var(--surface); box-shadow: 0 0 0 1px var(--line); }
 .steps-bar { display: flex; gap: 6px; }
 .steps-bar span { flex: 1; height: 4px; border-radius: 2px; background: var(--line); }
 .steps-bar span.on { background: var(--accent); }

@@ -1,16 +1,9 @@
+import { nameInitial, placeholderColor } from '@dr/shared';
 import { useAuthedImage } from '../hooks/useAuthedImage';
-
-const PALETTE = ['#2e7a4e', '#b9741b', '#3d6a9e', '#8a4f9e', '#bf3f35', '#4f7f8a', '#7a6a2e'];
-
-function colorFor(text: string): string {
-  let h = 0;
-  for (const ch of text) h = (h * 31 + ch.codePointAt(0)!) >>> 0;
-  return PALETTE[h % PALETTE.length]!;
-}
 
 /** 写真がない犬は、犬種の色と名前の頭文字で作った絵を出す(6.2) */
 export function DogPlaceholder({ name, breedName, size }: { name: string; breedName: string; size: number }) {
-  const initial = [...(name.trim() || '?')][0];
+  const initial = nameInitial(name);
   return (
     <svg
       className="av"
@@ -20,7 +13,7 @@ export function DogPlaceholder({ name, breedName, size }: { name: string; breedN
       role="img"
       aria-label={`${name}(写真なし)`}
     >
-      <circle cx="50" cy="50" r="50" fill={colorFor(breedName || name)} />
+      <circle cx="50" cy="50" r="50" fill={placeholderColor(breedName, name)} />
       <text x="50" y="50" dy=".36em" textAnchor="middle" fontSize="46" fontWeight="700" fill="#fff">
         {initial}
       </text>

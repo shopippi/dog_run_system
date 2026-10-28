@@ -3,6 +3,7 @@ import { ErrorNotice } from './components/ErrorNotice';
 import { Layout } from './components/Layout';
 import { AuthProvider, useAuth } from './lib/auth';
 import { LoginPage } from './pages/LoginPage';
+import { TodayPage } from './pages/TodayPage';
 
 export function App() {
   return (
@@ -26,6 +27,7 @@ function Gate() {
   return (
     <Layout>
       <Routes>
+        <Route path="/" element={<TodayPage />} />
         <Route path="*" element={<Placeholder />} />
       </Routes>
     </Layout>
