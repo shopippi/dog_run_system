@@ -31,16 +31,24 @@ function toJpeg(canvas: HTMLCanvasElement, quality: number): Promise<Blob> {
   );
 }
 
+export type ResizeOptions = {
+  /** 長い辺の大きさ。初期値は犬の写真の 800px。旧カードの写真(C-10)は 1200px */
+  maxEdge?: number;
+  /** これより大きくなったら、画質を下げて作り直す(バイト) */
+  maxBytes?: number;
+};
+
 /**
  * スマホの中で写真を縮小する(要件定義書 6.2)。
  * 長い辺を 800px にした写真(約150KB)と、一覧用の正方形の小さな写真を作る。
  */
-export async function resizePhoto(file: Blob): Promise<ResizedPhoto> {
+export async function resizePhoto(file: Blob, options: ResizeOptions = {}): Promise<ResizedPhoto> {
+  const maxEdge = options.maxEdge ?? PHOTO_MAX_EDGE;
   const img = await loadBitmap(file);
   const w = img.width;
   const h = img.height;
 
-  const scale = Math.min(1, PHOTO_MAX_EDGE / Math.max(w, h));
+  const scale = Math.min(1, maxEdge / Math.max(w, h));
   const main = document.createElement('canvas');
   main.width = Math.max(1, Math.round(w * scale));
   main.height = Math.max(1, Math.round(h * scale));
@@ -56,7 +64,11 @@ export async function resizePhoto(file: Blob): Promise<ResizedPhoto> {
     .drawImage(img, (w - side) / 2, (h - side) / 2, side, side, 0, 0, THUMB_EDGE, THUMB_EDGE);
 
   if ('close' in img) img.close();
-  const photo = await toJpeg(main, 0.82);
+  let photo = await toJpeg(main, 0.82);
+  for (const quality of [0.7, 0.6, 0.5]) {
+    if (!options.maxBytes || photo.size <= options.maxBytes) break;
+    photo = await toJpeg(main, quality);
+  }
   const thumb = await toJpeg(thumbCanvas, 0.8);
   return { photo, thumb, previewUrl: URL.createObjectURL(thumb) };
 }
