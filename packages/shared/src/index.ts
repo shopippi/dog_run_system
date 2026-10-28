@@ -5,3 +5,5 @@ export * from './search';
 export * from './settings';
 export * from './api-types';
 export * from './schemas/register';
+export * from './schemas/dog';
+export * from './image';

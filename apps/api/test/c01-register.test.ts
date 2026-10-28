@@ -1,6 +1,6 @@
 import { env } from 'cloudflare:test';
 import { describe, expect, it, vi } from 'vitest';
-import { call } from './helpers';
+import { call, dog } from './helpers';
 
 const PAPA = 'U001:パパ';
 const MAMA = 'U002:ママ';
@@ -53,10 +53,10 @@ describe('C-01 初回登録', () => {
   });
 
   it('登録すると DR-000001 形式の会員IDが連番で発行される', async () => {
-    const a = await call('/api/register', { user: PAPA, body: { consent: true } });
+    const a = await call('/api/register', { user: PAPA, body: { consent: true, dogs: [dog('アル')] } });
     expect(a.status).toBe(201);
     expect(a.body.memberNo).toBe('DR-000001');
-    const b = await call('/api/register', { user: MAMA, body: { consent: true } });
+    const b = await call('/api/register', { user: MAMA, body: { consent: true, dogs: [dog('アル')] } });
     expect(b.body.memberNo).toBe('DR-000002');
 
     const me = await call('/api/me', { user: PAPA });
@@ -65,14 +65,14 @@ describe('C-01 初回登録', () => {
   });
 
   it('同意した日時と、登録の方法を記録する', async () => {
-    await call('/api/register', { user: PAPA, body: { consent: true }, now: '2026-10-28T01:00:00Z' });
+    await call('/api/register', { user: PAPA, body: { consent: true, dogs: [dog('アル')] }, now: '2026-10-28T01:00:00Z' });
     const row = await env.DB.prepare('SELECT consented_at, join_method, line_display_name FROM family_members').first();
     expect(row).toEqual({ consented_at: '2026-10-28T10:00:00+09:00', join_method: 'register', line_display_name: 'パパ' });
   });
 
   it('同じ LINE アカウントは2回登録できない', async () => {
-    await call('/api/register', { user: PAPA, body: { consent: true } });
-    const again = await call('/api/register', { user: PAPA, body: { consent: true } });
+    await call('/api/register', { user: PAPA, body: { consent: true, dogs: [dog('アル')] } });
+    const again = await call('/api/register', { user: PAPA, body: { consent: true, dogs: [dog('アル')] } });
     expect(again.status).toBe(409);
     expect(again.body.error.code).toBe('already_registered');
     const n = await env.DB.prepare('SELECT COUNT(*) AS n FROM households').first<{ n: number }>();
@@ -81,22 +81,22 @@ describe('C-01 初回登録', () => {
 
   it('同時に登録しても、会員IDは重ならない', async () => {
     const users = Array.from({ length: 6 }, (_, i) => `U10${i}:ユーザー${i}`);
-    const results = await Promise.all(users.map((user) => call('/api/register', { user, body: { consent: true } })));
+    const results = await Promise.all(users.map((user) => call('/api/register', { user, body: { consent: true, dogs: [dog('アル')] } })));
     expect(results.every((r) => r.status === 201)).toBe(true);
     const nos = results.map((r) => r.body.memberNo).sort();
     expect(nos).toEqual(['DR-000001', 'DR-000002', 'DR-000003', 'DR-000004', 'DR-000005', 'DR-000006']);
   });
 
   it('おうちから抜けた人は、新しいおうちとして登録し直せる', async () => {
-    await call('/api/register', { user: PAPA, body: { consent: true } });
+    await call('/api/register', { user: PAPA, body: { consent: true, dogs: [dog('アル')] } });
     await env.DB.prepare("UPDATE family_members SET status = 'left'").run();
-    const res = await call('/api/register', { user: PAPA, body: { consent: true } });
+    const res = await call('/api/register', { user: PAPA, body: { consent: true, dogs: [dog('アル')] } });
     expect(res.status).toBe(201);
     expect(res.body.memberNo).toBe('DR-000002');
   });
 
   it('LINE の表示名が変わったら、次に開いたときに更新する', async () => {
-    await call('/api/register', { user: PAPA, body: { consent: true } });
+    await call('/api/register', { user: PAPA, body: { consent: true, dogs: [dog('アル')] } });
     const me = await call('/api/me', { user: 'U001:パパ(新)' });
     expect(me.body.member.lineDisplayName).toBe('パパ(新)');
   });

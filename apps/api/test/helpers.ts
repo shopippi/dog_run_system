@@ -37,3 +37,20 @@ export async function call<T = any>(path: string, opts: CallOptions = {}): Promi
   }
   return { status: res.status, body: json as T };
 }
+
+export { fakeJpeg } from '../../../packages/shared/test/fake-jpeg';
+
+/** 登録で使う犬の入力(breedId 1 = トイプードル、5 = 柴犬、11 = その他) */
+export const dog = (name: string, extra: Record<string, unknown> = {}) => ({
+  name,
+  breedId: 1,
+  size: 'small',
+  ...extra,
+});
+
+/** お客さんを登録する。会員IDと犬を返す。 */
+export async function registerUser(user: string, dogs = [dog('アル')], extra: Record<string, unknown> = {}) {
+  const res = await call('/api/register', { user, body: { consent: true, dogs, ...extra } });
+  if (res.status !== 201) throw new Error(`登録に失敗: ${res.status} ${JSON.stringify(res.body)}`);
+  return res.body as { memberNo: string; householdName: string; dogs: { id: number; dogNo: string; name: string }[] };
+}

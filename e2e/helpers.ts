@@ -12,3 +12,40 @@ export function newLineUser(name: string): string {
 export async function openLiff(page: Page, user: string, path = '/') {
   await page.goto(`/liff${path}${path.includes('?') ? '&' : '?'}mockUser=${encodeURIComponent(user)}`);
 }
+
+/** ブラウザで大きな写真(JPEG)を作る。カメラで撮った写真の代わり。 */
+export async function makePhoto(page: Page, width = 1600, height = 1200): Promise<Buffer> {
+  const dataUrl = await page.evaluate(
+    ([w, h]) => {
+      const c = document.createElement('canvas');
+      c.width = w;
+      c.height = h;
+      const g = c.getContext('2d')!;
+      g.fillStyle = '#c8a165';
+      g.fillRect(0, 0, w, h);
+      g.fillStyle = '#5a3d1e';
+      g.beginPath();
+      g.arc(w / 2, h / 2, Math.min(w, h) / 3, 0, Math.PI * 2);
+      g.fill();
+      return c.toDataURL('image/jpeg', 0.9);
+    },
+    [width, height] as const,
+  );
+  return Buffer.from(dataUrl.split(',')[1]!, 'base64');
+}
+
+/** 画面から初回登録をする(同意 → 犬の登録)。 */
+export async function registerViaUi(page: Page, user: string, dogNames: string[] = ['アル']) {
+  await openLiff(page, user);
+  await page.getByLabel('利用規約とプライバシーポリシーに同意します').check();
+  await page.getByRole('button', { name: '同意して次へ' }).click();
+  for (const [i, name] of dogNames.entries()) {
+    if (i > 0) await page.getByRole('button', { name: '＋ もう1頭追加する' }).click();
+    const form = page.locator('fieldset.dog-form').nth(i);
+    await form.getByLabel('名前').fill(name);
+    await form.getByRole('combobox', { name: /犬種/ }).selectOption({ label: 'トイプードル' });
+  }
+  await page.getByRole('button', { name: '登録する' }).click();
+  await page.getByText('登録が完了しました').waitFor();
+  return (await page.locator('.welcome-card .id').textContent())!;
+}
