@@ -9,6 +9,7 @@ import {
   dogInputSchema,
   type Breed,
   type DogInput,
+  type DogSummary,
   type DogSex,
   type DogSize,
   type Neutered,
@@ -29,6 +30,23 @@ export type DogDraft = {
   neutered: Neutered | null;
   photo: ResizedPhoto | null;
 };
+
+/** 登録済みの犬を、入力の形にする(C-08) */
+export function dogToDraft(d: DogSummary): DogDraft {
+  const [y = '', m = ''] = d.birthYm ? d.birthYm.split('-') : [];
+  return {
+    key: String(d.id),
+    name: d.name,
+    breedId: d.breedId,
+    breedOther: d.breedOther ?? '',
+    size: d.size,
+    sex: d.sex,
+    birthYear: y,
+    birthMonth: m ? String(Number(m)) : '',
+    neutered: d.neutered,
+    photo: null,
+  };
+}
 
 export function emptyDogDraft(): DogDraft {
   return {
@@ -72,6 +90,8 @@ type Props = {
   breedEditable?: boolean;
   title?: string;
   onRemove?: () => void;
+  /** 登録済みの写真(差し替える前の写真) */
+  currentPhotoUrl?: string | null;
 };
 
 const THIS_YEAR = new Date().getFullYear();
@@ -79,7 +99,7 @@ const YEARS = Array.from({ length: 26 }, (_, i) => String(THIS_YEAR - i));
 const MONTHS = Array.from({ length: 12 }, (_, i) => String(i + 1));
 
 /** 犬の登録項目の入力(6.1)。L-02 と L-09 で使う。 */
-export function DogForm({ draft, breeds, onChange, breedEditable = true, title, onRemove }: Props) {
+export function DogForm({ draft, breeds, onChange, breedEditable = true, title, onRemove, currentPhotoUrl }: Props) {
   const id = useId();
   const [photoBusy, setPhotoBusy] = useState(false);
   const [photoError, setPhotoError] = useState<string | null>(null);
@@ -115,11 +135,12 @@ export function DogForm({ draft, breeds, onChange, breedEditable = true, title, 
           name={draft.name || '?'}
           breedName={breed?.name ?? ''}
           previewUrl={draft.photo?.previewUrl}
+          url={currentPhotoUrl}
           size={72}
         />
         <div className="photo-pick-body">
           <label className="up" htmlFor={`${id}-photo`}>
-            {photoBusy ? '写真を準備しています…' : draft.photo ? '写真を撮り直す・選び直す' : '写真を撮る・選ぶ'}
+            {photoBusy ? '写真を準備しています…' : draft.photo || currentPhotoUrl ? '写真を撮り直す・選び直す' : '写真を撮る・選ぶ'}
           </label>
           <input
             id={`${id}-photo`}

@@ -251,3 +251,47 @@ export async function isHouseholdDogMedia(db: D1Database, householdId: number, k
     .first();
   return Boolean(row);
 }
+
+/** おうちの呼び名を自動で作る設定なら、登録中の犬の名前から作り直す(4章)。 */
+export function refreshAutoNameStatement(db: D1Database, householdId: number, nowIso: string): D1PreparedStatement {
+  // 犬の名前を登録順に「・」でつなぐ。犬がいなければ「おうち」
+  return db
+    .prepare(
+      `UPDATE households
+          SET display_name = COALESCE(
+                (SELECT group_concat(name, '・') || 'のおうち'
+                   FROM (SELECT name FROM dogs WHERE household_id = ?1 AND status = 'active' ORDER BY id)),
+                'おうち'),
+              updated_at = ?2
+        WHERE id = ?1 AND display_name_auto = 1`,
+    )
+    .bind(householdId, nowIso);
+}
+
+/** 呼び名の検索用の列を、呼び名に合わせる(SQL ではひらがなにそろえられないため、あとから更新する)。 */
+export async function syncHouseholdSearchName(db: D1Database, householdId: number) {
+  const h = await db.prepare('SELECT display_name FROM households WHERE id = ?').bind(householdId).first<{ display_name: string }>();
+  if (!h) return;
+  await db
+    .prepare('UPDATE households SET display_name_search = ? WHERE id = ?')
+    .bind(normalizeForSearch(h.display_name), householdId)
+    .run();
+}
+
+export function dogChangeStatement(
+  db: D1Database,
+  dogId: number,
+  field: string,
+  before: unknown,
+  after: unknown,
+  actor: { type: ActorType; id: number | null },
+  nowIso: string,
+  reason: string | null = null,
+): D1PreparedStatement {
+  return db
+    .prepare(
+      `INSERT INTO dog_changes (dog_id, field, before_value, after_value, reason, actor_type, actor_id, changed_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    )
+    .bind(dogId, field, before == null ? null : String(before), after == null ? null : String(after), reason, actor.type, actor.id, nowIso);
+}
