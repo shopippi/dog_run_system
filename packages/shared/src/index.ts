@@ -10,3 +10,4 @@ export * from './image';
 export * from './schemas/survey';
 export * from './points';
 export * from './schemas/checkin';
+export * from './schemas/staff';
