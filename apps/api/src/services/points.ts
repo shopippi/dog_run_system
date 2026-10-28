@@ -31,3 +31,15 @@ export async function nextUsableTicket(db: D1Database, householdId: number, now:
     .first<{ id: number }>();
   return row?.id ?? null;
 }
+
+/** 使える無料券の一覧(期限の近いものから) */
+export async function usableTickets(db: D1Database, householdId: number, now: Date) {
+  const { results } = await db
+    .prepare(
+      `SELECT id, issued_at, expires_at FROM tickets WHERE household_id = ? AND ${USABLE}
+        ORDER BY expires_at IS NULL, expires_at, id`,
+    )
+    .bind(householdId, toJstIso(now))
+    .all<{ id: number; issued_at: string; expires_at: string | null }>();
+  return results.map((r) => ({ id: r.id, issuedAt: r.issued_at, expiresAt: r.expires_at }));
+}

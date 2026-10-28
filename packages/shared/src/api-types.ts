@@ -12,6 +12,21 @@ export type MeRegistered = {
   registered: true;
   member: { id: number; lineDisplayName: string };
   household: { memberNo: string; displayName: string };
+  /** 会員証(C-06) */
+  card: MemberCard;
+};
+
+export type MemberCard = {
+  dogs: DogSummary[];
+  /** ポイント残高(台帳から計算) */
+  balance: number;
+  pointsPerTicket: number;
+  /** 次の無料券まであと何ポイント */
+  toNextTicket: number;
+  /** 使える無料券 */
+  tickets: { id: number; issuedAt: string; expiresAt: string | null }[];
+  /** 今日のチェックイン(済んでいれば) */
+  todayVisitId: number | null;
 };
 
 export type MeResponse = MeUnregistered | MeRegistered;
