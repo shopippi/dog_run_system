@@ -9,6 +9,7 @@ import { joinRoutes } from './routes/customer/join';
 import { meRoutes } from './routes/customer/me';
 import { authRoutes } from './routes/admin/auth';
 import { todayRoutes } from './routes/admin/today';
+import { householdRoutes } from './routes/admin/households';
 import { adminCheckinRoutes } from './routes/admin/checkins';
 import { requireStaff } from './lib/staff-auth';
 import { mediaRoutes } from './routes/customer/media';
@@ -54,6 +55,7 @@ export function createApp() {
   admin.use('*', requireStaff);
   admin.route('/', todayRoutes);
   admin.route('/', adminCheckinRoutes);
+  admin.route('/', householdRoutes);
   app.route('/admin/api', admin);
 
   app.all('/api/*', (c) =>
