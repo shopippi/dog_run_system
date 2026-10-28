@@ -175,3 +175,40 @@ export const staffPatchSchema = z.object({
 
 /** パスワードの再発行。password を送らなければ、ランダムに作って1回だけ返す */
 export const staffPasswordResetSchema = z.object({ password: staffPasswordSchema.optional() });
+
+// ============================================================
+// A-09 イベント・休業日
+// ============================================================
+
+/** イベントの種類(画面ではここから選ぶ。分析ではイベントの日として同じに扱う) */
+export const EVENT_KINDS = ['イベント', '貸し切り', '教室・講習', 'その他'] as const;
+
+const dateSchema = z
+  .string({ error: '日付を選んでください。' })
+  .regex(/^(20\d{2})-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/, { error: '日付を選び直してください。' })
+  .refine(
+    (d) => {
+      const t = new Date(`${d}T00:00:00Z`);
+      return !Number.isNaN(t.getTime()) && t.toISOString().slice(0, 10) === d;
+    },
+    { error: '日付を選び直してください。' },
+  );
+
+/** 月("2026-10") */
+export const monthSchema = z.string().regex(/^20\d{2}-(0[1-9]|1[0-2])$/, { error: '月を選び直してください。' });
+
+export const eventCreateSchema = z.object({
+  date: dateSchema,
+  name: z
+    .string({ error: 'イベントの名前を入力してください。' })
+    .trim()
+    .min(1, { error: 'イベントの名前を入力してください。' })
+    .max(50, { error: 'イベントの名前は50文字までで入力してください。' }),
+  kind: z.enum(EVENT_KINDS, { error: '種類を選んでください。' }).default('イベント'),
+  memo: z.string().trim().max(500, { error: 'メモは500文字までで入力してください。' }).nullish(),
+});
+
+export const closureCreateSchema = z.object({
+  date: dateSchema,
+  note: z.string().trim().max(100, { error: '休業の理由は100文字までで入力してください。' }).nullish(),
+});

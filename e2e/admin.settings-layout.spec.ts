@@ -59,6 +59,14 @@ async function checkScreen(page: Page, folder: string, screen: string, touch: bo
   }
 }
 
+/** 日本時間の今日 */
+const today = () => new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10);
+/** 今月の、今日より2日前の日(月の初めなら null) */
+const closedDay = () => {
+  const d = Number(today().slice(8));
+  return d > 2 ? `${today().slice(0, 8)}${String(d - 2).padStart(2, '0')}` : null;
+};
+
 test.describe('設定まわりの画面の見え方', () => {
   test.describe.configure({ mode: 'serial' });
 
@@ -73,6 +81,18 @@ test.describe('設定まわりの画面の見え方', () => {
     });
     const { id } = (await created.json()) as { id: number };
     await page.request.patch(`/admin/api/survey-questions/${id}`, { headers, data: { visible: false } });
+    // カレンダーに出すイベントと臨時休業日(休業日は、今月の今日より前の日にして、テストの後で戻す)
+    await page.request.post('/admin/api/events', { headers, data: { date: today(), name: '見え方の確認用のイベント', kind: 'イベント' } });
+    await page.request.post('/admin/api/events', { headers, data: { date: today(), name: '2つ目のイベント', kind: '貸し切り' } });
+    await page.request.post('/admin/api/events', { headers, data: { date: today(), name: '3つ目のイベント', kind: 'その他' } });
+    if (closedDay()) await page.request.post('/admin/api/closures', { headers, data: { date: closedDay(), note: '見え方の確認' } });
+    await page.close();
+  });
+
+  test.afterAll(async ({ browser }) => {
+    const page = await browser.newPage();
+    await adminLogin(page, 'admin');
+    if (closedDay()) await page.request.delete(`/admin/api/closures/${closedDay()}`, { headers: { 'x-dr-admin': '1' } });
     await page.close();
   });
 
@@ -127,6 +147,11 @@ test.describe('設定まわりの画面の見え方', () => {
       await page.getByRole('dialog', { name: 'アカウントを停止する' }).waitFor();
       await checkScreen(page, v.name, 'M-14 アカウントを停止する', v.touch);
       await page.getByRole('button', { name: 'やめる' }).click();
+
+      // M-10 イベント・休業日
+      await page.getByRole('link', { name: 'イベント・休業日' }).click();
+      await page.getByRole('region', { name: 'カレンダー' }).getByRole('button', { name: /今日/ }).waitFor();
+      await checkScreen(page, v.name, 'M-10 イベント・休業日', v.touch);
 
       await page.close();
     });

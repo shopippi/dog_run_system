@@ -122,6 +122,10 @@ for (const scheme of ['light', 'dark'] as const) {
       await page.getByRole('dialog', { name: 'アカウントを停止する' }).waitFor();
       await check(page, 'M-14 アカウントを停止する');
       await page.getByRole('button', { name: 'やめる' }).click();
+
+      await page.getByRole('link', { name: 'イベント・休業日' }).click();
+      await page.getByRole('region', { name: 'カレンダー' }).getByRole('button', { name: /今日/ }).waitFor();
+      await check(page, 'M-10 イベント・休業日');
       await page.close();
 
       const dev = await browser.newPage({ ...TABLET, colorScheme: scheme });

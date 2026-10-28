@@ -76,3 +76,21 @@ export type AdminStaffResponse = { staff: AdminStaff[] };
 
 /** パスワードの再発行の結果。ランダムに作ったときだけ、新しいパスワードを1回だけ返す */
 export type StaffPasswordResult = { password: string | null };
+
+/** イベント(A-09) */
+export type AdminEvent = {
+  id: number;
+  date: string;
+  name: string;
+  kind: string | null;
+  memo: string | null;
+};
+
+export type AdminEventsResponse = { month: string; events: AdminEvent[] };
+
+/** 臨時休業日と祝日(A-09)。祝日は B-02 が取り込んだもの */
+export type AdminClosuresResponse = {
+  month: string;
+  closures: { date: string; note: string | null }[];
+  holidays: { date: string; name: string }[];
+};
