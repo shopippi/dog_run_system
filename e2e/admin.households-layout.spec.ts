@@ -47,6 +47,20 @@ test.describe('おうちの詳細と記録の見え方', () => {
       await dialog.getByRole('button', { name: 'やめる' }).click();
       await expect(dialog).toHaveCount(0);
 
+      // M-06 おうちの詳細(探す → 詳しく)
+      await page.getByRole('link', { name: 'おうちを探す' }).click();
+      await page.getByRole('searchbox', { name: '探す言葉' }).fill('ここあ');
+      const open = page.getByRole('link', { name: 'ココア・キナコのおうちの詳細を開く' });
+      await expect(open).toBeVisible();
+      await checkScreen(page, v.name, 'M-04 おうちを探す(管理者・詳しくのリンク)', v.touch);
+      await open.click();
+      const head = page.getByRole('region', { name: 'おうちの概要' });
+      await expect(head.getByRole('heading', { name: 'ココア・キナコのおうち' })).toBeVisible();
+      await checkScreen(page, v.name, 'M-06 おうちの詳細', v.touch);
+      await head.getByRole('button', { name: '呼び名を変える' }).click();
+      await checkScreen(page, v.name, 'M-06 呼び名の変更', v.touch);
+      await head.getByRole('button', { name: 'やめる' }).click();
+
       await page.close();
     });
   }

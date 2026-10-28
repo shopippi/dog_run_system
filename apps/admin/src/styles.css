@@ -349,3 +349,57 @@ input::placeholder { color: var(--text-tertiary); }
   .audit-who { grid-column: 2; }
   .audit-acts { grid-column: 2; justify-content: flex-start; }
 }
+
+/* ---- M-06 おうちの詳細(A-02) ---- */
+.hh-back { display: flex; margin: calc(-1 * var(--sp-2)) 0 calc(-1 * var(--sp-2)) calc(-1 * var(--sp-3)); }
+.hh-head { display: flex; flex-direction: column; }
+.hh-id { display: flex; flex-wrap: wrap; align-items: flex-start; gap: var(--sp-4); padding: var(--sp-5); }
+.hh-name { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; flex: 1; min-width: 220px; }
+.hh-name h2 { font-size: var(--fs-20); overflow-wrap: anywhere; }
+.hh-name .mono { font-size: var(--fs-13); }
+.hh-rename-open { margin-left: calc(-1 * var(--sp-3)); margin-top: var(--sp-1); }
+.hh-rename { display: flex; flex-direction: column; gap: var(--sp-3); flex: 1; min-width: 240px; max-width: 520px; }
+.hh-rename-acts { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
+.hh-kpis { border-top: 1px solid var(--border); }
+.hh-section { display: flex; flex-direction: column; overflow: hidden; }
+.hh-section-title { display: flex; align-items: baseline; gap: var(--sp-2); padding: var(--sp-4) var(--sp-5) var(--sp-3); font-size: var(--fs-17); border-bottom: 1px solid var(--border); }
+.hh-section-title .sub-text { font-weight: var(--fw-regular); }
+.hh-sub { padding: var(--sp-4) var(--sp-5) var(--sp-2); font-size: var(--fs-14); border-bottom: 1px solid var(--border); }
+.hh-list + .hh-sub, .empty + .hh-sub { border-top: 1px solid var(--border); }
+.hh-list { list-style: none; margin: 0; padding: 0; }
+.hh-list > li + li { border-top: 1px solid var(--border); }
+.hh-row {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(80px, auto); align-items: center; gap: var(--sp-4);
+  min-height: 64px; padding: var(--sp-3) var(--sp-4) var(--sp-3) var(--sp-5);
+}
+.hh-row:has(> .hh-date) { grid-template-columns: 96px minmax(0, 1fr) auto; }
+.hh-dog { grid-template-columns: auto minmax(0, 1fr) auto minmax(80px, auto); }
+.hh-date { display: flex; flex-direction: column; font-size: var(--fs-13); color: var(--text-secondary); line-height: 1.4; }
+.hh-main { display: flex; flex-direction: column; min-width: 0; }
+.hh-main b { font-size: var(--fs-15); overflow-wrap: anywhere; }
+.hh-meta { white-space: nowrap; }
+.hh-meta.mono { font-size: var(--fs-13); color: var(--text-secondary); }
+.hh-end { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: var(--sp-2); }
+.hh-delta { min-width: 40px; text-align: right; font-size: var(--fs-15); font-weight: var(--fw-strong); font-variant-numeric: tabular-nums; }
+.hh-delta.minus { color: var(--text-secondary); }
+.hh-row.off b, .hh-row.off .sub-text, .hh-row.off .hh-date, .hh-row.off .hh-meta { color: var(--text-tertiary); }
+.hh-row.off .av { opacity: .6; }
+.hh-survey { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+.hh-survey > div { min-width: 0; }
+.hh-answers { margin: 0; padding: var(--sp-2) var(--sp-5) var(--sp-4); display: flex; flex-direction: column; }
+.hh-answers > div { display: grid; grid-template-columns: minmax(120px, 40%) minmax(0, 1fr); gap: var(--sp-3); padding: var(--sp-2) 0; }
+.hh-answers > div + div { border-top: 1px solid var(--border); }
+.hh-answers dt { font-size: var(--fs-13); color: var(--text-secondary); }
+.hh-answers dd { margin: 0; overflow-wrap: anywhere; }
+.hh-answers dd.none { color: var(--text-tertiary); }
+@media (max-width: 720px) {
+  .hh-row, .hh-row:has(> .hh-date) { grid-template-columns: minmax(0, 1fr) auto; row-gap: var(--sp-1); }
+  .hh-row > .hh-date { grid-column: 1 / -1; flex-direction: row; gap: var(--sp-2); }
+  .hh-dog { grid-template-columns: auto minmax(0, 1fr) auto; }
+  .hh-dog .hh-meta { grid-column: 2; grid-row: 2; }
+}
+
+/* M-04 おうちを探す: 結果の行から、おうちの詳細へ */
+.result-item { display: flex; align-items: center; }
+.result-item > .result-row { flex: 1; min-width: 0; }
+.result-open { margin-right: var(--sp-3); }

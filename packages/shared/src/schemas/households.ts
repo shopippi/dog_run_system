@@ -15,3 +15,12 @@ export type AuditQuery = z.infer<typeof auditQuerySchema>;
 
 /** 操作ログの1ページの行数 */
 export const AUDIT_PAGE_SIZE = 50;
+
+/** おうちの呼び名の変更(A-02)。空にすると、犬の名前から自動で作る呼び名に戻す */
+export const householdRenameSchema = z.object({
+  displayName: z
+    .string({ error: '呼び名を入力してください。' })
+    .trim()
+    .max(40, { error: '呼び名は40文字までで入力してください。' }),
+});
+export type HouseholdRename = z.infer<typeof householdRenameSchema>;

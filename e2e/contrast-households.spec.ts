@@ -37,6 +37,14 @@ for (const scheme of ['light', 'dark'] as const) {
       await dialog.getByRole('button', { name: '元に戻す' }).click();
       await list.getByText('元に戻し済み').first().waitFor();
       await check(page, 'M-15 操作ログ(元に戻し済み)');
+
+      // M-06 おうちの詳細
+      await list.getByRole('link', { name: /ルルのおうち/ }).first().click();
+      const head = page.getByRole('region', { name: 'おうちの概要' });
+      await head.getByRole('heading', { name: 'ルルのおうち' }).waitFor();
+      await check(page, 'M-06 おうちの詳細');
+      await head.getByRole('button', { name: '呼び名を変える' }).click();
+      await check(page, 'M-06 呼び名の変更');
       await page.close();
     });
   });

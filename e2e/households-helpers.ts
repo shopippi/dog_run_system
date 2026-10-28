@@ -49,6 +49,11 @@ export async function checkScreen(page: Page, folder: string, screen: string, to
   expect(problems, `${folder} / ${screen}`).toEqual([]);
   if (process.env.SHOT_DIR) {
     await page.screenshot({ path: `${process.env.SHOT_DIR}/${folder}/${screen}.png`, fullPage: true });
+    // 縦に長い画面を丸ごと撮ると、指で操作する端末のまね(pointer: coarse)が外れるため、かけ直す
+    if (touch) {
+      const cdp = await page.context().newCDPSession(page);
+      await cdp.send('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 1 });
+    }
   }
 }
 
