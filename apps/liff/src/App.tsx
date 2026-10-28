@@ -17,6 +17,8 @@ import { MigrationRequestPage } from './pages/migration/MigrationRequestPage';
 import { HistoryPage } from './pages/history/HistoryPage';
 import { ProfilePage } from './pages/profile/ProfilePage';
 import { HelpPage } from './pages/help/HelpPage';
+import { useMergeNotice } from './hooks/useMergeNotice';
+import { MergeNoticeScreen } from './pages/family/MergeNoticeScreen';
 
 export function App() {
   const { me, error, loading, reload } = useMe();
@@ -78,6 +80,8 @@ function backFor(path: string): HeaderBack | null {
 
 function Registered() {
   const survey = usePendingSurvey();
+  const mergeNotice = useMergeNotice();
+  if (mergeNotice.notice) return <MergeNoticeScreen notice={mergeNotice.notice} onDone={mergeNotice.dismiss} />;
   if (survey.questions && survey.questions.length > 0) {
     return <SurveyPrompt questions={survey.questions} onDone={survey.dismiss} />;
   }

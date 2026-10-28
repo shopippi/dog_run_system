@@ -249,28 +249,38 @@ describe('A-07 おうちの統合', () => {
     expect(justInTime.status).toBe(200);
   });
 
-  it('まとめる申請から統合すると、申請は承認になる。元に戻すと確認待ちに戻る', async () => {
+  it('管理者がまとめたときも、まとめられた側の家族に「おうちが一つになりました」を1回だけ出す', async () => {
     const admin = await cookieOf();
-    const { keepId, absorbId, papa } = await seed();
-    // パパの招待をママが開いた(ママはすでに別のおうちがある)
-    const invite = await call('/api/invites', { user: PAPA, body: {}, now: NOW });
-    const accepted = await call(`/api/invites/${invite.body.code}/accept`, { user: MAMA, body: { consent: true, survey: [] }, now: NOW });
-    expect(accepted.status).toBe(202);
-    const req = await env.DB.prepare("SELECT id FROM requests WHERE kind = 'merge'").first<{ id: number }>();
-    const res = await adminCall('/admin/api/merges', {
-      cookie: admin,
-      body: { keepHouseholdId: keepId, absorbHouseholdId: absorbId, requestId: req!.id },
-      now: NOW,
-    });
+    const { keepId, absorbId, papa, mama } = await seed();
+    const res = await adminCall('/admin/api/merges', { cookie: admin, body: { keepHouseholdId: keepId, absorbHouseholdId: absorbId }, now: NOW });
     expect(res.status).toBe(201);
-    const after = await env.DB.prepare('SELECT status, handled_by_staff_id FROM requests WHERE id = ?').bind(req!.id).first();
-    expect(after).toEqual({ status: 'approved', handled_by_staff_id: 1 });
-    expect((await env.DB.prepare('SELECT request_id FROM merges').first())!.request_id).toBe(req!.id);
-    expect((await me(MAMA)).body.household.memberNo).toBe(papa.memberNo);
+    expect((await call('/api/merge-notice', { user: PAPA })).body.notice).toBeNull();
+    const notice = await call('/api/merge-notice', { user: MAMA });
+    expect(notice.body.notice).toMatchObject({ memberNo: papa.memberNo, previousMemberNo: mama.memberNo });
+    // 統合の記録には、まとめた管理者の名前が出る
+    expect((await adminCall(`/admin/api/merges/${res.body.mergeId}`, { cookie: admin, now: NOW })).body.executedBy).toBe('管理者');
+  });
 
+  it('写真だけ別に選べる(photo)。名前・犬種は take の方、写真は photo の方', async () => {
+    const admin = await cookieOf();
+    const { keepId, absorbId, papa, mama } = await seed();
+    await env.DB.prepare("UPDATE dogs SET photo_key = 'dogs/x/keep.jpg', thumb_key = 'dogs/x/keep-t.jpg' WHERE id = ?").bind(papa.dogs[0]!.id).run();
+    await env.DB.prepare("UPDATE dogs SET photo_key = 'dogs/x/absorb.jpg', thumb_key = 'dogs/x/absorb-t.jpg' WHERE id = ?").bind(mama.dogs[0]!.id).run();
+    const body = {
+      keepHouseholdId: keepId,
+      absorbHouseholdId: absorbId,
+      dogPairs: [{ keep: papa.dogs[0]!.id, absorb: mama.dogs[0]!.id, take: 'keep', photo: 'absorb' }],
+    };
+    const preview = await adminCall('/admin/api/merges/preview', { cookie: admin, body, now: NOW });
+    expect(preview.body.result.dogs[0]).toMatchObject({ name: 'アル', photoUrl: '/admin/api/media/dogs/x/absorb.jpg' });
+    const res = await adminCall('/admin/api/merges', { cookie: admin, body, now: NOW });
+    expect(res.status).toBe(201);
+    const al = await env.DB.prepare('SELECT name, photo_key, thumb_key FROM dogs WHERE id = ?').bind(papa.dogs[0]!.id).first();
+    expect(al).toEqual({ name: 'アル', photo_key: 'dogs/x/absorb.jpg', thumb_key: 'dogs/x/absorb-t.jpg' });
+    // 元に戻すと、写真も戻る
     await adminCall(`/admin/api/merges/${res.body.mergeId}/undo`, { cookie: admin, body: {}, now: NOW });
-    const back = await env.DB.prepare('SELECT status, handled_at FROM requests WHERE id = ?').bind(req!.id).first();
-    expect(back).toEqual({ status: 'pending', handled_at: null });
+    const back = await env.DB.prepare('SELECT photo_key FROM dogs WHERE id = ?').bind(papa.dogs[0]!.id).first();
+    expect(back).toEqual({ photo_key: 'dogs/x/keep.jpg' });
   });
 
   it('統合済みのおうちは、もう一度まとめられない。同じおうちどうし・違う犬の組み合わせは受け付けない', async () => {

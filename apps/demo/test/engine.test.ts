@@ -30,14 +30,14 @@ beforeAll(async () => {
 });
 
 describe('初期データ', () => {
-  it('おうち30件・来場およそ600件・確認待ち2件ができる', () => {
+  it('おうち30件・来場およそ600件・確認待ち1件ができる', () => {
     const one = (q: string) => Object.values(engine.select(q)[0]!)[0] as number;
     expect(one("SELECT COUNT(*) FROM households WHERE status = 'active'")).toBe(30);
     const visits = one('SELECT COUNT(*) FROM visits WHERE household_id IS NOT NULL');
     expect(visits).toBeGreaterThan(450);
     expect(visits).toBeLessThan(750);
     expect(one('SELECT COUNT(*) FROM visits WHERE household_id IS NULL')).toBeGreaterThan(10);
-    expect(one("SELECT COUNT(*) FROM requests WHERE status = 'pending'")).toBe(2);
+    expect(one("SELECT COUNT(*) FROM requests WHERE status = 'pending'")).toBe(1);
     expect(one('SELECT COUNT(*) FROM family_members GROUP BY household_id HAVING COUNT(*) = 2 LIMIT 1')).toBe(2);
     expect(one('SELECT COUNT(*) FROM (SELECT household_id FROM family_members GROUP BY household_id HAVING COUNT(*) = 2)')).toBe(5);
     expect(one('SELECT COUNT(*) FROM events')).toBe(4);
@@ -100,7 +100,7 @@ describe('ブラウザの中の API', () => {
     // 別の画面の入れ物にはクッキーがない
     expect((await engine.call('other', 'GET', '/admin/api/me')).status).toBe(401);
     const pending = await engine.call<{ pending: number }>('admin', 'GET', '/admin/api/requests/count');
-    expect(pending.data.pending).toBe(2);
+    expect(pending.data.pending).toBe(1);
 
     // 製作者は見るだけ
     expect(await engine.loginAs('admin', 'developer@example.com', DEMO_PASSWORD)).toBe(true);

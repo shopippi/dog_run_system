@@ -2,9 +2,9 @@ import { execFileSync } from 'node:child_process';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { expect, type Page } from '@playwright/test';
-import { openLiff } from './helpers';
+import { answerSurvey, makePhoto, openLiff } from './helpers';
 
-// 担当B(おうちの統合・確認待ち・旧カードの移行)の e2e で使う補助。
+// 担当B(おうちの統合・確認待ち・旧カードの移行)と担当H(お客さん同士でまとめる)の e2e で使う補助。
 
 /** テスト用のデータベースに SQL を実行する(お客さんの申請の画面がまだないものの準備に使う) */
 export function sql(command: string): { [key: string]: unknown }[] {
@@ -25,12 +25,34 @@ export async function sendInvite(page: Page, user: string): Promise<string> {
   return messages.at(-1)!.match(/\/liff(\/invite\/[A-Za-z0-9_-]+)/)![1]!;
 }
 
-/** すでに別のおうちがある人が招待を開いて、まとめる申請をする(C-12) */
-export async function requestMerge(page: Page, inviter: string, requester: string) {
+/** すでに別のおうちがある人が招待を開く(C-12)。「おうちを一つにまとめる」の画面が出るまで待つ */
+export async function openMergeInvite(page: Page, inviter: string, opener: string) {
   const invitePath = await sendInvite(page, inviter);
-  await openLiff(page, requester, invitePath);
-  await page.getByRole('button', { name: 'おうちをまとめる申請をする' }).click();
-  await expect(page.getByRole('status')).toContainText('おうちをまとめる申請をしました');
+  await openLiff(page, opener, invitePath);
+  await expect(page.getByRole('heading', { name: 'おうちを一つにまとめる' })).toBeVisible();
+  return invitePath;
+}
+
+/** 写真つきで登録する(最初のワンちゃんだけ写真つき)。会員IDを返す */
+export async function registerWithPhoto(page: Page, user: string, names: [string, ...string[]]) {
+  await openLiff(page, user);
+  await page.getByLabel('利用規約とプライバシーポリシーに同意します').check();
+  await page.getByRole('button', { name: '同意して次へ' }).click();
+  for (const [i, name] of names.entries()) {
+    if (i > 0) await page.getByRole('button', { name: 'もう1頭追加する' }).click();
+    const form = page.locator('fieldset.dog-form').nth(i);
+    await form.getByLabel('名前').fill(name);
+    await form.getByRole('combobox', { name: /犬種/ }).selectOption({ label: i === 0 ? '柴犬' : 'トイプードル' });
+    if (i === 0) {
+      await form.locator('input[type=file]').setInputFiles({ name: 'a.jpg', mimeType: 'image/jpeg', buffer: await makePhoto(page) });
+      await form.locator('img.av').waitFor();
+    }
+  }
+  await page.getByRole('button', { name: '次へ' }).click();
+  await answerSurvey(page);
+  await page.getByRole('button', { name: '登録する' }).click();
+  await page.getByText('登録が完了しました').waitFor();
+  return (await page.locator('.welcome-card .id').textContent())!;
 }
 
 /** 写真の保存先(R2)に画像を置く(旧カードの写真の準備に使う) */

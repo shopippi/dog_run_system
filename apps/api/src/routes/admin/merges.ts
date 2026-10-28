@@ -22,7 +22,7 @@ mergesRoutes.post('/merges/preview', requireRole('admin'), async (c) => {
 mergesRoutes.post('/merges', requireRole('admin'), async (c) => {
   const input = await parseJson(c, mergeInputSchema);
   const db = c.env.DB;
-  const result = await executeMerge(db, input, c.get('staff').id, c.get('now'), await loadSettings(db));
+  const result = await executeMerge(db, input, { type: 'staff', id: c.get('staff').id }, c.get('now'), await loadSettings(db));
   return c.json(result, 201);
 });
 
@@ -48,11 +48,17 @@ type RecordRow = {
 const RECORD_SELECT = `
   SELECT m.id, k.id AS kept_id, k.member_no AS kept_no, k.display_name AS kept_name,
          a.id AS absorbed_id, a.member_no AS absorbed_no, a.display_name AS absorbed_name,
-         m.executed_at, COALESCE(s.name, '') AS executed_by, m.undone_at
+         m.executed_at,
+         -- お客さんが招待からまとめたときは「○○さん(お客さん)」
+         CASE WHEN m.executed_by_staff_id IS NULL AND m.executed_by_member_id IS NOT NULL
+              THEN COALESCE(f.line_display_name || 'さん', '') || '(お客さん)'
+              ELSE COALESCE(s.name, '') END AS executed_by,
+         m.undone_at
     FROM merges m
     JOIN households k ON k.id = m.kept_household_id
     JOIN households a ON a.id = m.absorbed_household_id
-    LEFT JOIN staff_users s ON s.id = m.executed_by_staff_id`;
+    LEFT JOIN staff_users s ON s.id = m.executed_by_staff_id
+    LEFT JOIN family_members f ON f.id = m.executed_by_member_id`;
 
 async function toRecord(db: D1Database, r: RecordRow, now: Date): Promise<MergeRecord> {
   const state = await mergeUndoState(db, r.id, now);
@@ -87,7 +93,7 @@ mergesRoutes.get('/merges/:id', requireRole('admin'), async (c) => {
   return c.json(await toRecord(db, row, c.get('now')));
 });
 
-// 操作ログ(A-15)からも、同じ条件で元に戻せるようにする
+// 操作ログ(A-15)からも、同じ条件で元に戻せるようにする。お客さんが招待からまとめたもの(C-12)も同じ
 registerUndo('household.merge', async (db, log, ctx) => {
   await undoMerge(db, Number(log.target_id) || 0, ctx.staffId, ctx.now);
 });

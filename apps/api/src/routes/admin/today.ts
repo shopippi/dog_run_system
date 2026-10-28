@@ -15,7 +15,8 @@ todayRoutes.get('/today', async (c) => {
   const visits = await listVisitsOn(db, date, staff.role);
   let pendingRequests: number | null = null;
   if (canSeePersonal(staff.role)) {
-    const row = await db.prepare("SELECT COUNT(*) AS n FROM requests WHERE status = 'pending'").first<{ n: number }>();
+    // 以前の「まとめる申請」(kind 'merge')は数えない(お客さんが招待から自分でまとめる形になったため)
+    const row = await db.prepare("SELECT COUNT(*) AS n FROM requests WHERE status = 'pending' AND kind <> 'merge'").first<{ n: number }>();
     pendingRequests = row?.n ?? 0;
   }
   const body: TodayResponse = { date, visits, totals: totalsOf(visits), pendingRequests };
