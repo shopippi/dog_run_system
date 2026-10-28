@@ -3,7 +3,7 @@ import { d1, daysAgo, householdIdOf } from './analytics-helpers';
 import { adminLogin, newLineUser, openCheckin, registerViaUi } from './helpers';
 
 // 担当D(分析と自動処理)の画面の見え方(e2e/admin.layout.spec.ts と同じ確かめ方)。
-// PC(1280×800)とタブレット縦(768×1024)で、ダッシュボード(M-05)を確かめる。
+// PC(1280×800)とタブレット縦(768×1024)で、ダッシュボード(M-05)とシステムの状態(M-17)を確かめる。
 const VIEWPORTS = [
   { name: '1280x800', viewport: { width: 1280, height: 800 }, touch: false },
   { name: '768x1024', viewport: { width: 768, height: 1024 }, touch: true },
@@ -105,6 +105,21 @@ test.describe('担当D の画面の見え方', () => {
       page = await open('staff', '今月');
       await expect(page.getByRole('region', { name: '来場頻度' })).toBeVisible();
       await checkScreen(page, v.name, 'M-05 ダッシュボード(受付スタッフ)', v.touch);
+      await page.close();
+
+      // M-17 システムの状態(管理者は簡易、製作者は詳細)
+      page = await browser.newPage({ viewport: v.viewport, hasTouch: v.touch });
+      await adminLogin(page, 'admin', '/status');
+      const stats = page.getByRole('listitem', { name: /日別の集計/ });
+      await stats.getByRole('button', { name: '今すぐ実行' }).click();
+      await expect(stats.getByRole('status')).toBeVisible();
+      await checkScreen(page, v.name, 'M-17 システムの状態', v.touch);
+      await page.close();
+
+      page = await browser.newPage({ viewport: v.viewport, hasTouch: v.touch });
+      await adminLogin(page, 'developer', '/status');
+      await expect(page.getByRole('region', { name: 'データ量' })).toBeVisible();
+      await checkScreen(page, v.name, 'M-17 システムの状態(製作者)', v.touch);
       await page.close();
     });
   }

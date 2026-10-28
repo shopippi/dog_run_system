@@ -110,5 +110,22 @@ for (const scheme of ['light', 'dark'] as const) {
       await check(page, 'M-05 ダッシュボード(期間を選ぶ)');
       await page.close();
     });
+
+    test('システムの状態の文字が背景に対して読める', async ({ browser }) => {
+      test.setTimeout(90_000);
+      const page = await browser.newPage({ ...TABLET, colorScheme: scheme });
+      await adminLogin(page, 'admin', '/status');
+      const stats = page.getByRole('listitem', { name: /日別の集計/ });
+      await stats.getByRole('button', { name: '今すぐ実行' }).click();
+      await stats.getByRole('status').waitFor();
+      await check(page, 'M-17 システムの状態');
+      await page.close();
+
+      const dev = await browser.newPage({ ...TABLET, colorScheme: scheme });
+      await adminLogin(dev, 'developer', '/status');
+      await dev.getByRole('region', { name: 'データ量' }).waitFor();
+      await check(dev, 'M-17 システムの状態(製作者)');
+      await dev.close();
+    });
   });
 }

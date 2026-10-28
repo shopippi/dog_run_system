@@ -139,3 +139,50 @@ export type DashboardResponse = {
   family: { households: number; multi: number; rate: number | null; avgVisitsMulti: number | null; avgVisitsSingle: number | null } | null;
   surveys: SurveySummary[] | null;
 };
+
+/** システムの状態の色(A-17)。green: 正常 / yellow: 注意 / red: 止まっている */
+export type StatusLevel = 'green' | 'yellow' | 'red';
+export const STATUS_LEVEL_LABELS: Record<StatusLevel, string> = { green: '正常', yellow: '注意', red: '止まっています' };
+
+/** 手動で「今すぐ実行」できる自動処理 */
+export const RUNNABLE_JOBS = ['weather', 'holidays', 'backup', 'daily_stats'] as const;
+export type RunnableJob = (typeof RUNNABLE_JOBS)[number];
+
+export type SystemJobRun = {
+  name: SystemJobName;
+  label: string;
+  startedAt: string;
+  finishedAt: string | null;
+  status: SystemJobStatus;
+  message: string | null;
+};
+
+/** GET /admin/api/system-status の応答(A-17 簡易・D-02 詳細) */
+export type SystemStatusResponse = {
+  checkedAt: string;
+  overall: StatusLevel;
+  jobs: {
+    name: SystemJobName;
+    label: string;
+    level: StatusLevel;
+    /** 色の理由(画面にそのまま出す) */
+    summary: string;
+    /** いつ動く処理か */
+    schedule: string;
+    lastRun: SystemJobRun | null;
+    lastSuccessAt: string | null;
+    runnable: boolean;
+  }[];
+  /** 赤のときに出す、製作者への連絡方法(settings.developer_contact) */
+  contact: string | null;
+  /** 製作者だけ(D-02)。管理者には null */
+  detail: {
+    recentFailures: SystemJobRun[];
+    history: SystemJobRun[];
+    tables: { name: string; label: string; rows: number }[];
+    /** データベースの大きさ(バイト)。分からなければ null */
+    databaseBytes: number | null;
+    databaseLimitBytes: number;
+    photos: { count: number; estimatedBytes: number; limitBytes: number };
+  } | null;
+};

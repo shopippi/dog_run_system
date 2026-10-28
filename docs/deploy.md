@@ -50,18 +50,19 @@ STAFF_PASSWORD='<10文字以上>' pnpm staff:create --email dev@example.com --na
 | `10 18 * * *` | 毎日 3:10 | 日別集計の再計算(過去400日)、有効期限の処理、バックアップ、移行期間終了後の画像削除。2月1日(と、祝日をまだ取り込めていないとき)は祝日の取り込みも |
 | `10 20 * * *` | 毎日 5:10 | 前日の天気の取得(取れていない日があれば、過去7日分まで取り直す) |
 
-ローカルで手動で動かすには、`--test-scheduled` を付けて起動し、cron の文字列を指定して呼ぶ。
+ローカルで手動で動かすには、`--test-scheduled` を付けて起動し、cron の文字列を指定して呼ぶ(wrangler 4.154 で確認)。
 
 ```sh
 pnpm build
 pnpm --filter @dr/api exec wrangler dev --local --port 8787 --test-scheduled
 # 別の端末で
-curl "http://localhost:8787/__scheduled?cron=10+18+*+*+*"   # 3:10 の処理
-curl "http://localhost:8787/__scheduled?cron=10+20+*+*+*"   # 5:10 の処理
+curl "http://localhost:8787/cdn-cgi/local/scheduled?cron=10+18+*+*+*"   # 3:10 の処理
+curl "http://localhost:8787/cdn-cgi/local/scheduled?cron=10+20+*+*+*"   # 5:10 の処理
 ```
 
-- 新しい wrangler では `curl "http://localhost:8787/cdn-cgi/handler/scheduled?cron=10+18+*+*+*"` でも呼べる(`--test-scheduled` は要らない)。古い案内にある `/cdn-cgi/local/scheduled` は、使っている wrangler の版で動かなければ上のどちらかを使う。
-- 管理画面の「システムの状態」の「今すぐ実行」からも、処理ごとに動かせる(管理者のみ)。
+- `/__scheduled?cron=...` と `/cdn-cgi/handler/scheduled?cron=...` でも同じように呼べる。
+- 結果は `system_jobs` に残る: `pnpm --filter @dr/api exec wrangler d1 execute DB --local --command "SELECT * FROM system_jobs ORDER BY id DESC LIMIT 10"`
+- 管理画面の「システムの状態」の「今すぐ実行」からも、天気・祝日・バックアップ・集計を動かせる(管理者のみ)。
 
 ## バックアップと復元
 

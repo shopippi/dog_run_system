@@ -387,3 +387,33 @@ input::placeholder { color: var(--text-tertiary); }
 @media (hover: hover) {
   .dash-dormant-row:hover { background: var(--surface-sunk); }
 }
+
+/* ---- M-17 システムの状態(担当D: status-) ---- */
+.status-list { list-style: none; margin: 0; padding: 0; }
+.status-list > li + li { border-top: 1px solid var(--border); }
+.status-row {
+  display: grid; grid-template-columns: 132px minmax(0, 1fr) auto; align-items: start; gap: var(--sp-4);
+  min-height: 64px; padding: var(--sp-4) var(--sp-4) var(--sp-4) var(--sp-5);
+}
+.status-level { display: inline-flex; align-items: center; gap: var(--sp-2); padding-top: 2px; font-size: var(--fs-14); font-weight: var(--fw-strong); }
+.status-dot { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+.status-level.green { color: var(--accent-text); }
+.status-level.green .status-dot { background: var(--accent); }
+.status-level.yellow { color: var(--warning); }
+.status-level.yellow .status-dot { background: var(--warning); }
+.status-level.red { color: var(--danger); }
+.status-level.red .status-dot { background: var(--danger); }
+.status-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.status-body b { font-size: var(--fs-15); }
+.status-summary { font-size: var(--fs-14); }
+.status-message, .status-result { font-size: var(--fs-13); color: var(--text-secondary); overflow-wrap: anywhere; }
+.status-result { color: var(--text); }
+.status-body .alert { margin-top: var(--sp-2); }
+.status-acts { display: flex; justify-content: flex-end; }
+@media (max-width: 720px) {
+  .status-row { grid-template-columns: minmax(0, 1fr); gap: var(--sp-2); }
+  .status-acts { justify-content: flex-start; }
+}
+.status-panel { display: flex; flex-direction: column; gap: var(--sp-3); padding: var(--sp-5); }
+.status-panel h2 { font-size: var(--fs-15); }
+.status-runs .status-msg-cell { white-space: normal; min-width: 240px; color: var(--text-secondary); }
