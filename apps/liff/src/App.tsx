@@ -1,9 +1,10 @@
-import { Link, Route, Routes } from 'react-router-dom';
+import { Route, Routes } from 'react-router-dom';
 import { AppHeader } from './components/AppHeader';
 import { ErrorNotice } from './components/ErrorNotice';
 import { useMe } from './hooks/useMe';
 import { usePendingSurvey } from './hooks/usePendingSurvey';
 import { RegisterFlow } from './pages/register/RegisterFlow';
+import { CardPage } from './pages/card/CardPage';
 import { CheckinDonePage } from './pages/checkin/CheckinDonePage';
 import { CheckinPage } from './pages/checkin/CheckinPage';
 import { DogEditPage } from './pages/dogs/DogEditPage';
@@ -28,13 +29,13 @@ export function App() {
       ) : !me.registered ? (
         <RegisterFlow me={me} onFinished={reload} />
       ) : (
-        <Registered memberNo={me.household.memberNo} name={me.household.displayName} />
+        <Registered />
       )}
     </div>
   );
 }
 
-function Registered({ memberNo, name }: { memberNo: string; name: string }) {
+function Registered() {
   const survey = usePendingSurvey();
   if (survey.questions && survey.questions.length > 0) {
     return <SurveyPrompt questions={survey.questions} onDone={survey.dismiss} />;
@@ -46,24 +47,7 @@ function Registered({ memberNo, name }: { memberNo: string; name: string }) {
       <Route path="/dogs" element={<DogsPage />} />
       <Route path="/dogs/new" element={<DogNewPage />} />
       <Route path="/dogs/:id" element={<DogEditPage />} />
-      <Route path="*" element={<Home memberNo={memberNo} name={name} />} />
+      <Route path="*" element={<CardPage />} />
     </Routes>
-  );
-}
-
-function Home({ memberNo, name }: { memberNo: string; name: string }) {
-  return (
-    <main className="screen">
-      <div className="panel">
-        <h2>{name}</h2>
-        <p className="mono">{memberNo}</p>
-      </div>
-      <Link to="/checkin" className="btn as-link">
-        チェックイン
-      </Link>
-      <Link to="/dogs" className="btn sub as-link">
-        ワンちゃん
-      </Link>
-    </main>
   );
 }

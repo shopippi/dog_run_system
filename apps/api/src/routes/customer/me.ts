@@ -1,10 +1,12 @@
 import type { MeResponse, RegisterResponse } from '@dr/shared';
-import { registerSchema } from '@dr/shared';
+import { pointsToNextTicket, registerSchema, toJstDate } from '@dr/shared';
 import { Hono } from 'hono';
 import type { AppEnv } from '../../env';
 import { loadSettings } from '../../lib/settings';
 import { parseJson } from '../../lib/validate';
 import { findActiveMember, refreshDisplayName } from '../../services/members';
+import { findVisitOn } from '../../services/checkins';
+import { pointBalance, usableTickets } from '../../services/points';
 import { insertDogStatements, listHouseholdDogs, normalizeDogInputs } from '../../services/dogs';
 import { alreadyRegistered, registerHousehold } from '../../services/register';
 import { customAnswerStatements, loadVisibleQuestions, splitAnswers } from '../../services/survey';
@@ -25,11 +27,24 @@ meRoutes.get('/me', async (c) => {
     };
     return c.json(body);
   }
-  await refreshDisplayName(c.env.DB, member, lineUser, c.get('now'));
+  const now = c.get('now');
+  const db = c.env.DB;
+  await refreshDisplayName(db, member, lineUser, now);
+  const settings = await loadSettings(db);
+  const balance = await pointBalance(db, member.householdId);
+  const today = await findVisitOn(db, member.householdId, toJstDate(now));
   const body: MeResponse = {
     registered: true,
     member: { id: member.memberId, lineDisplayName: member.lineDisplayName },
     household: { memberNo: member.memberNo, displayName: member.householdName },
+    card: {
+      dogs: await listHouseholdDogs(db, member.householdId, MEDIA_BASE),
+      balance,
+      pointsPerTicket: settings.points_per_ticket,
+      toNextTicket: pointsToNextTicket(balance, settings.points_per_ticket),
+      tickets: await usableTickets(db, member.householdId, now),
+      todayVisitId: today?.id ?? null,
+    },
   };
   return c.json(body);
 });
