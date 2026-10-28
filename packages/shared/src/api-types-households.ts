@@ -186,6 +186,8 @@ export type HouseholdDetail = {
   status: import('./constants').HouseholdStatus;
   statusLabel: string;
   sourceLabel: string;
+  /** 会員証の背景の種類(「写真」「単色(紺)」など。写真そのものは管理画面に出さない。C-06) */
+  cardBackgroundLabel: string;
   /** 統合済みのとき、統合先 */
   mergedInto: { id: number; memberNo: string; displayName: string } | null;
   balance: number;

@@ -19,6 +19,8 @@ export type MeRegistered = {
   optionalSurveyPending?: boolean;
   /** 会員証(C-06) */
   card: MemberCard;
+  /** 会員証の背景(おうちで共通。C-06) */
+  cardBackground: import('./card-background').CardBackgroundView;
 };
 
 export type MemberCard = {

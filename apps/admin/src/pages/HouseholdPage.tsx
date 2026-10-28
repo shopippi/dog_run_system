@@ -466,6 +466,8 @@ function NameBlock({
         {formatMonthDay(d.registeredAt)}に登録
         <span aria-hidden="true"> · </span>
         {d.sourceLabel}
+        <span aria-hidden="true"> · </span>
+        会員証の背景は{d.cardBackgroundLabel}
         {d.displayNameAuto ? (
           <>
             <span aria-hidden="true"> · </span>呼び名は自動

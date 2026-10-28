@@ -32,6 +32,8 @@ import { familyRoutes } from './routes/customer/family';
 import { ticketRoutes } from './routes/customer/tickets';
 import { adminTicketRoutes } from './routes/admin/tickets';
 import { migrationRoutes } from './routes/admin/migrations';
+import { cardBackgroundRoutes } from './routes/customer/card-background';
+import { facilityHandler } from './routes/facility';
 
 export function createApp() {
   const app = new Hono<AppEnv>();
@@ -54,6 +56,9 @@ export function createApp() {
   });
 
   app.get('/api/health', (c) => c.json({ ok: true }));
+  // 施設の名前(認証なし。ログインの前の画面でも使う)
+  app.get('/api/public-settings', facilityHandler);
+  app.get('/admin/api/public-settings', facilityHandler);
 
   // お客さん向け API(LINE の IDトークンで認証)
   const customer = new Hono<AppEnv>();
@@ -69,6 +74,7 @@ export function createApp() {
   customer.route('/', profileRoutes);
   customer.route('/', familyRoutes);
   customer.route('/', ticketRoutes);
+  customer.route('/', cardBackgroundRoutes);
   app.route('/api', customer);
 
   // 管理画面向け API(ログインのセッションで認証)。ログインだけは認証の前に置く

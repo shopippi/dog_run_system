@@ -6,7 +6,8 @@ test('C-06 10ポイントたまると会員証に「無料券と交換する」�
   const user = newLineUser('ママ');
   await registerViaUi(page, user, ['ゴンタ']);
   await openLiff(page, user);
-  const card = page.getByRole('region', { name: '会員証' });
+  // ポイントの数と「あと○ポイント」は、会員証の下のスタンプのパネルに出る
+  const card = page.getByRole('region', { name: 'スタンプ' });
   await expect(card.getByText('あと10ポイントで無料券と交換できます')).toBeVisible();
   await expect(page.getByRole('button', { name: /無料券と交換する/ })).toHaveCount(0);
 
@@ -69,7 +70,7 @@ test('C-06 無料券の「使用する」を確認して押すと「無料券を
 
   // 会員証に戻ると、今日使った券の画面をもう一度開ける
   await page.getByRole('link', { name: '会員証にもどる' }).click();
-  await expect(page.getByText('未使用 0枚')).toBeVisible();
+  await expect(page.getByText('使える無料券はありません')).toBeVisible();
   await page.getByRole('link', { name: '今日使った無料券の画面を見る' }).click();
   await expect(page.getByRole('region', { name: '無料券を使用しました' })).toBeVisible();
 

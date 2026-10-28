@@ -4,7 +4,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { ErrorNotice } from '../../components/ErrorNotice';
 import { postJson } from '../../lib/api';
 
-type Confirm = { kind: 'exchange'; opId: string } | { kind: 'use'; id: number } | null;
+type Confirm = { kind: 'use'; id: number } | null;
 
 const ymd = (iso: string) => iso.slice(0, 10).replace(/-/g, '/');
 
@@ -19,34 +19,16 @@ function newOpId(): string {
 
 /**
  * 会員証(L-07)の無料券の欄(C-06、8章)。
- * - ポイントが無料券1枚分以上あるとき「無料券と交換する」(確認つき)
  * - 未使用の券ごとに「使用する」(確認つき)。使うと「無料券を使用しました」の画面に進む
+ * - 0 枚なら「使える無料券はありません」の一文
+ * 「無料券と交換する」はスタンプのパネルに置く(ExchangeControl。docs/design.md 5章)
  */
 export function TicketPanel({ card, onChanged }: { card: MemberCard; onChanged: () => Promise<void> | void }) {
   const navigate = useNavigate();
   const [confirm, setConfirm] = useState<Confirm>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
-  const [exchanged, setExchanged] = useState(false);
-  const canExchange = card.balance >= card.pointsPerTicket;
   const count = card.tickets.length;
-
-  if (!canExchange && count === 0 && !card.todayUsedTicketId) return null;
-
-  const exchange = async (opId: string) => {
-    setBusy(true);
-    setError(null);
-    try {
-      await postJson<TicketExchangeResult>('/api/tickets/exchange', { opId });
-      setConfirm(null);
-      setExchanged(true);
-      await onChanged();
-    } catch (e) {
-      setError(e);
-    } finally {
-      setBusy(false);
-    }
-  };
 
   const use = async (id: number) => {
     setBusy(true);
@@ -68,47 +50,10 @@ export function TicketPanel({ card, onChanged }: { card: MemberCard; onChanged: 
         <h3 className="section-title" id="tk-title">
           無料券
         </h3>
-        <span className="tk-count">未使用 {count}枚</span>
+        {count > 0 ? <span className="tk-count">未使用 {count}枚</span> : null}
       </div>
 
-      {exchanged && (
-        <p className="tk-done" role="status">
-          無料券と交換しました。
-        </p>
-      )}
-
-      {canExchange &&
-        (confirm?.kind === 'exchange' ? (
-          <div className="confirm-inline tk-confirm" role="group" aria-label="無料券との交換の確認">
-            <p>
-              <b>{card.pointsPerTicket}ポイントを無料券1枚と交換します。</b>
-            </p>
-            <p className="sub-text">
-              いま{card.balance}ポイント → 交換したあと{card.balance - card.pointsPerTicket}ポイント
-            </p>
-            <div className="actions">
-              <button type="button" className="btn" disabled={busy} onClick={() => void exchange(confirm.opId)}>
-                {busy ? '交換しています…' : '交換する'}
-              </button>
-              <button type="button" className="btn ghost" disabled={busy} onClick={() => setConfirm(null)}>
-                やめる
-              </button>
-            </div>
-          </div>
-        ) : (
-          <button
-            type="button"
-            className="btn"
-            disabled={busy || confirm !== null}
-            onClick={() => {
-              setExchanged(false);
-              setError(null);
-              setConfirm({ kind: 'exchange', opId: newOpId() });
-            }}
-          >
-            無料券と交換する({card.pointsPerTicket}ポイント)
-          </button>
-        ))}
+      {count === 0 && <p className="tk-empty">使える無料券はありません</p>}
 
       {count > 0 && (
         <ul className="rows tk-list" aria-label="未使用の無料券">
@@ -142,7 +87,6 @@ export function TicketPanel({ card, onChanged }: { card: MemberCard; onChanged: 
                     className="btn sub tk-use"
                     disabled={busy || confirm !== null}
                     onClick={() => {
-                      setExchanged(false);
                       setError(null);
                       setConfirm({ kind: 'use', id: t.id });
                     }}
@@ -164,5 +108,77 @@ export function TicketPanel({ card, onChanged }: { card: MemberCard; onChanged: 
         </Link>
       )}
     </section>
+  );
+}
+
+/**
+ * 「無料券と交換する」(C-06、8章)。ポイントが無料券1枚分以上あるときの主ボタン。確認してから交換する。
+ * 会員証の下のスタンプのパネルの中に置く(docs/design.md 5章)。担当G の交換の処理をそのまま移したもの。
+ */
+export function ExchangeControl({ card, onChanged }: { card: MemberCard; onChanged: () => Promise<void> | void }) {
+  const [confirm, setConfirm] = useState<{ kind: 'exchange'; opId: string } | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<unknown>(null);
+  const [exchanged, setExchanged] = useState(false);
+  const canExchange = card.balance >= card.pointsPerTicket;
+
+  const exchange = async (opId: string) => {
+    setBusy(true);
+    setError(null);
+    try {
+      await postJson<TicketExchangeResult>('/api/tickets/exchange', { opId });
+      setConfirm(null);
+      setExchanged(true);
+      await onChanged();
+    } catch (e) {
+      setError(e);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  if (!canExchange && !exchanged && !error) return null;
+  return (
+    <>
+      {exchanged && (
+        <p className="tk-done" role="status">
+          無料券と交換しました。
+        </p>
+      )}
+      {canExchange &&
+        (confirm?.kind === 'exchange' ? (
+          <div className="confirm-inline tk-confirm" role="group" aria-label="無料券との交換の確認">
+            <p>
+              <b>{card.pointsPerTicket}ポイントを無料券1枚と交換します。</b>
+            </p>
+            <p className="sub-text">
+              いま{card.balance}ポイント → 交換したあと{card.balance - card.pointsPerTicket}ポイント
+            </p>
+            <div className="actions">
+              <button type="button" className="btn" disabled={busy} onClick={() => void exchange(confirm.opId)}>
+                {busy ? '交換しています…' : '交換する'}
+              </button>
+              <button type="button" className="btn ghost" disabled={busy} onClick={() => setConfirm(null)}>
+                やめる
+              </button>
+            </div>
+          </div>
+        ) : (
+          <button
+            type="button"
+            className="btn"
+            disabled={busy || confirm !== null}
+            onClick={() => {
+              setExchanged(false);
+              setError(null);
+              setConfirm({ kind: 'exchange', opId: newOpId() });
+            }}
+          >
+            無料券と交換する({card.pointsPerTicket}ポイント)
+          </button>
+        ))}
+
+      {error ? <ErrorNotice error={error} /> : null}
+    </>
   );
 }
