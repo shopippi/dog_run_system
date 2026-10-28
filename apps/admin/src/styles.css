@@ -74,3 +74,16 @@ body { font-size: 16px; }
 }
 .empty { color: var(--muted); padding: 24px 0; text-align: center; }
 .mono { font-family: var(--f-mono); }
+.visit-acts { display: flex; gap: 8px; }
+.confirm {
+  grid-column: 1 / -1; border-top: 1px solid var(--line); padding-top: 12px; display: flex; flex-direction: column; gap: 10px;
+}
+.confirm ul { margin: 0; padding-left: 1.2em; }
+.confirm-acts { display: flex; gap: 10px; flex-wrap: wrap; }
+.choices { display: flex; flex-wrap: wrap; gap: 8px; }
+.choices label {
+  display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 6px 16px;
+  border: 1.5px solid var(--line); border-radius: 999px; background: var(--surface);
+}
+.choices label:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); font-weight: 700; }
+.choices input { accent-color: var(--accent); width: 18px; height: 18px; margin: 0; }
