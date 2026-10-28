@@ -106,6 +106,7 @@ export type DayType = (typeof DAY_TYPES)[number];
 
 export const ACTOR_TYPES = ['member', 'staff', 'system'] as const;
 export type ActorType = (typeof ACTOR_TYPES)[number];
+export type AuditActor = ActorType;
 
 // 固定のアンケート(要件定義書 7.1)。選択肢の文言は survey_questions に入り、管理画面から変えられる。
 // 回答は分析しやすいよう households / family_members の列に保存する。

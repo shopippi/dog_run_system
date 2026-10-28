@@ -6,6 +6,19 @@ import { LoginPage } from './pages/LoginPage';
 import { ProxyCheckin } from './components/ProxyCheckin';
 import { SearchPage } from './pages/SearchPage';
 import { TodayPage } from './pages/TodayPage';
+import { HouseholdPage } from './pages/HouseholdPage';
+import { MergePage } from './pages/MergePage';
+import { RequestsPage } from './pages/RequestsPage';
+import { EventsPage } from './pages/EventsPage';
+import { SurveyQuestionsPage } from './pages/SurveyQuestionsPage';
+import { BreedsPage } from './pages/BreedsPage';
+import { SettingsPage } from './pages/SettingsPage';
+import { StaffPage } from './pages/StaffPage';
+import { AuditPage } from './pages/AuditPage';
+import { HelpPage } from './pages/HelpPage';
+import { StatusPage } from './pages/StatusPage';
+import { ExportPage } from './pages/ExportPage';
+import { DashboardPage } from './pages/DashboardPage';
 
 export function App() {
   return (
@@ -44,6 +57,19 @@ function Gate() {
             />
           }
         />
+        <Route path="/households/:id" element={<HouseholdPage />} />
+        <Route path="/merge" element={<MergePage />} />
+        <Route path="/requests" element={<RequestsPage />} />
+        <Route path="/events" element={<EventsPage />} />
+        <Route path="/survey-questions" element={<SurveyQuestionsPage />} />
+        <Route path="/breeds" element={<BreedsPage />} />
+        <Route path="/settings" element={<SettingsPage />} />
+        <Route path="/staff" element={<StaffPage />} />
+        <Route path="/audit" element={<AuditPage />} />
+        <Route path="/help" element={<HelpPage />} />
+        <Route path="/status" element={<StatusPage />} />
+        <Route path="/export" element={<ExportPage />} />
+        <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="*" element={<Placeholder />} />
       </Routes>
     </Layout>

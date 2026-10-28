@@ -11,4 +11,5 @@ npx wrangler d1 migrations apply DB --local --persist-to "$STATE" >/dev/null
 for r in admin:管理者 staff:受付 developer:製作者; do
   STAFF_PASSWORD=e2e-password-1234 node scripts/create-staff.mjs --email "${r%%:*}@example.com" --name "${r##*:}" --role "${r%%:*}" --persist-to "$STATE" >/dev/null
 done
-exec npx wrangler dev --local --port 8788 --persist-to "$STATE" --var ENVIRONMENT:test --var LINE_LOGIN_MOCK:1
+PORT="${E2E_PORT:-8788}"
+exec npx wrangler dev --local --port "$PORT" --inspector-port "$((PORT + 1000))" --persist-to "$STATE" --var ENVIRONMENT:test --var LINE_LOGIN_MOCK:1

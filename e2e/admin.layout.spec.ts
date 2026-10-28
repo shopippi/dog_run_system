@@ -41,7 +41,9 @@ async function checkScreen(page: Page, folder: string, screen: string, touch: bo
       if (r.width === 0 || el.closest('[hidden]')) continue;
       const name = (el.getAttribute('aria-label') ?? el.textContent ?? '').trim().slice(0, 20);
       if (r.height < minHeight - 0.5) out.push(`押す部品が低い(${Math.round(r.height)}px): ${name}`);
-      if (r.right > doc.clientWidth + 1) out.push(`押す部品がはみ出し: ${name}`);
+      // 横スクロールのメニュー(狭い画面)の中は、はみ出しではない
+      const inScroller = el.closest('.nav') !== null && doc.clientWidth < 960;
+      if (!inScroller && r.right > doc.clientWidth + 1) out.push(`押す部品がはみ出し: ${name}`);
     }
     for (const el of document.querySelectorAll<HTMLElement>('input:not([type=checkbox]):not([type=radio]), select, textarea')) {
       const size = parseFloat(getComputedStyle(el).fontSize);

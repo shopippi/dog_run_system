@@ -14,6 +14,22 @@ import { adminCheckinRoutes } from './routes/admin/checkins';
 import { requireStaff } from './lib/staff-auth';
 import { mediaRoutes } from './routes/customer/media';
 import { surveyRoutes } from './routes/customer/survey';
+import { householdDetailRoutes } from './routes/admin/household-detail';
+import { mergesRoutes } from './routes/admin/merges';
+import { requestsRoutes } from './routes/admin/requests';
+import { eventsRoutes } from './routes/admin/events';
+import { surveyQuestionsRoutes } from './routes/admin/survey-questions';
+import { breedsRoutes } from './routes/admin/breeds';
+import { settingsRoutes } from './routes/admin/settings';
+import { staffRoutes } from './routes/admin/staff';
+import { auditRoutes } from './routes/admin/audit';
+import { exportRoutes } from './routes/admin/export';
+import { dashboardRoutes } from './routes/admin/dashboard';
+import { systemRoutes } from './routes/admin/system';
+import { historyRoutes } from './routes/customer/history';
+import { profileRoutes } from './routes/customer/profile';
+import { familyRoutes } from './routes/customer/family';
+import { customerRequestRoutes } from './routes/customer/requests';
 
 export function createApp() {
   const app = new Hono<AppEnv>();
@@ -47,6 +63,10 @@ export function createApp() {
   customer.route('/', checkinRoutes);
   customer.route('/', inviteRoutes);
   customer.route('/', joinRoutes);
+  customer.route('/', historyRoutes);
+  customer.route('/', profileRoutes);
+  customer.route('/', familyRoutes);
+  customer.route('/', customerRequestRoutes);
   app.route('/api', customer);
 
   // 管理画面向け API(ログインのセッションで認証)。ログインだけは認証の前に置く
@@ -56,6 +76,18 @@ export function createApp() {
   admin.route('/', todayRoutes);
   admin.route('/', adminCheckinRoutes);
   admin.route('/', householdRoutes);
+  admin.route('/', householdDetailRoutes);
+  admin.route('/', mergesRoutes);
+  admin.route('/', requestsRoutes);
+  admin.route('/', eventsRoutes);
+  admin.route('/', surveyQuestionsRoutes);
+  admin.route('/', breedsRoutes);
+  admin.route('/', settingsRoutes);
+  admin.route('/', staffRoutes);
+  admin.route('/', auditRoutes);
+  admin.route('/', exportRoutes);
+  admin.route('/', dashboardRoutes);
+  admin.route('/', systemRoutes);
   app.route('/admin/api', admin);
 
   app.all('/api/*', (c) =>
