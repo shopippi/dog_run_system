@@ -3,8 +3,16 @@ import { ticketsFromBalance } from './points';
 
 // おうちの統合の計算(要件定義書 5.3、A-07)。データベースを使わない純粋な関数だけを置き、API と画面で共有する。
 
-/** 同じ犬の組み合わせ。take は、写真・名前・犬種をどちらの犬から残すか */
-export type MergeDogPair = { keep: number; absorb: number; take: 'keep' | 'absorb' };
+/**
+ * 同じ犬の組み合わせ。take は、写真・名前・犬種をどちらの犬から残すか。
+ * photo を指定したときは、写真だけ別に選ぶ(お客さんがまとめるとき。名前と犬種は招待した側のまま、写真だけ選ぶ)
+ */
+export type MergeDogPair = { keep: number; absorb: number; take: 'keep' | 'absorb'; photo?: 'keep' | 'absorb' };
+
+/** 組み合わせた犬の写真を、どちらの犬から残すか */
+export function mergePhotoSide(pair: Pick<MergeDogPair, 'take' | 'photo'>): 'keep' | 'absorb' {
+  return pair.photo ?? pair.take;
+}
 
 /** 統合を元に戻せる日数(3.3、5.3) */
 export const MERGE_UNDO_DAYS = 30;
@@ -113,13 +121,14 @@ export function planMergeDogs<D extends MergeDogProfile>(
     }
     const chosen = p.take === 'absorb' ? a : k;
     const other = p.take === 'absorb' ? k : a;
+    const photo = mergePhotoSide(p) === 'absorb' ? a : k;
     out.push({
       ...k,
       name: chosen.name,
       breedName: chosen.breedName,
       size: chosen.size,
-      photoUrl: chosen.photoUrl,
-      thumbUrl: chosen.thumbUrl,
+      photoUrl: photo.photoUrl,
+      thumbUrl: photo.thumbUrl,
       sex: chosen.sex ?? other.sex,
       birthYm: chosen.birthYm ?? other.birthYm,
       mergedFromId: a.id,

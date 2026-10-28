@@ -6,11 +6,12 @@ import { ErrorNotice, MessageNotice } from '../../components/ErrorNotice';
 import { Terms } from '../../components/Terms';
 import { SurveyForm, toAnswers, type SurveyValues } from '../../components/SurveyForm';
 import { api, postJson } from '../../lib/api';
+import { MergeFlow } from './MergeFlow';
 
 /**
  * L-12 招待を受けたときの画面(C-12)。
  * はじめての人は同意と年代・性別だけで参加できる(犬の登録は要らない)。
- * 別のおうちがある人は、その場では参加せず「おうちをまとめる申請」になる(5.1)。
+ * 別のおうちがある人は、参加ではなく「おうちを一つにまとめる」画面になり、本人の確認だけでその場でまとめる(5.1、MergeFlow)。
  */
 export function JoinPage({ onJoined }: { onJoined: () => void }) {
   const { code = '' } = useParams();
@@ -88,24 +89,6 @@ export function JoinPage({ onJoined }: { onJoined: () => void }) {
     );
   }
 
-  if (done?.result === 'requested') {
-    return (
-      <main className="screen">
-        <div className="alert info" role="status">
-          <p>
-            <b>おうちをまとめる申請をしました</b>
-          </p>
-          <p>
-            受付で、ワンちゃんの写真を見ながら2つのおうちを1つにまとめます。まとまるまでは、今の会員証をそのまま使えます。
-          </p>
-        </div>
-        <Link to="/" className="btn" onClick={onJoined}>
-          会員証にもどる
-        </Link>
-      </main>
-    );
-  }
-
   const header = (
     <div className="invite-from">
       <div className="stack">
@@ -145,24 +128,17 @@ export function JoinPage({ onJoined }: { onJoined: () => void }) {
   }
 
   if (info.viewer === 'other') {
+    if (info.merge) return <MergeFlow code={code} info={info} merge={info.merge} header={header} onDone={onJoined} />;
     return (
       <main className="screen">
         {header}
-        <div className="page-head">
-          <h2>{info.householdName}とまとめますか?</h2>
-          <p className="lead">
-            このLINEは、すでに別のおうちで会員証を使っています。2つのおうちのポイントは、受付でワンちゃんの写真を確認してから1つにまとめます。
-          </p>
+        <div className="alert danger" role="alert">
+          <p>このおうちとは、いまはまとめられません。</p>
+          <p>受付にご相談ください。</p>
         </div>
-        {error ? <ErrorNotice error={error} /> : null}
-        <div className="actions">
-          <button type="button" className="btn" disabled={busy} onClick={accept}>
-            {busy ? '申請しています…' : 'おうちをまとめる申請をする'}
-          </button>
-          <Link to="/" className="btn ghost" onClick={onJoined}>
-            やめる
-          </Link>
-        </div>
+        <Link to="/" className="btn" onClick={onJoined}>
+          会員証にもどる
+        </Link>
       </main>
     );
   }

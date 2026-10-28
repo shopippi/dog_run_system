@@ -21,12 +21,17 @@ import { auditStatement } from '../../services/audit';
 import { migrationStatus, recordMigration, resolveActiveHousehold, undoMigration } from '../../services/migration';
 import { registerUndo } from '../../services/undo';
 
-// A-05 旧カードの移行の承認・却下、A-08 まとめる申請の確認
+// A-05 旧カードの移行の承認・却下
+// (おうちをまとめるのは、お客さんが招待から自分でまとめる形になった(C-12)。以前の「まとめる申請」(kind 'merge')の行は
+//  消さずに残すが、確認待ちには出さず、承認・却下もしない)
 export const requestsRoutes = new Hono<AppEnv>();
+
+/** 確認待ちに出す申請(以前の「まとめる申請」を除く) */
+const SHOWN = "kind <> 'merge'";
 
 // 確認待ちの件数(メニューの印)。管理者と製作者
 requestsRoutes.get('/requests/count', requireRole('admin'), async (c) => {
-  const row = await c.env.DB.prepare("SELECT COUNT(*) AS n FROM requests WHERE status = 'pending'").first<{ n: number }>();
+  const row = await c.env.DB.prepare(`SELECT COUNT(*) AS n FROM requests WHERE status = 'pending' AND ${SHOWN}`).first<{ n: number }>();
   return c.json({ pending: row?.n ?? 0 });
 });
 
@@ -130,7 +135,7 @@ requestsRoutes.get('/requests', requireRole('admin'), async (c) => {
          FROM requests r
          LEFT JOIN family_members m ON m.id = r.requester_member_id
          LEFT JOIN staff_users s ON s.id = r.handled_by_staff_id
-        WHERE ${handled ? "r.status <> 'pending'" : "r.status = 'pending'"}
+        WHERE ${handled ? "r.status <> 'pending'" : "r.status = 'pending'"} AND r.${SHOWN}
         ORDER BY ${handled ? 'r.handled_at DESC, r.id DESC' : 'r.created_at, r.id'}
         LIMIT 200`,
     )
@@ -139,7 +144,7 @@ requestsRoutes.get('/requests', requireRole('admin'), async (c) => {
     db,
     results.flatMap((r) => (r.related_household_id ? [r.household_id, r.related_household_id] : [r.household_id])),
   );
-  const pending = await db.prepare("SELECT COUNT(*) AS n FROM requests WHERE status = 'pending'").first<{ n: number }>();
+  const pending = await db.prepare(`SELECT COUNT(*) AS n FROM requests WHERE status = 'pending' AND ${SHOWN}`).first<{ n: number }>();
   const body: RequestListResponse = {
     pending: pending?.n ?? 0,
     pointsPerTicket: (await loadSettings(db)).points_per_ticket,
@@ -176,7 +181,8 @@ export async function findRequest(db: D1Database, id: number): Promise<RequestRe
     .prepare('SELECT id, kind, status, household_id, related_household_id, payload, created_at FROM requests WHERE id = ?')
     .bind(id)
     .first<RequestRecord>();
-  if (!r) throw errors.notFound('申請が見つかりませんでした。確認待ちの画面を読み込み直してください。');
+  // 以前の「まとめる申請」は、もう処理しない(見つからない扱い)
+  if (!r || r.kind === 'merge') throw errors.notFound('申請が見つかりませんでした。確認待ちの画面を読み込み直してください。');
   return r;
 }
 
@@ -221,18 +227,11 @@ requestsRoutes.post('/requests/:id/reject', requireRole('admin'), async (c) => {
   return c.json({ ok: true });
 });
 
-// 申請の承認。旧カードの引き継ぎ申請は、管理者が写真を見てポイント数を確認・修正して承認する(A-05)。
-// まとめる申請は、統合の画面(M-08)で統合すると承認になる。ここでは承認しない
+// 申請の承認。旧カードの引き継ぎ申請は、管理者が写真を見てポイント数を確認・修正して承認する(A-05)
 requestsRoutes.post('/requests/:id/approve', requireRole('admin'), async (c) => {
   const db = c.env.DB;
   const r = await findRequest(db, Number(c.req.param('id')) || 0);
   if (r.status !== 'pending') throw requestHandled();
-  if (r.kind === 'merge') {
-    throw errors.conflict(
-      'use_merge',
-      'まとめる申請は、「統合の画面に進む」から、同じワンちゃんを組み合わせてまとめてください。まとめると承認になります。',
-    );
-  }
   const input = await parseJson(c, approveMigrationSchema);
   const payload = parseMigrationPayload(r.payload);
   const source = input.source ?? payload?.source;

@@ -404,3 +404,27 @@ a { color: var(--accent-text); }
 @media (hover: hover) {
   .help-rows summary:hover { background: var(--surface-sunk); }
 }
+
+/* ================================================================
+ * 担当H: L-12 おうちを一つにまとめる(C-12)・おうちが一つになりました
+ * ================================================================ */
+.mg-summary { margin: 0; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--surface); }
+.mg-summary > div { display: flex; gap: var(--sp-3); padding: var(--sp-3) var(--sp-4); }
+.mg-summary > div + div { border-top: 1px solid var(--border); }
+.mg-summary dt { flex: none; width: 5.5em; font-size: var(--fs-13); color: var(--text-secondary); line-height: 1.9; }
+.mg-summary dd { flex: 1; min-width: 0; margin: 0; font-size: var(--fs-15); overflow-wrap: anywhere; }
+.mg-summary dd.mono { font-size: var(--fs-15); line-height: 1.7; }
+.mg-num { font-size: var(--fs-17); font-weight: var(--fw-strong); font-variant-numeric: tabular-nums; }
+.welcome-card .mg-num small { margin-left: 2px; font-size: var(--fs-14); font-weight: var(--fw-regular); color: var(--text-secondary); }
+.mg-block { display: block; }
+.mg-tickets { margin-left: var(--sp-3); font-size: var(--fs-14); font-weight: var(--fw-regular); color: var(--text-secondary); }
+.mg-family { line-height: 1.7; }
+.mg-dogs { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--sp-2); }
+.mg-dogs li { display: flex; align-items: center; gap: var(--sp-3); }
+.mg-mine { display: flex; flex-direction: column; gap: var(--sp-2); min-width: 0; margin: 0; padding: var(--sp-4) 0 0; border: 0; border-top: 1px solid var(--border); }
+.mg-mine-head { float: left; display: flex; align-items: center; gap: var(--sp-3); width: 100%; padding: 0; margin-bottom: var(--sp-2); }
+.mg-mine-head + * { clear: left; }
+.mg-mine .section-label { margin-top: var(--sp-1); }
+.mg-disabled { cursor: default; }
+.mg-disabled b { color: var(--text-tertiary); }
+.mg-confirm-text .mono { font-size: var(--fs-15); color: var(--text); }

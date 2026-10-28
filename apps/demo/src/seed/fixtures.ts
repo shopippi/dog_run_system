@@ -24,7 +24,7 @@ export const ACCOUNTS: DemoAccount[] = [
 export const FIXED = {
   komugi: 1, // 9ポイント。ママとばあばの2人
   taka: 2, // アル。7ポイント
-  nico: 3, // アル・ニコ。5ポイント。taka とまとめる申請が確認待ち
+  nico: 3, // アル・ニコ。5ポイント。taka_papa からの招待が届いている(開くとその場でまとめられる)
   momo: 4, // 旧カードの引き継ぎ申請が確認待ち
 } as const;
 

@@ -1,11 +1,13 @@
 import { expect, test, type Browser, type Page } from '@playwright/test';
-import { adminLogin, makePhoto, newLineUser, registerViaUi } from './helpers';
-import { insertMigrationRequest, putMedia, requestMerge, visitYesterday } from './merge-helpers';
+import { joinFamily } from './customer-helpers';
+import { adminLogin, makePhoto, newLineUser, openLiff, registerViaUi } from './helpers';
+import { insertMigrationRequest, openMergeInvite, putMedia, registerWithPhoto, visitYesterday } from './merge-helpers';
 
 // 担当B(おうちの統合・確認待ち)の画面の、文字と背景のコントラスト(WCAG の 4.5:1)。
 // 確かめ方は e2e/contrast.spec.ts の lowContrast と同じ(コピーして使う)。
 
 const TABLET = { viewport: { width: 1024, height: 768 }, hasTouch: true };
+const PHONE = { viewport: { width: 393, height: 759 }, isMobile: true, hasTouch: true };
 
 async function lowContrast(page: Page): Promise<string[]> {
   await page.waitForLoadState('networkidle');
@@ -109,10 +111,7 @@ for (const scheme of ['light', 'dark'] as const) {
       test.setTimeout(90_000);
       const customer = await browser.newPage();
       const papa = newLineUser('パパ');
-      const mama = newLineUser('ママ');
       const papaNo = await registerViaUi(customer, papa, ['ルル']);
-      const mamaNo = await registerViaUi(customer, mama, ['るるちゃん']);
-      await requestMerge(customer, papa, mama);
       const key = `requests/${papaNo}/card-${Date.now()}.jpg`;
       putMedia(key, await makePhoto(customer, 800, 600));
       insertMigrationRequest(papaNo, { source: 'line_card', claimedPoints: 4 }, key);
@@ -123,24 +122,25 @@ for (const scheme of ['light', 'dark'] as const) {
       await page.getByRole('link', { name: /確認待ちが \d+件 あります/ }).waitFor();
       await check(page, 'M-02 今日の来場(確認待ちあり)');
       await page.getByRole('link', { name: /確認待ちが \d+件 あります/ }).click();
-      const merge = page.getByRole('listitem', { name: `おうちをまとめる申請 るるちゃんのおうち ${mamaNo}` });
-      await merge.waitFor();
+      const migration = page.getByRole('listitem', { name: `旧カードの引き継ぎ ルルのおうち ${papaNo}` });
+      await migration.waitFor();
       await check(page, 'M-09 確認待ち');
-      await page.getByRole('listitem', { name: `旧カードの引き継ぎ ルルのおうち ${papaNo}` }).getByRole('button', { name: '確かめて承認する' }).click();
+      // 却下の確認(開いて、やめる)
+      await migration.getByRole('button', { name: '却下する' }).click();
+      const dialog = page.getByRole('dialog', { name: '申請を却下する' });
+      await dialog.waitFor();
+      await check(page, 'M-09 却下の確認');
+      await dialog.getByRole('button', { name: 'やめる' }).click();
+      await expect(dialog).toHaveCount(0);
+
+      await migration.getByRole('button', { name: '確かめて承認する' }).click();
       const approve = page.getByRole('dialog', { name: '旧カードの引き継ぎを承認する' });
       await approve.getByText(/引き継ぎ後/).waitFor();
       await check(page, 'M-09 旧カードの承認');
       await approve.getByRole('button', { name: '承認する' }).click();
       await expect(approve).toHaveCount(0);
-
-      await merge.getByRole('button', { name: '却下する' }).click();
-      const dialog = page.getByRole('dialog', { name: '申請を却下する' });
-      await dialog.waitFor();
-      await check(page, 'M-09 却下の確認');
-      await dialog.getByRole('button', { name: '却下する' }).click();
-      await expect(merge).toHaveCount(0);
       await page.getByRole('tab', { name: '処理済み' }).click();
-      await page.getByRole('listitem', { name: `おうちをまとめる申請 るるちゃんのおうち ${mamaNo}` }).waitFor();
+      await page.getByRole('listitem', { name: `旧カードの引き継ぎ ルルのおうち ${papaNo}` }).waitFor();
       await check(page, 'M-09 処理済み');
 
       // 受付で直接入力(引き継ぎ済みの種類は選べない見た目)
@@ -153,6 +153,36 @@ for (const scheme of ['light', 'dark'] as const) {
       await direct.getByLabel('旧カードのポイント数').fill('3');
       await direct.getByText(/引き継ぎ後/).waitFor();
       await check(page, 'M-09 受付で直接入力');
+      await page.close();
+    });
+
+    test('L-12 おうちを一つにまとめる(お客さん)の文字が背景に対して読める', async ({ browser, request }) => {
+      test.setTimeout(120_000);
+      const page = await browser.newPage({ ...PHONE, colorScheme: scheme });
+      const papa = newLineUser('パパ');
+      const mama = newLineUser('ママ');
+      const baaba = newLineUser('ばあば');
+      await registerWithPhoto(page, papa, ['モモ']);
+      await registerWithPhoto(page, mama, ['ももちゃん', 'クッキー']);
+      await joinFamily(request, mama, baaba);
+      await openMergeInvite(page, papa, mama);
+      await check(page, 'L-12 おうちを一つにまとめる(下見)');
+      const same = page.getByRole('group', { name: 'ももちゃんの同じ子' });
+      await same.getByRole('radio', { name: /^モモ.*同じ子$/ }).check();
+      await same.getByRole('radio', { name: /あなたの写真/ }).check();
+      // クッキーの選択肢では、モモはもう選べない(押せない見た目)
+      await expect(page.getByRole('group', { name: 'クッキーの同じ子' }).getByRole('radio', { name: /モモ/ })).toBeDisabled();
+      await check(page, 'L-12 おうちを一つにまとめる(同じ子と写真)');
+      await page.getByRole('button', { name: 'まとめる', exact: true }).click();
+      await page.getByRole('heading', { name: 'まとめてよいですか?' }).waitFor();
+      await check(page, 'L-12 おうちを一つにまとめる(確認)');
+      await page.getByRole('button', { name: 'まとめる', exact: true }).click();
+      await page.getByRole('heading', { name: 'おうちが一つになりました' }).waitFor();
+      await check(page, 'L-12 おうちが一つになりました');
+      // 一緒に移ったばあばには、次に開いたときにお知らせが出る
+      await openLiff(page, baaba);
+      await page.getByRole('heading', { name: 'おうちが一つになりました' }).waitFor();
+      await check(page, 'L-12 おうちが一つになりました(お知らせ)');
       await page.close();
     });
 
