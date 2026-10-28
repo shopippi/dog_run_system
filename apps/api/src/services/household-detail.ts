@@ -8,6 +8,8 @@ import {
   TICKET_STATUS_LABELS,
   VISIT_METHOD_LABELS,
   pointsToNextTicket,
+  surveyAnswerText,
+  type FixedSurveyKey,
   type HouseholdDetail,
   type HouseholdSource,
   type HouseholdStatus,
@@ -25,6 +27,8 @@ import { ADMIN_MEDIA_BASE, canSeePersonal } from './admin-visits';
 import { listHouseholdDogs } from './dogs';
 import { pointBalance, unusedTicketCount } from './points';
 import { ticketUsedOnVisitSql } from './tickets';
+import { HOUSEHOLD_FIXED_COLUMNS, householdColumnText } from './profile-fields';
+import { surveyKindOf } from './survey';
 
 
 export const householdNotFound = () => errors.notFound('おうちが見つかりませんでした。おうちを探す画面から、もう一度探してください。');
@@ -39,6 +43,11 @@ type HouseholdRow = {
   postal_code: string | null;
   referral: string | null;
   transport: string | null;
+  /** 2026-10-28 に足したおうちへの質問の回答(担当J。services/profile-fields.ts) */
+  preferred_times: string | null;
+  event_interests: string | null;
+  uses_other_runs: number | null;
+  wants_news: number | null;
   status: HouseholdStatus;
   merged_into_id: number | null;
 };
@@ -48,7 +57,7 @@ export async function getHouseholdRow(db: D1Database, id: number): Promise<House
   return db
     .prepare(
       `SELECT id, member_no, display_name, display_name_auto, registered_at, source, postal_code, referral, transport,
-              status, merged_into_id
+              preferred_times, event_interests, uses_other_runs, wants_news, status, merged_into_id
          FROM households WHERE id = ?`,
     )
     .bind(id)
@@ -224,8 +233,8 @@ async function loadSurvey(
   members: { id: number; line_display_name: string | null; age_group: string | null; gender: string | null }[],
 ): Promise<NonNullable<HouseholdDetail['survey']>> {
   const { results: questions } = await db
-    .prepare('SELECT id, fixed_key, target, label, visible FROM survey_questions ORDER BY sort_order, id')
-    .all<{ id: number; fixed_key: string | null; target: 'member' | 'household'; label: string; visible: number }>();
+    .prepare('SELECT id, fixed_key, target, kind, multiple, label, visible FROM survey_questions ORDER BY sort_order, id')
+    .all<{ id: number; fixed_key: string | null; target: 'member' | 'household'; kind: 'choice' | 'text'; multiple: number; label: string; visible: number }>();
   const memberIds = members.map((m) => m.id);
   const { results: answers } = await db
     .prepare(
@@ -240,7 +249,13 @@ async function loadSurvey(
     );
     return a ? { found: true, value: a.answer } : { found: false, value: null };
   };
-  const fixedHousehold: Record<string, string | null> = { postal_code: h.postal_code, referral: h.referral, transport: h.transport };
+  /** 回答を画面に出す文にする(複数選択は「・」でつなぐ) */
+  const textOf = (q: { kind: 'choice' | 'text'; multiple: number }, v: string | null) => surveyAnswerText(surveyKindOf(q), v);
+  // おうちへの固定の質問は、おうちの列(はい・いいえ・複数選択は文にする)
+  const fixedHousehold: Record<string, string | null> = {};
+  for (const [key, col] of Object.entries(HOUSEHOLD_FIXED_COLUMNS)) {
+    fixedHousehold[key] = householdColumnText(key as FixedSurveyKey, (h as unknown as Record<string, string | number | null>)[col!]);
+  }
 
   const household: SurveyAnswerView[] = [];
   for (const q of questions.filter((x) => x.target === 'household')) {
@@ -249,7 +264,7 @@ async function loadSurvey(
       continue;
     }
     const a = answerOf(q.id, { householdId: h.id });
-    if (q.visible === 1 || a.found) household.push({ label: q.label, answer: a.value });
+    if (q.visible === 1 || a.found) household.push({ label: q.label, answer: textOf(q, a.value) });
   }
   return {
     household,
@@ -262,7 +277,7 @@ async function loadSurvey(
           continue;
         }
         const a = answerOf(q.id, { memberId: m.id });
-        if (q.visible === 1 || a.found) list.push({ label: q.label, answer: a.value });
+        if (q.visible === 1 || a.found) list.push({ label: q.label, answer: textOf(q, a.value) });
       }
       return { memberId: m.id, name: m.line_display_name, answers: list };
     }),

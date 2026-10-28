@@ -1,17 +1,34 @@
 import { DOG_SIZE_LABELS } from '@dr/shared';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { DogAvatar } from '../../components/DogAvatar';
 import { ErrorNotice } from '../../components/ErrorNotice';
 import { Icon } from '../../components/Icon';
 import { useDogs } from '../../hooks/useDogs';
+import { postJson } from '../../lib/api';
 
 /** L-09 犬の管理(C-08) */
 export function DogsPage() {
   const { dogs, error, reload } = useDogs();
+  const [restoring, setRestoring] = useState<number | null>(null);
+  const [restoreError, setRestoreError] = useState<unknown>(null);
   if (error) return <main className="screen"><ErrorNotice error={error} onRetry={reload} /></main>;
   if (!dogs) return <main className="screen"><p className="loading">読み込んでいます…</p></main>;
   const active = dogs.filter((d) => d.status === 'active');
-  const retired = dogs.filter((d) => d.status === 'retired');
+  // おやすみ中(内部の値は retired)のワンちゃん。「戻す」でチェックインに選べるようにする
+  const resting = dogs.filter((d) => d.status === 'retired');
+  const restore = async (id: number) => {
+    setRestoring(id);
+    setRestoreError(null);
+    try {
+      await postJson(`/api/dogs/${id}/restore`, {});
+      reload();
+    } catch (e) {
+      setRestoreError(e);
+    } finally {
+      setRestoring(null);
+    }
+  };
   return (
     <main className="screen">
       <div className="page-head">
@@ -39,14 +56,26 @@ export function DogsPage() {
         <Icon name="plus" />
         ワンちゃんを追加する
       </Link>
-      {retired.length > 0 && (
-        <section className="section">
-          <p className="section-label">登録解除したワンちゃん</p>
+      {resting.length > 0 && (
+        <section className="section" aria-labelledby="dogs-resting">
+          <p className="section-label" id="dogs-resting">
+            おやすみ中のワンちゃん
+          </p>
+          {restoreError ? <ErrorNotice error={restoreError} /> : null}
           <ul className="retired-list">
-            {retired.map((d) => (
+            {resting.map((d) => (
               <li key={d.id}>
                 <DogAvatar name={d.name} breedName={d.breedName} url={d.thumbUrl} size={32} />
-                <span>{d.name}</span>
+                <span className="dog-rest-name">{d.name}</span>
+                <button
+                  type="button"
+                  className="btn sub dog-rest-back"
+                  aria-label={`${d.name}を戻す`}
+                  disabled={restoring !== null}
+                  onClick={() => void restore(d.id)}
+                >
+                  {restoring === d.id ? '戻しています…' : '戻す'}
+                </button>
               </li>
             ))}
           </ul>

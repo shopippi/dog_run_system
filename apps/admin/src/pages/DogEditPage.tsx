@@ -4,11 +4,18 @@ import {
   DOG_SEXES,
   DOG_SIZE_LABELS,
   DOG_SIZES,
+  DOG_SOCIABILITY,
+  DOG_SOCIABILITY_LABELS,
   DOG_STATUS_LABELS,
+  VACCINE_YEAR_MIN,
+  currentJstYear,
+  dogWeightSchema,
+  parseWeightInput,
   type AdminDogDetail,
   type AdminDogPatch,
   type DogSex,
   type DogSize,
+  type DogSociability,
 } from '@dr/shared';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link, useParams } from 'react-router-dom';
@@ -31,8 +38,16 @@ type Form = {
   size: DogSize;
   sex: DogSex | null;
   birthYm: string;
+  /** 2026-10-28 に足した任意の項目(担当J)。体重は入力中の文字、年は選んだ年の文字 */
+  weight: string;
+  sociability: DogSociability | null;
+  rabiesYear: string;
+  comboYear: string;
   reason: string;
 };
+
+/** 予防注射の年の選択肢(今年から 2000 年まで、新しい順) */
+const VACCINE_YEARS = Array.from({ length: currentJstYear() - VACCINE_YEAR_MIN + 1 }, (_, i) => String(currentJstYear() - i));
 
 /** 写真の変更(保存するまで画面の中だけ) */
 type PhotoDraft =
@@ -46,11 +61,15 @@ const formOf = (d: AdminDogDetail): Form => ({
   size: d.dog.size,
   sex: d.dog.sex,
   birthYm: d.dog.birthYm ?? '',
+  weight: d.dog.weightKg == null ? '' : d.dog.weightKg.toFixed(1),
+  sociability: d.dog.sociability,
+  rabiesYear: d.dog.rabiesVaccineYear ? String(d.dog.rabiesVaccineYear) : '',
+  comboYear: d.dog.comboVaccineYear ? String(d.dog.comboVaccineYear) : '',
   reason: '',
 });
 
 /**
- * M-07 犬の編集(A-04)。写真の差し替え・回転・削除と、名前・犬種・サイズ・性別・生まれた年月。
+ * M-07 犬の編集(A-04)。写真の差し替え・回転・削除と、名前・犬種・サイズ・性別・生まれた年月・体重・相性・予防注射の年。
  * 犬種とサイズを変えるときは理由を書いてもらい、履歴に残す(6.1)。保存するとお客さんの会員証にもすぐ反映される。
  */
 export function DogEditPage() {
@@ -114,10 +133,23 @@ function Editor({ d, canEdit, onSaved }: { d: AdminDogDetail; canEdit: boolean; 
   if (form.size !== initial.size) patch.size = form.size;
   if (form.sex !== initial.sex) patch.sex = form.sex;
   if (form.birthYm !== initial.birthYm) patch.birthYm = form.birthYm || null;
+  // 体重(小数1桁)。読めない値のときは保存できないようにして、下に理由を出す
+  const weight = parseWeightInput(form.weight);
+  const weightCheck = weight === null ? null : dogWeightSchema.safeParse(weight);
+  const weightError = weightCheck && !weightCheck.success ? (weightCheck.error.issues[0]?.message ?? '体重を確かめてください。') : null;
+  if (form.weight.trim() !== initial.weight && !weightError) patch.weightKg = weight;
+  if (form.sociability !== initial.sociability) patch.sociability = form.sociability;
+  if (form.rabiesYear !== initial.rabiesYear) patch.rabiesVaccineYear = form.rabiesYear ? Number(form.rabiesYear) : null;
+  if (form.comboYear !== initial.comboYear) patch.comboVaccineYear = form.comboYear ? Number(form.comboYear) : null;
   const needsReason = 'breedId' in patch || 'size' in patch;
   if (needsReason) patch.reason = form.reason.trim();
   const changed = Object.keys(patch).length > 0 || photo !== null;
-  const ready = changed && form.name.trim() !== '' && (!needsReason || form.reason.trim() !== '') && (!breed?.isOther || form.breedOther.trim() !== '');
+  const ready =
+    changed &&
+    !weightError &&
+    form.name.trim() !== '' &&
+    (!needsReason || form.reason.trim() !== '') &&
+    (!breed?.isOther || form.breedOther.trim() !== '');
 
   // 写真の変更を、画面の中で回して見せる
   useEffect(() => {
@@ -327,6 +359,60 @@ function Editor({ d, canEdit, onSaved }: { d: AdminDogDetail; canEdit: boolean; 
             <input id="dg-birth" type="month" value={form.birthYm} min="1990-01" onChange={(e) => set('birthYm', e.target.value)} />
             <span className="hint">分からなければ空のままにしてください。</span>
           </div>
+          <div className="field">
+            <label htmlFor="dg-weight">体重(kg)</label>
+            <input
+              id="dg-weight"
+              className="dg-weight"
+              value={form.weight}
+              inputMode="decimal"
+              maxLength={5}
+              placeholder="例: 5.2"
+              aria-invalid={weightError ? true : undefined}
+              aria-describedby="dg-weight-hint"
+              onChange={(e) => set('weight', e.target.value)}
+            />
+            <span id="dg-weight-hint" className={weightError ? 'err' : 'hint'}>
+              {weightError ?? '小数1桁まで。分からなければ空のままにしてください。'}
+            </span>
+          </div>
+          <div className="field">
+            <span className="label" id="dg-soc">
+              ほかの犬との相性
+            </span>
+            <div className="segment dg-soc" role="radiogroup" aria-labelledby="dg-soc">
+              {DOG_SOCIABILITY.map((x) => (
+                <button key={x} type="button" role="radio" aria-checked={form.sociability === x} onClick={() => set('sociability', x)}>
+                  {DOG_SOCIABILITY_LABELS[x]}
+                </button>
+              ))}
+              <button type="button" role="radio" aria-checked={form.sociability === null} onClick={() => set('sociability', null)}>
+                未登録
+              </button>
+            </div>
+          </div>
+          <div className="field">
+            <label htmlFor="dg-rabies">狂犬病の予防注射(最近の年)</label>
+            <select id="dg-rabies" value={form.rabiesYear} onChange={(e) => set('rabiesYear', e.target.value)}>
+              <option value="">未登録</option>
+              {VACCINE_YEARS.map((y) => (
+                <option key={y} value={y}>
+                  {y}年
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="field">
+            <label htmlFor="dg-combo">混合ワクチン(最近の年)</label>
+            <select id="dg-combo" value={form.comboYear} onChange={(e) => set('comboYear', e.target.value)}>
+              <option value="">未登録</option>
+              {VACCINE_YEARS.map((y) => (
+                <option key={y} value={y}>
+                  {y}年
+                </option>
+              ))}
+            </select>
+          </div>
         </fieldset>
         {canEdit && (
           <div className="dg-foot">
@@ -335,8 +421,8 @@ function Editor({ d, canEdit, onSaved }: { d: AdminDogDetail; canEdit: boolean; 
               <button type="button" className="btn" disabled={!ready || busy} onClick={save}>
                 {busy ? '保存しています…' : '保存する'}
               </button>
-              <button type="button" className="btn ghost danger-text" disabled={busy} onClick={() => setRetireOpen(true)}>
-                {d.dog.status === 'active' ? '登録を解除する' : '登録解除を取り消す'}
+              <button type="button" className="btn ghost" disabled={busy} onClick={() => setRetireOpen(true)}>
+                {d.dog.status === 'active' ? '登録をおやすみする' : '登録に戻す'}
               </button>
             </div>
           </div>
@@ -387,7 +473,7 @@ function Editor({ d, canEdit, onSaved }: { d: AdminDogDetail; canEdit: boolean; 
   );
 }
 
-/** 登録解除・その取り消しの確認(6.1。過去の来場記録は残り、チェックインの選択肢に出なくなる) */
+/** 登録をおやすみする(内部の値は retired)・登録に戻す の確認(6.1。過去の来場記録は残り、チェックインの選択肢に出なくなる) */
 function RetireDialog({ d, onClose, onDone }: { d: AdminDogDetail; onClose: () => void; onDone: (m: ReactNode) => void }) {
   const retire = d.dog.status === 'active';
   const [busy, setBusy] = useState(false);
@@ -397,7 +483,7 @@ function RetireDialog({ d, onClose, onDone }: { d: AdminDogDetail; onClose: () =
     setError(null);
     try {
       await adminPatch(`/dogs/${d.dog.id}`, { status: retire ? 'retired' : 'active' });
-      onDone(<p>{retire ? `${d.dog.name}の登録を解除しました。` : `${d.dog.name}の登録解除を取り消しました。`}間違えたときは、操作ログから元に戻せます。</p>);
+      onDone(<p>{retire ? `${d.dog.name}の登録をおやすみしました。` : `${d.dog.name}を登録に戻しました。`}間違えたときは、操作ログから元に戻せます。</p>);
     } catch (e) {
       setError(e);
       setBusy(false);
@@ -405,26 +491,27 @@ function RetireDialog({ d, onClose, onDone }: { d: AdminDogDetail; onClose: () =
   };
   return (
     <Dialog
-      title={retire ? 'ワンちゃんの登録を解除する' : '登録解除を取り消す'}
+      title={retire ? 'ワンちゃんの登録をおやすみする' : '登録に戻す'}
       onClose={() => !busy && onClose()}
       footer={
         <>
           <button type="button" className="btn sub" data-autofocus disabled={busy} onClick={onClose}>
             やめる
           </button>
-          <button type="button" className={retire ? 'btn danger-fill' : 'btn'} disabled={busy} onClick={submit}>
-            {busy ? '変えています…' : retire ? '登録を解除する' : '取り消す'}
+          <button type="button" className="btn" disabled={busy} onClick={submit}>
+            {busy ? '変えています…' : retire ? 'おやすみする' : '登録に戻す'}
           </button>
         </>
       }
     >
       <p>
-        <b>{d.dog.name}</b>({d.household.displayName}){retire ? 'の登録を解除します。' : 'を、もう一度チェックインで選べるようにします。'}
+        <b>{d.dog.name}</b>({d.household.displayName}){retire ? 'の登録をおやすみします。' : 'を登録に戻して、もう一度チェックインで選べるようにします。'}
       </p>
       {retire && (
         <ul className="plain-list">
-          <li>これまでの来場の記録は残ります</li>
+          <li>これまでの来場の記録は、そのまま残ります</li>
           <li>チェックインのときに、選べなくなります</li>
+          <li>いつでも登録に戻せます</li>
         </ul>
       )}
       {error ? <ErrorNotice error={error} /> : null}

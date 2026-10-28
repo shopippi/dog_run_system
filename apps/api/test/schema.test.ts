@@ -102,6 +102,10 @@ describe('マイグレーション', () => {
       { fixed_key: 'postal_code', required: 0 },
       { fixed_key: 'referral', required: 1 },
       { fixed_key: 'transport', required: 0 },
+      { fixed_key: 'preferred_times', required: 0 },
+      { fixed_key: 'event_interests', required: 0 },
+      { fixed_key: 'uses_other_runs', required: 0 },
+      { fixed_key: 'wants_news', required: 0 },
     ]);
   });
 

@@ -40,7 +40,7 @@ export async function call<T = any>(path: string, opts: CallOptions = {}): Promi
 
 export { fakeJpeg } from '../../../packages/shared/test/fake-jpeg';
 
-/** 登録で使う犬の入力(breedId 1 = トイプードル、5 = 柴犬、11 = その他) */
+/** 登録で使う犬の入力(breedId 1 = プードル、5 = 柴犬、11 = その他。migrations/0001_init.sql) */
 export const dog = (name: string, extra: Record<string, unknown> = {}) => ({
   name,
   breedId: 1,

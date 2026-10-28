@@ -51,7 +51,7 @@ describe('C-08 犬の管理', () => {
       body: { breedId: 5, size: 'large' },
     });
     expect(res.status).toBe(200);
-    expect(res.body.dog).toMatchObject({ breedName: 'トイプードル', size: 'small' });
+    expect(res.body.dog).toMatchObject({ breedName: 'プードル', size: 'small' });
   });
 
   it('管理者が呼び名を変えたおうちは、犬の名前を変えても呼び名は変わらない', async () => {
@@ -62,7 +62,7 @@ describe('C-08 犬の管理', () => {
     expect(me.body.household.displayName).toBe('アルくんち');
   });
 
-  it('登録解除すると一覧に「登録解除」として残り、呼び名から外れる', async () => {
+  it('登録をおやすみすると一覧に「おやすみ中」として残り、呼び名から外れる', async () => {
     const r = await registerUser(PAPA, [dog('アル'), dog('ニコ')]);
     const res = await call(`/api/dogs/${r.dogs[1]!.id}/retire`, { user: PAPA, method: 'POST' });
     expect(res.status).toBe(200);
@@ -73,19 +73,48 @@ describe('C-08 犬の管理', () => {
     expect(me.body.household.displayName).toBe('アルのおうち');
   });
 
-  it('最後の1頭は登録解除できない', async () => {
+  it('おやすみ中のワンちゃんは「戻す」で登録に戻り、呼び名とチェックインの選択肢に戻る。履歴に残る', async () => {
+    const r = await registerUser(PAPA, [dog('アル'), dog('ニコ')]);
+    const niko = r.dogs[1]!.id;
+    await call(`/api/dogs/${niko}/retire`, { user: PAPA, method: 'POST' });
+    const ng = await call(`/api/dogs/${niko}`, { user: PAPA, method: 'PATCH', body: { name: 'ニコル' } });
+    expect(ng.status).toBe(409);
+    expect(ng.body.error.message).toMatch(/おやすみ/);
+    const res = await call(`/api/dogs/${niko}/restore`, { user: PAPA, method: 'POST' });
+    expect(res.status).toBe(200);
+    expect(res.body.dog.status).toBe('active');
+    const me = await call('/api/me', { user: PAPA });
+    expect(me.body.household.displayName).toBe('アル・ニコのおうち');
+    expect(me.body.card.dogs.map((d: { name: string }) => d.name)).toEqual(['アル', 'ニコ']);
+    const { results } = await env.DB.prepare(
+      "SELECT before_value, after_value, actor_type FROM dog_changes WHERE dog_id = ? AND field = 'status' ORDER BY id",
+    )
+      .bind(niko)
+      .all();
+    expect(results).toEqual([
+      { before_value: 'active', after_value: 'retired', actor_type: 'member' },
+      { before_value: 'retired', after_value: 'active', actor_type: 'member' },
+    ]);
+    // 登録中のワンちゃんを戻しても、何も変わらない
+    const again = await call(`/api/dogs/${niko}/restore`, { user: PAPA, method: 'POST' });
+    expect(again.status).toBe(200);
+    expect(again.body.dog.status).toBe('active');
+  });
+
+  it('最後の1頭は登録をおやすみできない', async () => {
     const r = await registerUser(PAPA);
     const res = await call(`/api/dogs/${r.dogs[0]!.id}/retire`, { user: PAPA, method: 'POST' });
     expect(res.status).toBe(409);
     expect(res.body.error.message).toMatch(/追加してから/);
   });
 
-  it('よそのおうちの犬は変更も登録解除もできない', async () => {
+  it('よそのおうちの犬は変更もおやすみも戻すこともできない', async () => {
     const r = await registerUser(PAPA, [dog('アル'), dog('ニコ')]);
     await registerUser(OTHER, [dog('ハナ')]);
     const id = r.dogs[0]!.id;
     expect((await call(`/api/dogs/${id}`, { user: OTHER, method: 'PATCH', body: { name: 'x' } })).status).toBe(404);
     expect((await call(`/api/dogs/${id}/retire`, { user: OTHER, method: 'POST' })).status).toBe(404);
+    expect((await call(`/api/dogs/${id}/restore`, { user: OTHER, method: 'POST' })).status).toBe(404);
   });
 
   it('検索用の名前もそろえて更新する', async () => {

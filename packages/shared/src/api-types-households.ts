@@ -111,7 +111,7 @@ export const MEMBER_STATUS_LABELS: Record<import('./constants').MemberStatus, st
 
 export const DOG_STATUS_LABELS: Record<import('./constants').DogStatus, string> = {
   active: '登録中',
-  retired: '登録解除',
+  retired: 'おやすみ中',
   merged: '統合済み',
 };
 
@@ -196,7 +196,7 @@ export type HouseholdDetail = {
   /** 来場の回数(取り消しを除く) */
   visitCount: number;
   family: HouseholdFamilyMember[];
-  /** 犬(登録解除した犬も含む) */
+  /** 犬(おやすみ中の犬も含む) */
   dogs: import('./api-types').DogSummary[];
   /** 来場履歴(新しい順。最大100件) */
   visits: HouseholdVisit[];

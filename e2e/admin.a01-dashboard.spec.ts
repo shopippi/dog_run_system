@@ -31,7 +31,7 @@ test.describe('A-01 ダッシュボード', () => {
     // 今月のチェックインが数に入っている
     await expect(kpis.locator('.kpi', { hasText: '来場頭数' }).locator('.v')).not.toHaveText(/^0頭$/);
     await expect(page.getByRole('region', { name: '来場の推移' }).locator('canvas')).toBeVisible();
-    await expect(page.getByRole('region', { name: '犬種' }).locator('canvas')).toHaveAttribute('aria-label', /トイプードル/);
+    await expect(page.getByRole('region', { name: '犬種' }).locator('canvas')).toHaveAttribute('aria-label', /プードル/);
 
     // 期間を切り替える
     await page.getByRole('radiogroup', { name: '期間' }).getByRole('radio', { name: '過去12か月' }).check();

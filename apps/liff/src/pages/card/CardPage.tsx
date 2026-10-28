@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { DogAvatar } from '../../components/DogAvatar';
 import { ErrorNotice } from '../../components/ErrorNotice';
 import { Icon } from '../../components/Icon';
+import { ProfileNudge } from '../../components/ProfileNudge';
 import { useMe } from '../../hooks/useMe';
 import { canScan, scanCheckinCode } from '../../lib/liff';
 import { TicketPanel } from './TicketPanel';
@@ -86,6 +87,7 @@ function Card({ me, reload }: { me: MeRegistered; reload: () => Promise<void> })
           <Icon name="chevron-right" />
         </Link>
       </nav>
+      <ProfileNudge pending={me.optionalSurveyPending} />
       <p className="note">
         1日1ポイント。{card.pointsPerTicket}ポイントで無料券1枚(来場1回分)と交換できます。前のポイントカードは、受付で見せると引き継げます。
       </p>

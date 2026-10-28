@@ -19,18 +19,18 @@ describe('A-11 犬種の選択肢の管理', () => {
     const res = await adminCall('/admin/api/breeds', { cookie });
     expect(res.status).toBe(200);
     expect(res.body.breeds.at(-1)).toMatchObject({ name: 'その他', isOther: true, visible: true });
-    expect(res.body.breeds[0]).toMatchObject({ id: 1, name: 'トイプードル', defaultSize: 'small', dogCount: 2 });
+    expect(res.body.breeds[0]).toMatchObject({ id: 1, name: 'プードル', defaultSize: 'small', dogCount: 2 });
   });
 
   it('追加すると「その他」の直前に入り、お客さんの選択肢にも出る。操作ログに残る', async () => {
     const cookie = await as('admin');
-    const res = await adminCall('/admin/api/breeds', { cookie, body: { name: ' コーギー ', defaultSize: 'medium' } });
+    const res = await adminCall('/admin/api/breeds', { cookie, body: { name: ' シェットランドシープドッグ ', defaultSize: 'medium' } });
     expect(res.status).toBe(201);
-    expect(names(res.body.breeds).slice(-2)).toEqual(['コーギー', 'その他']);
-    expect((await customerBreeds()).slice(-2)).toEqual(['コーギー', 'その他']);
+    expect(names(res.body.breeds).slice(-2)).toEqual(['シェットランドシープドッグ', 'その他']);
+    expect((await customerBreeds()).slice(-2)).toEqual(['シェットランドシープドッグ', 'その他']);
     expect(await lastLog()).toMatchObject({ action: 'breed.create', target_type: 'breed', target_id: String(res.body.id) });
 
-    const dup = await adminCall('/admin/api/breeds', { cookie, body: { name: 'コーギー', defaultSize: 'small' } });
+    const dup = await adminCall('/admin/api/breeds', { cookie, body: { name: 'シェットランドシープドッグ', defaultSize: 'small' } });
     expect(dup.status).toBe(409);
     expect(dup.body.error.message).toMatch(/もう選択肢にあります/);
     const empty = await adminCall('/admin/api/breeds', { cookie, body: { name: '  ', defaultSize: 'small' } });
@@ -77,10 +77,10 @@ describe('A-11 犬種の選択肢の管理', () => {
     expect(me.body.card.dogs[0]).toMatchObject({ breedName: 'トイ・プードル', size: 'small' });
 
     const log = (await lastLog())!;
-    expect(JSON.parse(log.before_value!)).toEqual({ name: 'トイプードル', defaultSize: 'small' });
+    expect(JSON.parse(log.before_value!)).toEqual({ name: 'プードル', defaultSize: 'small' });
     await getUndo('breed.update')!(env.DB, log, { staffId: 1, now: new Date() });
     const back = await adminCall('/admin/api/breeds', { cookie });
-    expect(back.body.breeds[0]).toMatchObject({ name: 'トイプードル', defaultSize: 'small' });
+    expect(back.body.breeds[0]).toMatchObject({ name: 'プードル', defaultSize: 'small' });
 
     // 同じ名前にはできない
     const dup = await adminCall('/admin/api/breeds/1', { cookie, method: 'PATCH', body: { name: 'チワワ' } });

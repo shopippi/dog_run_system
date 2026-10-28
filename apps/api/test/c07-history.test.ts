@@ -39,7 +39,7 @@ describe('C-07 来場履歴', () => {
     expect(v3.dogs.map((d: { name: string }) => d.name)).toEqual(['アル']);
     expect(v2).toMatchObject({ date: '2026-10-02', checkedInBy: 'ママ', checkedInByMe: false, pointsAwarded: 1, ticketsIssued: 0, usedTicket: false });
     expect(v1.dogs).toEqual([
-      { id: al!.id, name: 'アル', breedName: 'トイプードル', thumbUrl: null },
+      { id: al!.id, name: 'アル', breedName: 'プードル', thumbUrl: null },
       { id: niko!.id, name: 'ニコ', breedName: '柴犬', thumbUrl: null },
     ]);
     // 家族が見ても同じ履歴(来場はおうちに付く)

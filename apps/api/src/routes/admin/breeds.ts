@@ -5,6 +5,7 @@ import { errors } from '../../lib/errors';
 import { requireRole } from '../../lib/staff-auth';
 import { parseJson } from '../../lib/validate';
 import { auditStatement } from '../../services/audit';
+import { registerAuditDetail } from '../../services/audit-view';
 import { registerUndo } from '../../services/undo';
 
 // A-11 犬種の選択肢の管理(M-12)
@@ -209,4 +210,11 @@ registerUndo('breed.reorder', async (db, log) => {
   // あとから追加した犬種は、元の並びの後ろに置く
   const ids = [...before.filter((id) => now.includes(id)), ...now.filter((id) => !before.includes(id))];
   await db.batch([...orderStatements(db, ids), keepOtherLast(db)]);
+});
+
+// 犬種を大まかな分け方にまとめた記録(migrations/0007_profile.sql が書く。自動処理なので元に戻す操作はない)
+registerAuditDetail('breed.consolidate', (before) => {
+  if (!Array.isArray(before) || before.length === 0) return null;
+  const list = (before as { name: string; dogs: number }[]).map((b) => (b.dogs ? `${b.name}(${b.dogs}頭)` : b.name));
+  return `${list.join('・')}を、大まかな犬種にまとめた`;
 });

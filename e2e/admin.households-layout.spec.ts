@@ -107,10 +107,10 @@ test.describe('おうちの詳細と記録の見え方', () => {
       await expect(page.getByRole('img', { name: 'ココアの写真' })).toBeVisible({ timeout: 15_000 });
       await expect(page.getByLabel('犬種・サイズを変える理由')).toBeVisible();
       await checkScreen(page, v.name, 'M-07 犬の編集(変更中)', v.touch);
-      await page.getByRole('button', { name: '登録を解除する' }).click();
-      await expect(page.getByRole('dialog', { name: 'ワンちゃんの登録を解除する' })).toBeVisible();
-      await checkScreen(page, v.name, 'M-07 登録解除の確認', v.touch);
-      await page.getByRole('dialog', { name: 'ワンちゃんの登録を解除する' }).getByRole('button', { name: 'やめる' }).click();
+      await page.getByRole('button', { name: '登録をおやすみする' }).click();
+      await expect(page.getByRole('dialog', { name: 'ワンちゃんの登録をおやすみする' })).toBeVisible();
+      await checkScreen(page, v.name, 'M-07 登録のおやすみの確認', v.touch);
+      await page.getByRole('dialog', { name: 'ワンちゃんの登録をおやすみする' }).getByRole('button', { name: 'やめる' }).click();
 
       await page.close();
     });

@@ -138,8 +138,27 @@ export type DashboardResponse = {
   };
   dayTypes: { dayType: DayType; label: string; days: number; avgDogs: number | null }[];
   events: { date: string; names: string[]; dayType: DayType; dogs: number; baseline: number | null; diffPct: number | null }[];
-  dogs: { total: number; breeds: Bar[]; sizes: Bar[]; ages: Bar[] };
-  owners: { members: number; households: number; ageGroups: Bar[]; genders: Bar[]; areas: Bar[]; referrals: Bar[]; transports: Bar[] };
+  dogs: {
+    total: number;
+    breeds: Bar[];
+    sizes: Bar[];
+    ages: Bar[];
+    /** ほかの犬との相性(担当J) */
+    sociability: Bar[];
+  };
+  owners: {
+    members: number;
+    households: number;
+    ageGroups: Bar[];
+    genders: Bar[];
+    areas: Bar[];
+    referrals: Bar[];
+    transports: Bar[];
+    /** 来たい時間帯・興味のあるイベント(複数選択。選んだ選択肢ごとにおうちを数える)・ほかのドッグランの利用(担当J) */
+    preferredTimes: Bar[];
+    eventInterests: Bar[];
+    otherRuns: Bar[];
+  };
   cohort: { rows: CohortRow[]; offsets: number } | null;
   dormant: { total: number; households: DormantHousehold[] } | null;
   family: { households: number; multi: number; rate: number | null; avgVisitsMulti: number | null; avgVisitsSingle: number | null } | null;

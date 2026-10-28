@@ -1,6 +1,6 @@
 import { z } from 'zod';
-import { DOG_SEXES, DOG_SIZES } from '../constants';
-import { birthYmSchema, dogNameSchema } from './dog';
+import { DOG_SEXES, DOG_SIZES, DOG_SOCIABILITY } from '../constants';
+import { birthYmSchema, dogNameSchema, dogWeightSchema, vaccineYearSchema } from './dog';
 
 // 入力チェック(households: おうちの詳細と記録、操作ログ)
 
@@ -62,7 +62,7 @@ export function manualReasonText(input: { reason: ManualPointReason; note: strin
 
 /**
  * 管理者による犬の情報の変更(A-04)。犬種とサイズを変えるときは理由が必要(6.1)。
- * status は登録解除(retired)と、その取り消し(active)。
+ * status は登録のおやすみ(retired)と、登録に戻す(active)。
  */
 export const adminDogPatchSchema = z
   .object({
@@ -73,6 +73,11 @@ export const adminDogPatchSchema = z
     sex: z.enum(DOG_SEXES).nullable(),
     birthYm: birthYmSchema.nullable(),
     status: z.enum(['active', 'retired']),
+    // 2026-10-28 に足した任意の項目(体重・ほかの犬との相性・予防注射の年)
+    weightKg: dogWeightSchema.nullable(),
+    sociability: z.enum(DOG_SOCIABILITY, { error: 'ほかの犬との相性を選び直してください。' }).nullable(),
+    rabiesVaccineYear: vaccineYearSchema.nullable(),
+    comboVaccineYear: vaccineYearSchema.nullable(),
     reason: z.string().trim().max(100, { error: '理由は100文字までで入力してください。' }),
   })
   .partial();

@@ -29,3 +29,5 @@ export * from './migration';
 export * from './manual-points';
 export * from './api-types-tickets';
 export * from './schemas/tickets';
+export * from './api-types-profile';
+export * from './schemas/profile';

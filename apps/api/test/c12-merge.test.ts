@@ -60,7 +60,7 @@ describe('C-12 お客さん同士でおうちをまとめる', () => {
     const merge = res.body.merge;
     expect(merge.theirs).toMatchObject({ memberNo: papa.memberNo, displayName: 'アルのおうち', points: 7, visits: 1, family: ['パパ'] });
     expect(merge.mine).toMatchObject({ memberNo: mama.memberNo, displayName: 'あるくん・モカのおうち', points: 5, visits: 1, family: ['ママ', 'ばあば'] });
-    expect(merge.theirs.dogs).toEqual([{ id: papa.dogs[0]!.id, name: 'アル', breedName: 'トイプードル', thumbUrl: null, hasPhoto: false }]);
+    expect(merge.theirs.dogs).toEqual([{ id: papa.dogs[0]!.id, name: 'アル', breedName: 'プードル', thumbUrl: null, hasPhoto: false }]);
     expect(merge.mine.dogs.map((d: { name: string }) => d.name)).toEqual(['あるくん', 'モカ']);
     // 一緒に移る家族(自分以外)
     expect(merge.movingFamily).toEqual(['ばあば']);

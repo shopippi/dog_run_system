@@ -12,6 +12,11 @@ export type MeRegistered = {
   registered: true;
   member: { id: number; lineDisplayName: string };
   household: { memberNo: string; displayName: string };
+  /**
+   * あとから足した任意のおうちの質問(来たい時間帯など)に、まだ1つも答えていないか。
+   * 会員証に小さく「答える」を出すだけで、登録のあとのアンケートの画面(SurveyPrompt)は出さない。
+   */
+  optionalSurveyPending?: boolean;
   /** 会員証(C-06) */
   card: MemberCard;
 };
@@ -51,6 +56,13 @@ export type DogSummary = {
   size: DogSize;
   sex: DogSex | null;
   birthYm: string | null;
+  /** 体重(kg、小数1桁)。任意 */
+  weightKg: number | null;
+  /** ほかの犬との相性。任意 */
+  sociability: import('./constants').DogSociability | null;
+  /** 狂犬病の予防注射・混合ワクチンの年(西暦)。任意 */
+  rabiesVaccineYear: number | null;
+  comboVaccineYear: number | null;
   status: DogStatus;
   /** 写真(認証つき API の URL)。写真がなければ null */
   photoUrl: string | null;

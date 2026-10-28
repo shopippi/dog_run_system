@@ -4,12 +4,18 @@ import {
   DOG_SEX_LABELS,
   DOG_SIZES,
   DOG_SIZE_LABELS,
+  DOG_SOCIABILITY,
+  DOG_SOCIABILITY_LABELS,
+  VACCINE_YEAR_MIN,
+  currentJstYear,
   dogInputSchema,
+  parseWeightInput,
   type Breed,
   type DogInput,
   type DogSummary,
   type DogSex,
   type DogSize,
+  type DogSociability,
 } from '@dr/shared';
 import { useId, useState } from 'react';
 import { resizePhoto, type ResizedPhoto } from '../lib/photo';
@@ -25,6 +31,11 @@ export type DogDraft = {
   sex: DogSex | null;
   birthYear: string;
   birthMonth: string;
+  /** 2026-10-28 に足した任意の項目(体重は入力中の文字、年は選んだ年の文字) */
+  weight: string;
+  sociability: DogSociability | null;
+  rabiesYear: string;
+  comboYear: string;
   photo: ResizedPhoto | null;
 };
 
@@ -40,6 +51,10 @@ export function dogToDraft(d: DogSummary): DogDraft {
     sex: d.sex,
     birthYear: y,
     birthMonth: m ? String(Number(m)) : '',
+    weight: d.weightKg == null ? '' : d.weightKg.toFixed(1),
+    sociability: d.sociability,
+    rabiesYear: d.rabiesVaccineYear ? String(d.rabiesVaccineYear) : '',
+    comboYear: d.comboVaccineYear ? String(d.comboVaccineYear) : '',
     photo: null,
   };
 }
@@ -54,6 +69,10 @@ export function emptyDogDraft(): DogDraft {
     sex: null,
     birthYear: '',
     birthMonth: '',
+    weight: '',
+    sociability: null,
+    rabiesYear: '',
+    comboYear: '',
     photo: null,
   };
 }
@@ -71,6 +90,10 @@ export function draftToInput(d: DogDraft): { input: DogInput } | { error: string
     size: d.size ?? undefined,
     sex: d.sex,
     birthYm,
+    weightKg: parseWeightInput(d.weight),
+    sociability: d.sociability,
+    rabiesVaccineYear: d.rabiesYear ? Number(d.rabiesYear) : null,
+    comboVaccineYear: d.comboYear ? Number(d.comboYear) : null,
   });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? '入力を確かめてください。' };
   return { input: parsed.data };
@@ -91,6 +114,9 @@ type Props = {
 const THIS_YEAR = new Date().getFullYear();
 const YEARS = Array.from({ length: 26 }, (_, i) => String(THIS_YEAR - i));
 const MONTHS = Array.from({ length: 12 }, (_, i) => String(i + 1));
+/** 予防注射の年(今年から 2000 年まで、新しい順) */
+const VACCINE_YEARS = Array.from({ length: currentJstYear() - VACCINE_YEAR_MIN + 1 }, (_, i) => String(currentJstYear() - i));
+const hasExtra = (d: DogDraft) => Boolean(d.weight || d.sociability || d.rabiesYear || d.comboYear);
 
 /** 犬の登録項目の入力(6.1)。L-02 と L-09 で使う。 */
 export function DogForm({ draft, breeds, onChange, breedEditable = true, title, onRemove, currentPhotoUrl }: Props) {
@@ -99,6 +125,8 @@ export function DogForm({ draft, breeds, onChange, breedEditable = true, title, 
   const [photoError, setPhotoError] = useState<string | null>(null);
   const set = (patch: Partial<DogDraft>) => onChange({ ...draft, ...patch });
   const breed = breeds.find((b) => b.id === draft.breedId);
+  // 任意の項目の欄は、すでに入っていれば開いておく(最初の表示のときだけ決め、入力中に勝手に閉じない)
+  const [extraOpen] = useState(() => hasExtra(draft));
 
   const pickPhoto = async (file: File | undefined) => {
     if (!file) return;
@@ -248,6 +276,67 @@ export function DogForm({ draft, breeds, onChange, breedEditable = true, title, 
         </div>
         <span className="hint">分からなければ空欄のままで大丈夫です</span>
       </div>
+
+      {/* 体重・相性・予防注射は任意。たたんでおき、あとで答えてもよい(担当J) */}
+      <details className="pf-more" open={extraOpen || undefined}>
+        <summary>
+          <span>体重・相性・予防注射</span>
+          <span className="note">あとでもよい</span>
+        </summary>
+        <div className="pf-more-body">
+          <div className="field">
+            <label htmlFor={`${id}-weight`}>体重</label>
+            <div className="pf-unit">
+              <input
+                id={`${id}-weight`}
+                value={draft.weight}
+                inputMode="decimal"
+                maxLength={5}
+                autoComplete="off"
+                placeholder="例: 5.2"
+                onChange={(e) => set({ weight: e.target.value })}
+              />
+              <span aria-hidden="true">kg</span>
+            </div>
+          </div>
+          <div className="field">
+            <span className="label" id={`${id}-soc`}>
+              ほかの犬との相性
+            </span>
+            <ChoiceGroup
+              labelledBy={`${id}-soc`}
+              options={DOG_SOCIABILITY.map((s) => ({ value: s, label: DOG_SOCIABILITY_LABELS[s] }))}
+              value={draft.sociability}
+              onChange={(sociability) => set({ sociability })}
+            />
+          </div>
+          <div className="row2">
+            <div className="field">
+              <label htmlFor={`${id}-rabies`}>狂犬病の予防注射</label>
+              <select id={`${id}-rabies`} value={draft.rabiesYear} onChange={(e) => set({ rabiesYear: e.target.value })}>
+                <option value="">年</option>
+                {VACCINE_YEARS.map((y) => (
+                  <option key={y} value={y}>
+                    {y}年
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="field">
+              <label htmlFor={`${id}-combo`}>混合ワクチン</label>
+              <select id={`${id}-combo`} value={draft.comboYear} onChange={(e) => set({ comboYear: e.target.value })}>
+                <option value="">年</option>
+                {VACCINE_YEARS.map((y) => (
+                  <option key={y} value={y}>
+                    {y}年
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <span className="hint">いちばん最近に受けた年です。受付での確認と、ご案内に使います。</span>
+        </div>
+      </details>
     </fieldset>
   );
 }

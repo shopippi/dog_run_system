@@ -54,7 +54,7 @@ test('A-11 犬種を追加して上へ動かし、非表示にするとお客さ
 
 test('A-11 製作者は一覧を見るだけ(追加・並べ替えのボタンがない)', async ({ page }) => {
   await adminLogin(page, 'developer', '/breeds');
-  await expect(page.getByRole('list', { name: '犬種' }).getByRole('listitem', { name: 'トイプードル' })).toBeVisible();
+  await expect(page.getByRole('list', { name: '犬種' }).getByRole('listitem', { name: 'プードル' })).toBeVisible();
   await expect(page.getByRole('region', { name: '犬種を追加' })).toHaveCount(0);
   await expect(page.getByRole('button', { name: /上へ|下へ|変える|非表示/ })).toHaveCount(0);
 });

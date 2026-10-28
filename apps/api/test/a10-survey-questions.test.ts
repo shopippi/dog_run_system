@@ -20,7 +20,7 @@ describe('A-10 アンケートの管理', () => {
     const cookie = await as('admin');
     const res = await adminCall('/admin/api/survey-questions', { cookie });
     expect(res.status).toBe(200);
-    expect(res.body.questions).toHaveLength(5);
+    expect(res.body.questions).toHaveLength(9);
     expect(res.body.questions[0]).toMatchObject({ fixedKey: 'age_group', isFixed: true, visible: true, answerCount: null });
   });
 
@@ -78,7 +78,7 @@ describe('A-10 アンケートの管理', () => {
     const cookie = await as('admin');
     const one = await add(cookie, { target: 'member', kind: 'choice', label: '質問', options: ['はい'] });
     expect(one.status).toBe(400);
-    expect(one.body.error.message).toBe('「選ぶ」の質問には、選択肢を2つ以上入れてください。');
+    expect(one.body.error.message).toBe('「選ぶ」「いくつでも選ぶ」の質問には、選択肢を2つ以上入れてください。');
     expect((await add(cookie, { target: 'member', kind: 'text', label: 'あ'.repeat(100) })).status).toBe(201);
     const long = await add(cookie, { target: 'member', kind: 'text', label: 'あ'.repeat(101) });
     expect(long.status).toBe(400);

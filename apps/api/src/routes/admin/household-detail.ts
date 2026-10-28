@@ -3,14 +3,17 @@ import {
   DOG_FIELD_LABELS,
   DOG_SEX_LABELS,
   DOG_SIZE_LABELS,
+  DOG_SOCIABILITY_LABELS,
   DOG_STATUS_LABELS,
   adminDogPatchSchema,
+  householdProfilePatchSchema,
   householdRenameSchema,
   manualPointsSchema,
   normalizeForSearch,
   toJstIso,
   type AdminDogDetail,
   type HouseholdDetail,
+  type HouseholdProfileResponse,
   type ManualPointsPreview,
   type ReceptionInvite,
 } from '@dr/shared';
@@ -36,6 +39,7 @@ import { getDog, refreshAutoNameStatement, saveDogPhoto, syncHouseholdSearchName
 import { getHouseholdRow, householdNotFound, loadHouseholdDetail } from '../../services/household-detail';
 import { applyManualPoints, previewManualPoints, undoManualPoints } from '../../services/manual-points';
 import { createReceptionInvite, removeFamilyMember, undoFamilyRemove } from '../../services/family-admin';
+import { describeHouseholdProfile, loadHouseholdProfile, patchHouseholdProfile, undoHouseholdProfile } from '../../services/household-profile';
 import { registerUndo } from '../../services/undo';
 
 // A-02 おうちの詳細・呼び名の変更、A-03 ポイントの手動登録、A-04 犬の情報の変更、A-06 家族の追加・解除
@@ -148,6 +152,32 @@ registerUndo('household.rename', async (db, log, ctx) => {
 });
 
 // ------------------------------------------------------------
+// A-02 おうちのアンケートの回答(おうちへの固定の質問)の確認と変更(管理者。製作者は見るだけ。担当J)
+// ------------------------------------------------------------
+
+householdDetailRoutes.get('/households/:id/profile', requireRole('admin'), async (c) => {
+  const db = c.env.DB;
+  const h = await getHouseholdRow(db, Number(c.req.param('id')));
+  if (!h) throw householdNotFound();
+  const body: HouseholdProfileResponse = await loadHouseholdProfile(db, h.id);
+  return c.json(body);
+});
+
+// 送った質問の回答だけを変える。知ったきっかけ(必須)は空にできない。操作ログに前後を残し、元に戻せる
+householdDetailRoutes.patch('/households/:id/profile', requireRole('admin'), async (c) => {
+  const db = c.env.DB;
+  const id = Number(c.req.param('id'));
+  const { answers } = await parseJson(c, householdProfilePatchSchema);
+  await requireActiveHousehold(db, id);
+  await patchHouseholdProfile(db, { householdId: id, answers, staffId: c.get('staff').id, now: c.get('now') });
+  const body: HouseholdProfileResponse = await loadHouseholdProfile(db, id);
+  return c.json(body);
+});
+
+registerAuditDetail('household.profile', describeHouseholdProfile);
+registerUndo('household.profile', undoHouseholdProfile);
+
+// ------------------------------------------------------------
 // A-03 ポイント・無料券の手動登録(管理者)
 // ------------------------------------------------------------
 
@@ -198,7 +228,7 @@ householdDetailRoutes.get('/dogs/:id', requireRole('admin'), async (c) => {
   return c.json(body);
 });
 
-// 名前・犬種・サイズ・性別・生まれた年月・登録解除とその取り消し。犬種とサイズは理由つきで履歴に残す(6.1)
+// 名前・犬種・サイズ・性別・生まれた年月・体重・相性・予防注射の年・登録のおやすみと戻す操作。犬種とサイズは理由つきで履歴に残す(6.1)
 householdDetailRoutes.patch('/dogs/:id', requireRole('admin'), async (c) => {
   const db = c.env.DB;
   const id = Number(c.req.param('id'));
@@ -249,6 +279,10 @@ const DOG_VALUE_TEXT: Record<string, (v: any) => string> = {
   sex: (v) => (v ? (DOG_SEX_LABELS[v as keyof typeof DOG_SEX_LABELS] ?? v) : '未登録'),
   birthYm: (v) => (v ? `${String(v).slice(0, 4)}年${Number(String(v).slice(5, 7))}月` : '未登録'),
   status: (v) => DOG_STATUS_LABELS[v as keyof typeof DOG_STATUS_LABELS] ?? v,
+  weightKg: (v) => (v == null ? '未登録' : `${Number(v).toFixed(1)}kg`),
+  sociability: (v) => (v ? (DOG_SOCIABILITY_LABELS[v as keyof typeof DOG_SOCIABILITY_LABELS] ?? v) : '未登録'),
+  rabiesVaccineYear: (v) => (v ? `${v}年` : '未登録'),
+  comboVaccineYear: (v) => (v ? `${v}年` : '未登録'),
 };
 const DOG_VALUE_LABEL: Record<string, string> = {
   name: DOG_FIELD_LABELS.name!,
@@ -257,6 +291,10 @@ const DOG_VALUE_LABEL: Record<string, string> = {
   sex: DOG_FIELD_LABELS.sex!,
   birthYm: DOG_FIELD_LABELS.birth_ym!,
   status: DOG_FIELD_LABELS.status!,
+  weightKg: DOG_FIELD_LABELS.weight_kg!,
+  sociability: DOG_FIELD_LABELS.sociability!,
+  rabiesVaccineYear: DOG_FIELD_LABELS.rabies_vaccine_year!,
+  comboVaccineYear: DOG_FIELD_LABELS.combo_vaccine_year!,
 };
 registerAuditDetail('dog.update', (b, a) => {
   if (!a) return null;
