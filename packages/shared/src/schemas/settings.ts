@@ -143,3 +143,35 @@ export const surveyQuestionPatchSchema = z
   .refine((v) => Object.keys(v).length > 0, { error: '変える内容がありません。画面を読み込み直してください。' });
 export type SurveyQuestionPatch = z.infer<typeof surveyQuestionPatchSchema>;
 export const SURVEY_NEED_OPTIONS_MESSAGE = NEED_OPTIONS;
+
+// ============================================================
+// A-13 スタッフの管理
+// ============================================================
+
+/** 管理画面のパスワードの長さ(apps/api/scripts/create-staff.mjs と同じ) */
+export const STAFF_PASSWORD_MIN = 10;
+
+const staffPasswordSchema = z
+  .string({ error: 'パスワードを入力してください。' })
+  .min(STAFF_PASSWORD_MIN, { error: `パスワードは${STAFF_PASSWORD_MIN}文字以上にしてください。` })
+  .max(200, { error: 'パスワードは200文字までにしてください。' });
+
+/** スタッフを追加する。製作者(見るだけ)は管理画面からは作れない(docs/deploy.md のコマンドで作る) */
+export const staffCreateSchema = z.object({
+  name: z
+    .string({ error: '名前を入力してください。' })
+    .trim()
+    .min(1, { error: '名前を入力してください。' })
+    .max(40, { error: '名前は40文字までで入力してください。' }),
+  email: z.string().trim().toLowerCase().email({ error: 'メールアドレスの形を確かめてください。' }).max(200),
+  role: z.enum(['staff', 'admin'], { error: '役割(受付スタッフ・管理者)を選んでください。' }),
+  password: staffPasswordSchema,
+});
+
+/** 停止・再開 */
+export const staffPatchSchema = z.object({
+  status: z.enum(['active', 'suspended'], { error: '停止するか再開するかを選んでください。' }),
+});
+
+/** パスワードの再発行。password を送らなければ、ランダムに作って1回だけ返す */
+export const staffPasswordResetSchema = z.object({ password: staffPasswordSchema.optional() });

@@ -113,6 +113,15 @@ for (const scheme of ['light', 'dark'] as const) {
       await page.getByRole('dialog', { name: '質問を変える' }).waitFor();
       await check(page, 'M-11 質問を変える');
       await page.getByRole('button', { name: 'やめる' }).click();
+
+      await page.getByRole('link', { name: 'スタッフ' }).click();
+      const staffRow = page.getByRole('list', { name: 'スタッフ' }).getByRole('listitem', { name: '受付' }).first();
+      await staffRow.waitFor();
+      await check(page, 'M-14 スタッフ');
+      await staffRow.getByRole('button', { name: '受付さんを停止する' }).click();
+      await page.getByRole('dialog', { name: 'アカウントを停止する' }).waitFor();
+      await check(page, 'M-14 アカウントを停止する');
+      await page.getByRole('button', { name: 'やめる' }).click();
       await page.close();
 
       const dev = await browser.newPage({ ...TABLET, colorScheme: scheme });

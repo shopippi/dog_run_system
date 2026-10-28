@@ -56,3 +56,23 @@ export type SurveySummary = {
   /** 自由に書く質問の回答(新しい順に50件まで) */
   texts: { answer: string; answeredAt: string }[];
 };
+
+/** 管理画面の利用者の一覧の1行(A-13) */
+export type AdminStaff = {
+  id: number;
+  name: string;
+  email: string;
+  role: import('./constants').StaffRole;
+  status: import('./constants').StaffStatus;
+  lastLoginAt: string | null;
+  createdAt: string;
+  /** パスワードを5回まちがえて、ログインできない状態か */
+  locked: boolean;
+  /** ログイン中の本人か(自分は停止できない) */
+  isMe: boolean;
+};
+
+export type AdminStaffResponse = { staff: AdminStaff[] };
+
+/** パスワードの再発行の結果。ランダムに作ったときだけ、新しいパスワードを1回だけ返す */
+export type StaffPasswordResult = { password: string | null };

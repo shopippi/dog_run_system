@@ -389,3 +389,15 @@ input::placeholder { color: var(--text-tertiary); }
 .cfg-texts { list-style: none; margin: 0; padding: 0; max-height: 320px; overflow: auto; }
 .cfg-texts li { display: flex; flex-direction: column; padding: var(--sp-2) 0; overflow-wrap: anywhere; }
 .cfg-texts li + li { border-top: 1px solid var(--border); }
+
+/* スタッフ */
+.cfg-item.cfg-staff { grid-template-columns: minmax(0, 1fr) auto auto; }
+@media (max-width: 640px) {
+  .cfg-item.cfg-staff { grid-template-columns: minmax(0, 1fr) auto; }
+  .cfg-staff .cfg-item-acts { grid-column: 1 / -1; margin-left: calc(-1 * var(--sp-3)); }
+}
+.cfg-grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--sp-4) var(--sp-5); align-items: start; }
+@media (max-width: 640px) { .cfg-grid2 { grid-template-columns: minmax(0, 1fr); } }
+.btn.ghost.cfg-danger-text { color: var(--danger); }
+.cfg-password { padding: var(--sp-3) var(--sp-4); border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface-sunk); font-size: var(--fs-20); font-weight: var(--fw-strong); user-select: all; }
+@media (hover: hover) { .btn.ghost.cfg-danger-text:hover:not(:disabled) { color: var(--danger); } }

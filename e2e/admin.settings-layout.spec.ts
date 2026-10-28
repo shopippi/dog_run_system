@@ -113,6 +113,21 @@ test.describe('設定まわりの画面の見え方', () => {
       await checkScreen(page, v.name, 'M-11 回答の集計', v.touch);
       await page.getByRole('button', { name: '閉じる' }).click();
 
+      // M-14 スタッフ
+      await page.getByRole('link', { name: 'スタッフ' }).click();
+      const staffRow = page.getByRole('list', { name: 'スタッフ' }).getByRole('listitem', { name: '受付' }).first();
+      await staffRow.waitFor();
+      await checkScreen(page, v.name, 'M-14 スタッフ', v.touch);
+      await staffRow.getByRole('button', { name: '受付さんのパスワードを再発行' }).click();
+      const pw = page.getByRole('dialog', { name: 'パスワードを再発行' });
+      await pw.getByRole('radio', { name: '自分で入れる' }).click();
+      await checkScreen(page, v.name, 'M-14 パスワードを再発行', v.touch);
+      await pw.getByRole('button', { name: 'やめる' }).click();
+      await staffRow.getByRole('button', { name: '受付さんを停止する' }).click();
+      await page.getByRole('dialog', { name: 'アカウントを停止する' }).waitFor();
+      await checkScreen(page, v.name, 'M-14 アカウントを停止する', v.touch);
+      await page.getByRole('button', { name: 'やめる' }).click();
+
       await page.close();
     });
   }
