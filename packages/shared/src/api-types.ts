@@ -173,3 +173,22 @@ export type TodayResponse = {
   /** 確認待ちの件数(管理者と製作者だけ) */
   pendingRequests: number | null;
 };
+
+/** おうちの検索結果の1件(S-06) */
+export type HouseholdHit = {
+  id: number;
+  memberNo: string;
+  displayName: string;
+  status: import('./constants').HouseholdStatus;
+  /** 統合済みのとき、統合先の会員ID(5.3) */
+  mergedIntoMemberNo: string | null;
+  dogs: { id: number; name: string; breedName: string; thumbUrl: string | null }[];
+  /** 最後に来場した日 */
+  lastVisit: string | null;
+  /** 家族の LINE の表示名。管理者と製作者だけに返す(15.2) */
+  familyNames: string[] | null;
+};
+
+export type HouseholdSearchResponse = {
+  households: HouseholdHit[];
+};

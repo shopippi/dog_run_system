@@ -3,6 +3,7 @@ import { ErrorNotice } from './components/ErrorNotice';
 import { Layout } from './components/Layout';
 import { AuthProvider, useAuth } from './lib/auth';
 import { LoginPage } from './pages/LoginPage';
+import { SearchPage } from './pages/SearchPage';
 import { TodayPage } from './pages/TodayPage';
 
 export function App() {
@@ -28,6 +29,7 @@ function Gate() {
     <Layout>
       <Routes>
         <Route path="/" element={<TodayPage />} />
+        <Route path="/search" element={<SearchPage />} />
         <Route path="*" element={<Placeholder />} />
       </Routes>
     </Layout>
