@@ -68,6 +68,8 @@ export type AdminStaff = {
   createdAt: string;
   /** パスワードを5回まちがえて、ログインできない状態か */
   locked: boolean;
+  /** ログインできない状態が解除されるまでの分(切り上げ)。ログインできるときは null */
+  lockedMinutes?: number | null;
   /** ログイン中の本人か(自分は停止できない) */
   isMe: boolean;
 };

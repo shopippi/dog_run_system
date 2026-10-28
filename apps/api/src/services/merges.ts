@@ -20,6 +20,7 @@ import {
 import { errors } from '../lib/errors';
 import { ADMIN_MEDIA_BASE } from './admin-visits';
 import { auditStatement } from './audit';
+import { refreshDailyStatsForHouseholdsQuietly } from './daily-stats';
 import { refreshAutoNameStatement, syncHouseholdSearchName } from './dogs';
 import { pointBalance, unusedTicketCount } from './points';
 
@@ -171,7 +172,7 @@ async function loadPair(db: D1Database, input: Pick<MergeInput, 'keepHouseholdId
       );
     }
     if (h.row.status !== 'active') {
-      throw errors.conflict('not_active', `${h.row.display_name}(${h.row.member_no})は退会しているため、まとめられません。`);
+      throw errors.conflict('not_active', `${h.row.display_name}(${h.row.member_no})は退会しているため、まとめられません。退会していないおうちを選び直してください。`);
     }
   }
   return { kept, absorbed };
@@ -562,6 +563,8 @@ export async function executeMerge(
     throw e;
   }
   await syncHouseholdSearchName(db, k);
+  // 初来場のおうちの数などが変わるため、日ごとの集計を作り直す
+  await refreshDailyStatsForHouseholdsQuietly(db, [k, a], now);
   const mergeId = results[0]!.meta.last_row_id;
   const after = await db.prepare('SELECT display_name FROM households WHERE id = ?').bind(k).first<{ display_name: string }>();
   return {
@@ -643,11 +646,12 @@ export async function mergeChangedAfter(db: D1Database, m: MergeRow): Promise<bo
                   WHERE v.household_id IN (?1, ?2) AND vd.created_at > ?3) AS visit_dogs,
          EXISTS (SELECT 1 FROM tickets WHERE household_id IN (?1, ?2) AND used_at >= ?3) AS tickets,
          EXISTS (SELECT 1 FROM audit_log WHERE created_at > ?3 AND action <> 'household.merge'
-                  AND ((target_type = 'household' AND target_id IN (CAST(?1 AS TEXT), CAST(?2 AS TEXT)))
+                  AND ((target_type = 'household' AND target_id IN (?5, ?6))
                     OR (target_type = 'dog' AND target_id IN (SELECT CAST(id AS TEXT) FROM (${dogIdsSql}))))) AS audit,
          EXISTS (SELECT 1 FROM dog_changes WHERE changed_at > ?3 AND dog_id IN (${dogIdsSql})) AS dogs`,
     )
-    .bind(hh[0], hh[1], t, m.id)
+    // 操作ログの対象の ID は整数の文字列(数値を CAST すると "5.0" になり一致しない)
+    .bind(hh[0], hh[1], t, m.id, String(Math.trunc(hh[0]!)), String(Math.trunc(hh[1]!)))
     .first<Record<string, number>>();
   return Object.values(row ?? {}).some((v) => v === 1);
 }
@@ -839,6 +843,7 @@ export async function undoMerge(db: D1Database, mergeId: number, staffId: number
     }
     throw e;
   }
+  await refreshDailyStatsForHouseholdsQuietly(db, [k, a], now);
 }
 
 /** 統合後の、組み合わせた犬の情報(元に戻すときの変更履歴に使う) */

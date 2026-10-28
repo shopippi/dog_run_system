@@ -1,5 +1,6 @@
 import { toJstIso } from '@dr/shared';
 import { errors } from '../lib/errors';
+import { refreshDailyStatsQuietly } from './daily-stats';
 import { pointBalance } from './points';
 import type { AuditRow, UndoContext } from './undo';
 
@@ -125,6 +126,7 @@ export async function undoVisitCancel(db: D1Database, log: AuditRow, ctx: UndoCo
     }
     throw e;
   }
+  await refreshDailyStatsQuietly(db, visit.visit_date, ctx.now);
 }
 
 function parseUndo(text: string | null): Record<string, any> {

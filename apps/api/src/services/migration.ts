@@ -119,7 +119,7 @@ export async function recordMigration(
       `このおうちは${to ? ` ${to.member_no} に` : ''}まとめられています。まとめた先のおうちで入力してください。`,
     );
   }
-  if (h.status !== 'active') throw errors.conflict('not_active', 'このおうちは退会しているため、引き継げません。');
+  if (h.status !== 'active') throw errors.conflict('not_active', 'このおうちは退会しているため、引き継げません。引き継ぎが必要なときは、製作者に相談してください。');
   if (!isWithinMigrationPeriod(settings.migration_period, args.periodDate)) throw outsidePeriod(settings.migration_period);
 
   const ids = await historyHouseholdIds(db, h.id);
@@ -234,7 +234,9 @@ function alreadyMigrated(source: MigrationSource, at: string, isRequest: boolean
   return errors.conflict(
     'already_migrated',
     `このおうちは、${MIGRATION_SOURCE_LABELS[source]}の引き継ぎが${DATE(at)}に済んでいます。同じカードは1回だけ引き継げます。` +
-      (isRequest ? 'この申請は「却下する」で、理由「すでに引き継ぎ済み」を選んでください。' : ''),
+      (isRequest
+        ? 'この申請は「却下する」で、理由「すでに引き継ぎ済み」を選んでください。'
+        : '足りない分があるときは、おうちの詳細の「ポイント・無料券の手動登録」で調整してください。'),
   );
 }
 

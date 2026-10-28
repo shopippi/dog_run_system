@@ -97,6 +97,32 @@ export async function refreshDailyStatsQuietly(db: D1Database, date: string, now
   }
 }
 
+/**
+ * おうちの統合・統合を元に戻したあとに呼ぶ。そのおうちの最初の来場日(または登録日)から今日までを作り直す
+ * (初来場のおうちの数が変わるため)。失敗してもエラーにはしない(毎晩の再計算で直る)。
+ */
+export async function refreshDailyStatsForHouseholdsQuietly(db: D1Database, householdIds: number[], now = new Date()): Promise<void> {
+  try {
+    const ids = householdIds.filter((n) => Number.isInteger(n));
+    if (ids.length === 0) return;
+    const marks = ids.map(() => '?').join(',');
+    const row = await db
+      .prepare(
+        `SELECT MIN(d) AS from_date FROM (
+           SELECT MIN(visit_date) AS d FROM visits WHERE household_id IN (${marks})
+           UNION ALL SELECT MIN(substr(registered_at, 1, 10)) FROM households WHERE id IN (${marks})
+         )`,
+      )
+      .bind(...ids, ...ids)
+      .first<{ from_date: string | null }>();
+    const to = toJstDate(now);
+    const from = row?.from_date && row.from_date < to ? row.from_date : to;
+    await refreshDailyStatsRange(db, from, to, now);
+  } catch (e) {
+    console.error('[daily-stats]', householdIds, e);
+  }
+}
+
 /** 毎晩の再計算(B-03)。今日から DAILY_STATS_RECHECK_DAYS 日さかのぼって作り直す */
 export async function recheckDailyStats(db: D1Database, now: Date): Promise<{ from: string; to: string }> {
   const to = toJstDate(now);

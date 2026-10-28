@@ -25,6 +25,6 @@ todayRoutes.get('/today', async (c) => {
 // 犬の写真・添付画像(S-02)。ログインしている人だけが見られる。誰でも開ける URL にはしない
 todayRoutes.get('/media/*', async (c) => {
   const key = decodeURIComponent(c.req.path.slice(`${ADMIN_MEDIA_BASE}/`.length));
-  if (!/^(dogs|requests)\//.test(key) || key.includes('..')) throw errors.notFound('写真が見つかりませんでした。');
+  if (!/^(dogs|requests)\//.test(key) || key.includes('..')) throw errors.notFound('写真が見つかりませんでした。画面を読み込み直してください。');
   return serveMedia(c.env.MEDIA, key);
 });

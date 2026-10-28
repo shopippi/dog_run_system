@@ -144,3 +144,36 @@ test('再読み込みしても続きから使え、「翌日にする」と「�
   await expect(page.getByTestId('demo-today')).toHaveText(today!);
   await expect(page.getByTestId('who-note')).toContainText('9ポイント');
 });
+
+test('管理画面: 写真は API から読んでから出し(404 にならない)、システムの状態は天気・祝日もふくめて緑', async ({ page }) => {
+  const notFound: string[] = [];
+  page.on('response', (r) => {
+    if (r.status() === 404 && /\/api\/media\//.test(r.url())) notFound.push(r.url());
+  });
+  await openDemo(page);
+  const a = adminFrame(page);
+
+  // おうちの詳細の犬の写真は blob: の URL で出る
+  await scene(page, 6);
+  const photo = a.locator('img.av').first();
+  await expect(photo).toBeVisible();
+  await expect(photo).toHaveAttribute('src', /^blob:/);
+  expect(await photo.evaluate((img: HTMLImageElement) => img.naturalWidth)).toBeGreaterThan(0);
+
+  // 確認待ちの旧カードの写真も同じ
+  await scene(page, 7);
+  const card = a.getByRole('img', { name: '旧カードの写真' }).first();
+  await expect(card).toHaveAttribute('src', /^blob:/);
+  expect(notFound).toEqual([]);
+
+  // システムの状態: 初期データに実行の履歴があり、すべて緑。天気は外につながずにスキップして成功にする
+  await a.getByRole('link', { name: 'システムの状態' }).click();
+  const list = a.getByRole('region', { name: '自動で動く処理' });
+  await expect(list.getByRole('listitem', { name: '天気の取得 正常' })).toBeVisible();
+  await expect(list.getByRole('listitem', { name: '祝日の取り込み 正常' })).toBeVisible();
+  await expect(a.getByRole('alert')).toHaveCount(0);
+  const weather = list.getByRole('listitem', { name: /天気の取得/ });
+  await weather.getByRole('button', { name: '今すぐ実行' }).click();
+  await expect(weather.getByRole('status')).toContainText('スキップしました(インターネットにつながらない環境のため)。');
+  await expect(list.getByRole('listitem', { name: '天気の取得 正常' })).toBeVisible();
+});

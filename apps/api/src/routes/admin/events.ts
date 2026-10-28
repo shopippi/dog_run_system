@@ -190,13 +190,13 @@ eventsRoutes.delete('/closures/:date', requireRole('admin'), async (c) => {
 
 registerUndo('event.create', async (db, log, ctx) => {
   const row = await findEvent(db, Number(log.target_id));
-  if (row.deleted_at) throw errors.conflict('event_changed', 'このイベントは、もう消してあります。');
+  if (row.deleted_at) throw errors.conflict('event_changed', 'このイベントは、もう消してあります。画面を読み込み直してください。');
   await db.prepare('UPDATE events SET deleted_at = ? WHERE id = ?').bind(toJstIso(ctx.now), row.id).run();
 });
 
 registerUndo('event.delete', async (db, log) => {
   const row = await findEvent(db, Number(log.target_id));
-  if (!row.deleted_at) throw errors.conflict('event_changed', 'このイベントは、もう元に戻っています。');
+  if (!row.deleted_at) throw errors.conflict('event_changed', 'このイベントは、もう元に戻っています。画面を読み込み直してください。');
   await db.prepare('UPDATE events SET deleted_at = NULL WHERE id = ?').bind(row.id).run();
 });
 

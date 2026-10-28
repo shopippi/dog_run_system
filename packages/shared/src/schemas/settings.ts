@@ -1,7 +1,7 @@
 // 入力チェック(settings)。ルールの設定(A-12)・犬種(A-11)・アンケート(A-10)・スタッフ(A-13)・
 // イベントと休業日(A-09)・CSV出力(A-14)。
 import { z } from 'zod';
-import { settingsSchema, type SettingKey, type Settings } from '../settings';
+import { LIFF_ID_MESSAGE, settingsSchema, type SettingKey, type Settings } from '../settings';
 
 // ============================================================
 // A-12 ルールの設定
@@ -24,7 +24,7 @@ export const SETTING_FIELDS: Record<SettingKey, { label: string; hint: string }>
   developer_contact: { label: '製作者の連絡先', hint: '500文字までで入れてください。' },
   terms_text: { label: '利用規約', hint: '20,000文字までで入れてください。' },
   privacy_text: { label: 'プライバシーポリシー', hint: '20,000文字までで入れてください。' },
-  liff_id: { label: 'LINEミニアプリの番号', hint: '半角の英数字とハイフンだけで入れてください。' },
+  liff_id: { label: 'LINEミニアプリの番号', hint: LIFF_ID_MESSAGE },
   merge_keep_same_day_points: { label: 'おうちをまとめたとき、同じ日の来場のポイント', hint: '残すか残さないかを選んでください。' },
   weather_station: { label: '天気の観測地点', hint: '気象庁の地点番号(5桁)と名前を入れてください。' },
 };
@@ -53,7 +53,9 @@ export function checkSettingsPatch(
   const key = (issue?.code === 'unrecognized_keys' ? undefined : issue?.path[0]) as SettingKey | undefined;
   const field = key ? SETTING_FIELDS[key] : undefined;
   if (!field) return { ok: false, message: '変えられない項目が含まれています。画面を読み込み直して、もう一度お試しください。' };
-  return { ok: false, message: `「${field.label}」は、${field.hint}`, key };
+  // 項目に日本語の文が付いていれば、それを出す(付いていなければ、項目ごとの入れ方の説明)
+  const own = issue?.message && /[ぁ-んァ-ヶ一-龠]/.test(issue.message) ? issue.message : field.hint;
+  return { ok: false, message: `「${field.label}」は、${own}`, key };
 }
 
 /** 受付の固定QRコードに入れる URL。LINEミニアプリの番号がなければ、同じドメインの /liff/ を指す(相対 URL) */

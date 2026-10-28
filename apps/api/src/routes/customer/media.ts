@@ -14,7 +14,7 @@ mediaRoutes.get('/media/*', async (c) => {
   const key = decodeURIComponent(c.req.path.slice(`${MEDIA_BASE}/`.length));
   const member = await requireMember(c.env.DB, c.get('lineUser').userId);
   if (!key || !(await isHouseholdDogMedia(c.env.DB, member.householdId, key))) {
-    throw errors.notFound('写真が見つかりませんでした。');
+    throw errors.notFound('写真が見つかりませんでした。画面を読み込み直してください。');
   }
   return serveMedia(c.env.MEDIA, key);
 });

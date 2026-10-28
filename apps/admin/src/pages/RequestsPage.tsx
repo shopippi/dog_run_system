@@ -18,6 +18,7 @@ import { DogFace } from '../components/DogFace';
 import { ErrorNotice } from '../components/ErrorNotice';
 import { HouseholdPicker } from '../components/HouseholdPicker';
 import { PageHead } from '../components/PageHead';
+import { usePhotoSrc } from '../hooks/usePhotoSrc';
 import { adminApi, adminPost } from '../lib/api';
 import { useAuth } from '../lib/auth';
 
@@ -112,6 +113,16 @@ function RequestList({ tab }: { tab: Tab }) {
   );
 }
 
+/** 旧カードの写真。デモでは fetch で読んでから出す(usePhotoSrc) */
+function CardPhoto({ url, large = false }: { url: string; large?: boolean }) {
+  const src = usePhotoSrc(url);
+  return (
+    <a className={large ? 'rq-photo-large' : 'rq-photo'} href={src ?? url} target="_blank" rel="noreferrer" aria-label="旧カードの写真を大きく見る">
+      {src ? large ? <img src={src} alt="旧カードの写真" /> : <img src={src} alt="旧カードの写真" width={72} height={72} /> : null}
+    </a>
+  );
+}
+
 function HouseholdBlock({ h, label }: { h: RequestHousehold; label: string }) {
   return (
     <div className="rq-house">
@@ -172,9 +183,7 @@ function RequestRow({
             <span className="rq-house-label">旧カード</span>
             <div className="rq-house-main">
               {r.attachmentUrl ? (
-                <a className="rq-photo" href={r.attachmentUrl} target="_blank" rel="noreferrer" aria-label="旧カードの写真を大きく見る">
-                  <img src={r.attachmentUrl} alt="旧カードの写真" width={72} height={72} />
-                </a>
+                <CardPhoto url={r.attachmentUrl} />
               ) : (
                 <span className="sub-text">写真なし</span>
               )}
@@ -391,9 +400,7 @@ function ApproveDialog({
         <b>{r.household.displayName}</b>(<span className="mono">{r.household.memberNo}</span>)の申請です。写真で旧カードのポイント数を確かめてください。
       </p>
       {r.attachmentUrl ? (
-        <a className="rq-photo-large" href={r.attachmentUrl} target="_blank" rel="noreferrer" aria-label="旧カードの写真を大きく見る">
-          <img src={r.attachmentUrl} alt="旧カードの写真" />
-        </a>
+        <CardPhoto url={r.attachmentUrl} large />
       ) : (
         <p className="sub-text">写真が添付されていません。</p>
       )}

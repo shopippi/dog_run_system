@@ -89,7 +89,7 @@ test.describe('担当D の画面の見え方', () => {
         const page = await browser.newPage({ viewport: v.viewport, hasTouch: v.touch });
         await adminLogin(page, role, '/dashboard');
         await page.getByRole('radiogroup', { name: '期間' }).getByRole('radio', { name: period }).check();
-        await expect(page.locator('p[role=status]', { hasText: '〜' })).toContainText('営業日');
+        await expect(page.locator('p.dash-period-label')).toContainText('営業日');
         return page;
       };
       let page = await open('admin', '過去12か月');
@@ -118,7 +118,7 @@ test.describe('担当D の画面の見え方', () => {
 
       page = await browser.newPage({ viewport: v.viewport, hasTouch: v.touch });
       await adminLogin(page, 'developer', '/status');
-      await expect(page.getByRole('region', { name: 'データ量' })).toBeVisible();
+      await expect(page.getByRole('region', { name: '記録の件数' })).toBeVisible();
       await checkScreen(page, v.name, 'M-17 システムの状態(製作者)', v.touch);
       await page.close();
     });

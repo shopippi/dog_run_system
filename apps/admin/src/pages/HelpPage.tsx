@@ -57,7 +57,7 @@ export function HelpPage() {
         </div>
       </Section>
 
-      <Section title="製作者への連絡先" desc="システムが動かないとき、データを元に戻してほしいとき、プログラムを変えてほしいときに連絡してください。">
+      <Section title="製作者への連絡先" desc="システムが動かないとき、記録を元に戻してほしいとき、プログラムを変えてほしいときに連絡してください。">
         {contact.error ? <ErrorNotice error={contact.error} onRetry={contact.reload} /> : null}
         {contact.data &&
           (contact.data.developerContact.trim() ? (

@@ -8,6 +8,8 @@ export type Bindings = {
   LINE_CHANNEL_ID: string;
   /** "1" のとき、LINE の代わりにモックのIDトークンを受け付ける(local / test のみ有効) */
   LINE_LOGIN_MOCK?: string;
+  /** "1" のとき、インターネットにつながらない環境(ブラウザだけで動くデモ)。天気・祝日の取得はせず、スキップとして成功にする */
+  OFFLINE?: string;
 };
 
 /** LINE の IDトークンを検証して分かった、お客さんのLINEアカウント */

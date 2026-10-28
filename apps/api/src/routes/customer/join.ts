@@ -59,12 +59,12 @@ joinRoutes.get('/invites/:code', async (c) => {
 joinRoutes.get('/invites/:code/photos/:dogId', async (c) => {
   const db = c.env.DB;
   const inv = await findInvite(db, c.req.param('code'));
-  if (!inv || inviteStatus(inv, c.get('now')) !== 'valid') throw errors.notFound('写真が見つかりませんでした。');
+  if (!inv || inviteStatus(inv, c.get('now')) !== 'valid') throw errors.notFound('写真が見つかりませんでした。画面を読み込み直してください。');
   const dog = await db
     .prepare("SELECT thumb_key FROM dogs WHERE id = ? AND household_id = ? AND status = 'active'")
     .bind(Number(c.req.param('dogId')) || 0, inv.household_id)
     .first<{ thumb_key: string | null }>();
-  if (!dog?.thumb_key) throw errors.notFound('写真が見つかりませんでした。');
+  if (!dog?.thumb_key) throw errors.notFound('写真が見つかりませんでした。画面を読み込み直してください。');
   return serveMedia(c.env.MEDIA, dog.thumb_key);
 });
 

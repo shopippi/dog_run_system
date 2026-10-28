@@ -230,7 +230,7 @@ export async function saveDogPhoto(
 /** 写真を返す。誰でも開ける URL にはせず、認証つきの API からだけ返す(6.2)。 */
 export async function serveMedia(media: R2Bucket, key: string): Promise<Response> {
   const obj = await media.get(key);
-  if (!obj) throw errors.notFound('写真が見つかりませんでした。');
+  if (!obj) throw errors.notFound('写真が見つかりませんでした。画面を読み込み直してください。');
   return new Response(obj.body, {
     headers: {
       'content-type': obj.httpMetadata?.contentType ?? 'image/jpeg',

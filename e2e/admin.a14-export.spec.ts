@@ -12,6 +12,7 @@ test('A-14 種類を選んでダウンロードすると、BOM つきの日本�
   const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
   await adminLogin(page, 'admin', '/export');
   const panel = page.getByRole('region', { name: 'CSVを作る' });
+  await expect(panel.getByRole('radiogroup', { name: '出す内容' })).toBeVisible();
   await panel.getByRole('radio', { name: 'ワンちゃん' }).check();
   await expect(panel.getByLabel('期間の始め')).toHaveCount(0);
   const [dl] = await Promise.all([page.waitForEvent('download'), panel.getByRole('button', { name: 'ダウンロード' }).click()]);

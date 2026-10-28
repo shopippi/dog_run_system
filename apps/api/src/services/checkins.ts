@@ -49,7 +49,7 @@ export const alreadyCheckedIn = (visit: { id: number; checked_in_by: string }) =
     'already_checked_in',
     visit.checked_in_by
       ? `今日は${visit.checked_in_by}さんがチェックイン済みです。ポイントは1日1回です。一緒に来たワンちゃんの追加だけができます。`
-      : '今日はすでにチェックイン済みです。ポイントは1日1回です。',
+      : '今日はすでにチェックイン済みです。ポイントは1日1回です。来場は記録されているので、このままお入りください。',
     { visitId: visit.id },
   );
 

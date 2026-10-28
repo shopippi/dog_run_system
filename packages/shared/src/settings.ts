@@ -13,6 +13,10 @@ export const expiryRuleSchema = z.discriminatedUnion('mode', [
 ]);
 export type ExpiryRule = z.infer<typeof expiryRuleSchema>;
 
+/** LINEミニアプリの番号の入れ方(エラーの文) */
+export const LIFF_ID_MESSAGE =
+  '「1234567890-AbCdEfGh」のような形(数字・ハイフン・英数字)で入れてください。製作者から伝えられた番号をそのまま貼り付けてください。';
+
 export const settingsSchema = z.object({
   /** 無料券1枚に必要なポイント数 */
   points_per_ticket: z.number().int().min(1).max(100),
@@ -55,7 +59,7 @@ export const settingsSchema = z.object({
     name: z.string().min(1).max(40),
   }),
   /** LINE ミニアプリ(LIFF)の ID。受付で出す招待QRの URL に使う(未設定なら、同じドメインの /liff/ の URL) */
-  liff_id: z.string().regex(/^$|^\d+-[A-Za-z0-9]+$/, { error: 'LIFF ID の形(例: 1234567890-AbCdEfGh)で入力してください。' }),
+  liff_id: z.string().regex(/^$|^\d+-[A-Za-z0-9]+$/, { error: LIFF_ID_MESSAGE }),
 });
 export type Settings = z.infer<typeof settingsSchema>;
 export type SettingKey = keyof Settings;

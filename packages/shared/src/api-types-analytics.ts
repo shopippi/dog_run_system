@@ -19,7 +19,13 @@ export const SYSTEM_JOB_LABELS: Record<SystemJobName, string> = {
 export type SystemJobStatus = 'running' | 'ok' | 'warning' | 'failed';
 
 /** 自動処理を手動で動かしたときの結果(POST /admin/api/holidays/import など) */
-export type JobRunResult = { status: 'ok' | 'warning' | 'failed'; message: string };
+export type JobRunResult = {
+  status: 'ok' | 'warning' | 'failed';
+  /** 画面に出す日本語の文 */
+  message: string;
+  /** 元の例外の文など(製作者が調べるため。画面には出さない) */
+  detail?: string;
+};
 
 
 /** 横棒グラフの1本 */
@@ -155,6 +161,8 @@ export type SystemJobRun = {
   finishedAt: string | null;
   status: SystemJobStatus;
   message: string | null;
+  /** 元の例外の文など(製作者の詳細のときだけ。画面には出さない) */
+  detail?: string | null;
 };
 
 /** GET /admin/api/system-status の応答(A-17 簡易・D-02 詳細) */
