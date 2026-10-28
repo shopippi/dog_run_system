@@ -228,8 +228,8 @@ function CancelConfirm({
         のチェックインを取り消します。
       </p>
       <ul className="plain-list">
-        {v.method !== 'walkin' && <li>付けたポイントを戻します(その来場で発行された無料券も回収します)</li>}
-        {v.usedTicket && <li>使った無料券を、使う前に戻します</li>}
+        {v.method !== 'walkin' && <li>付けたポイントを戻します</li>}
+        {v.usedTicket && <li>この来場に結びついた無料券の使用を、使う前(未使用)に戻します</li>}
         <li>来場の記録は「取り消し済み」として残ります</li>
       </ul>
       <div className="field">

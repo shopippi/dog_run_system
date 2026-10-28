@@ -60,7 +60,7 @@ export const LEDGER_KINDS = [
 export type LedgerKind = (typeof LEDGER_KINDS)[number];
 export const LEDGER_KIND_LABELS: Record<LedgerKind, string> = {
   visit: '来場',
-  ticket_issue: '無料券の発行',
+  ticket_issue: '無料券と交換',
   cancel: '来場の取り消し',
   migration: '旧カードから引き継ぎ',
   manual: '手動で調整',

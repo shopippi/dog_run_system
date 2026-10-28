@@ -765,3 +765,6 @@ input::placeholder { color: var(--text-tertiary); }
 .cfg-howto .plain-list { font-size: var(--fs-13); }
 .cfg-contact { white-space: pre-wrap; overflow-wrap: anywhere; font-size: var(--fs-15); }
 @media (hover: hover) { .cfg-howto h3 a:hover { text-decoration: underline; } }
+
+/* ---- 担当G: おうちの詳細の「無料券を使用済みにする」(tk-) ---- */
+.hh-end .btn.tk-mark { padding: 0 var(--sp-3); }

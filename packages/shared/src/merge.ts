@@ -1,5 +1,4 @@
 import type { LedgerKind } from './constants';
-import { ticketsFromBalance } from './points';
 
 // おうちの統合の計算(要件定義書 5.3、A-07)。データベースを使わない純粋な関数だけを置き、API と画面で共有する。
 
@@ -47,17 +46,17 @@ export type MergeLedgerPlan = { household: 'kept' | 'absorbed'; delta: number; k
 export type MergePointsPlan = {
   /** 合計(無料券の発行の前) */
   total: number;
-  /** 合計が無料券の分を超えたときに発行する枚数 */
+  /** 統合で発行する無料券の枚数。無料券には自動で替えない(8章)ため、いつも 0 */
   ticketsIssued: number;
   /** 統合後の残すおうちの残高 */
   balanceAfter: number;
-  /** 台帳に書く行。まとめた側の残高をゼロにする行、残す側に足す行、無料券の発行の行 */
+  /** 台帳に書く行。まとめた側の残高をゼロにする行、残す側に足す行 */
   ledger: MergeLedgerPlan[];
 };
 
 /**
- * ポイントの合算(5.3)。両方の残高を合計し、無料券1枚分以上になれば、その分の無料券を発行する。
- * 例: 7ポイントと5ポイント → 合計12、無料券1枚、残高2ポイント(19.2)
+ * ポイントの合算(5.3)。両方の残高を合計する。無料券1枚分以上になっても、自動では交換しない(8章)。
+ * 例: 7ポイントと5ポイント → 合計12ポイント(交換はお客さんが会員証で押す)
  */
 export function planMergePoints(
   keptBalance: number,
@@ -73,9 +72,8 @@ export function planMergePoints(
   }
   if (sameDayPoints > 0) ledger.push({ household: 'kept', delta: -sameDayPoints, kind: 'merge' });
   const total = keptBalance + absorbedBalance - sameDayPoints;
-  const { tickets, balanceAfter } = ticketsFromBalance(total, pointsPerTicket);
-  for (let i = 0; i < tickets; i++) ledger.push({ household: 'kept', delta: -pointsPerTicket, kind: 'ticket_issue' });
-  return { total, ticketsIssued: tickets, balanceAfter, ledger };
+  void pointsPerTicket;
+  return { total, ticketsIssued: 0, balanceAfter: total, ledger };
 }
 
 /** 統合で残す犬の情報。写真・名前・犬種(サイズを含む)は選んだ方から、性別と生まれた年月は空でない方から */

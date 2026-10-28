@@ -84,7 +84,7 @@ export const DOG_STATUS_LABELS: Record<import('./constants').DogStatus, string> 
 };
 
 export const TICKET_SOURCE_LABELS: Record<'points' | 'manual' | 'merge' | 'migration', string> = {
-  points: 'ポイントがたまって発行',
+  points: 'ポイントと交換',
   manual: '手動で追加',
   merge: 'おうちの統合',
   migration: '旧カードから移行',
@@ -188,8 +188,6 @@ export type ManualPointsPreview = {
   balanceAfter: number;
   ticketsBefore: number;
   ticketsAfter: number;
-  /** ポイントがたまって発行する無料券 */
-  ticketsIssued: number;
   pointsPerTicket: number;
 };
 

@@ -16,6 +16,7 @@ import { SurveyPrompt } from './pages/SurveyPrompt';
 import { MigrationRequestPage } from './pages/migration/MigrationRequestPage';
 import { HistoryPage } from './pages/history/HistoryPage';
 import { ProfilePage } from './pages/profile/ProfilePage';
+import { TicketUsedPage } from './pages/tickets/TicketUsedPage';
 import { HelpPage } from './pages/help/HelpPage';
 
 export function App() {
@@ -90,6 +91,7 @@ function Registered() {
       <Route path="/dogs/new" element={<DogNewPage />} />
       <Route path="/dogs/:id" element={<DogEditPage />} />
       <Route path="/migration" element={<MigrationRequestPage />} />
+      <Route path="/tickets/:id" element={<TicketUsedPage />} />
       <Route path="/history" element={<HistoryPage />} />
       <Route path="/profile" element={<ProfilePage />} />
       <Route path="/help" element={<HelpPage />} />

@@ -96,11 +96,6 @@ export function ManualPointsDialog({
             <dd>{reason === 'その他' ? `その他: ${note.trim()}` : note.trim() ? `${reason}(${note.trim()})` : reason}</dd>
           </div>
         </dl>
-        {preview.ticketsIssued > 0 && (
-          <p className="sub-text">
-            ポイントが{preview.pointsPerTicket}たまるので、無料券を{preview.ticketsIssued}枚発行し、その分のポイントを差し引きます。
-          </p>
-        )}
         <p className="sub-text">登録した内容は操作ログに残り、操作ログから元に戻せます。</p>
         {error ? <ErrorNotice error={error} /> : null}
       </Dialog>

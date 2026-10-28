@@ -2,7 +2,7 @@ import { env } from 'cloudflare:test';
 import { describe, expect, it } from 'vitest';
 import '../src/routes/admin/requests';
 import { getUndo, type AuditRow } from '../src/services/undo';
-import { adminCall, call, checkin, createStaff, dog, givePoints, login, registerUser } from './helpers';
+import { adminCall, call, checkin, createStaff, dog, givePoints, login, registerUser, useTicketOf } from './helpers';
 
 const PAPA = 'U001:パパ';
 const MAMA = 'U002:ママ';
@@ -156,7 +156,7 @@ describe('A-05 旧カードの移行(受付での直接入力)', () => {
     const r = await registerUser(PAPA);
     const id = await householdIdOf(r.memberNo);
     await migrate(admin, id, { source: 'paper_card', points: 10 });
-    await checkin(PAPA, [r.dogs[0]!.id], { useTicket: true, now: '2026-10-29T01:00:00Z' });
+    await useTicketOf(PAPA, { now: '2026-10-29T01:00:00Z' });
     await expect(
       getUndo('household.migrate')!(env.DB, await lastMigrateLog(), { staffId: 1, now: new Date('2026-10-29T03:00:00Z') }),
     ).rejects.toThrow(/無料券が、もう使われている/);

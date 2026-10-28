@@ -6,14 +6,13 @@ import { ErrorNotice } from '../../components/ErrorNotice';
 import { ApiError, api, postJson } from '../../lib/api';
 import { canScan, scanCheckinCode } from '../../lib/liff';
 
-/** L-05 チェックイン(C-04)。受付のQRコードから開く → 来た犬を選ぶ → 無料券を使うか選ぶ → 確定 */
+/** L-05 チェックイン(C-04)。受付のQRコードから開く → 来た犬を選ぶ → 確定。無料券は会員証の「使用する」から使う(8章) */
 export function CheckinPage() {
   const [params, setParams] = useSearchParams();
   const passphrase = params.get('k');
   const [status, setStatus] = useState<CheckinStatus | null>(null);
   const [error, setError] = useState<unknown>(null);
   const [selected, setSelected] = useState<Set<number>>(new Set());
-  const [useTicket, setUseTicket] = useState(false);
   const [busy, setBusy] = useState(false);
   const navigate = useNavigate();
 
@@ -50,7 +49,6 @@ export function CheckinPage() {
       const res = await postJson<CheckinResult>('/api/checkins', {
         passphrase,
         dogIds: [...selected],
-        useTicket,
       });
       navigate(`/checkin/done/${res.visitId}`, { replace: true });
     } catch (e) {
@@ -148,15 +146,6 @@ export function CheckinPage() {
         <p className="lead">今日来たワンちゃんを選んで、「チェックインする」を押してください。</p>
       </div>
       <DogChecklist dogs={status.dogs} selected={selected} onToggle={toggle} />
-      {status.unusedTickets > 0 && (
-        <label className="pick-row ticket-row">
-          <input type="checkbox" checked={useTicket} onChange={(e) => setUseTicket(e.target.checked)} />
-          <span className="pick-body">
-            <b>無料券を使う</b>
-            <span className="sub-text">のこり{status.unusedTickets}枚。1回の来場で1枚まで使えます</span>
-          </span>
-        </label>
-      )}
       {error ? <ErrorNotice error={error} /> : null}
       <button type="button" className="btn" disabled={busy || selected.size === 0} onClick={submit}>
         {busy ? 'チェックインしています…' : 'チェックインする'}

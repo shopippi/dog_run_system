@@ -20,18 +20,6 @@ export async function unusedTicketCount(db: D1Database, householdId: number, now
   return row?.n ?? 0;
 }
 
-/** 次に使う無料券(期限の近いものから) */
-export async function nextUsableTicket(db: D1Database, householdId: number, now: Date): Promise<number | null> {
-  const row = await db
-    .prepare(
-      `SELECT id FROM tickets WHERE household_id = ? AND ${USABLE}
-        ORDER BY expires_at IS NULL, expires_at, id LIMIT 1`,
-    )
-    .bind(householdId, toJstIso(now))
-    .first<{ id: number }>();
-  return row?.id ?? null;
-}
-
 /** 使える無料券の一覧(期限の近いものから) */
 export async function usableTickets(db: D1Database, householdId: number, now: Date) {
   const { results } = await db

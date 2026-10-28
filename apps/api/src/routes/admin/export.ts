@@ -25,6 +25,7 @@ import { requireRole } from '../../lib/staff-auth';
 import { parseInput } from '../../lib/validate';
 import { auditStatement } from '../../services/audit';
 import { toCsv, type CsvValue } from '../../services/csv';
+import { ticketUsedOnVisitSql } from '../../services/tickets';
 
 // A-14 CSV出力(M-18)
 // - おうち・家族・ワンちゃん・来場・ポイント台帳・アンケートの回答。列の見出しは日本語、値も画面と同じ言葉にする
@@ -132,7 +133,7 @@ async function visits(db: D1Database, p: Period): Promise<Table> {
     .prepare(
       `SELECT v.visit_date, v.checked_in_at, h.member_no, h.display_name, v.dog_count,
               (SELECT GROUP_CONCAT(d.name, '・') FROM visit_dogs vd JOIN dogs d ON d.id = vd.dog_id WHERE vd.visit_id = v.id) AS dog_names,
-              v.used_ticket, v.method, f.line_display_name, s.name AS staff_name, v.cancelled_at, v.cancel_reason
+              ${ticketUsedOnVisitSql('v')} AS used_ticket, v.method, f.line_display_name, s.name AS staff_name, v.cancelled_at, v.cancel_reason
          FROM visits v
          LEFT JOIN households h ON h.id = v.household_id
          LEFT JOIN family_members f ON f.id = v.checked_in_member_id

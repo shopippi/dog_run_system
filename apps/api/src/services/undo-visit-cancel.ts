@@ -7,17 +7,25 @@ import type { AuditRow, UndoContext } from './undo';
  * S-03 の取り消し(visit.cancel)を元に戻す(A-15)。
  * 来場を「取り消し済み」から戻し、取り消しで戻したポイントと無料券を、もう一度当てる。
  * - 同じ日に、そのおうちの別の来場がすでにあれば戻せない(1日1回)
- * - 取り消しで回収した無料券は未使用に戻す。使った無料券は、使える券をもう一度「使用済み」にする
+ * - 取り消しで回収した(以前の記録の)無料券は未使用に戻す
+ * - 取り消しで未使用に戻した無料券は、同じ券をもう一度「使用済み」にする(その間に使われていれば戻せない)
  * - 戻すとポイントがマイナスになる(その後にポイントが使われた)ときは戻せない
  */
 export async function undoVisitCancel(db: D1Database, log: AuditRow, ctx: UndoContext): Promise<void> {
   const undo = parseUndo(log.undo_info);
-  const before = parseUndo(log.before_value) as { usedTicket?: boolean; issuedTickets?: number[] };
+  const before = parseUndo(log.before_value) as {
+    usedTicket?: boolean;
+    usedTickets?: { id: number; usedAt: string | null }[];
+    issuedTickets?: number[];
+  };
   const visitId = Number(undo.visitId ?? log.target_id);
   const visit = await db
     .prepare('SELECT id, household_id, visit_date, used_ticket, cancelled_at FROM visits WHERE id = ?')
     .bind(visitId)
     .first<{ id: number; household_id: number | null; visit_date: string; used_ticket: number; cancelled_at: string | null }>();
+  const usedTickets = Array.isArray(before.usedTickets)
+    ? before.usedTickets.filter((t) => t && Number.isInteger(t.id))
+    : null;
   if (!visit) throw errors.notFound('来場の記録が見つかりませんでした。画面を読み込み直してください。');
   if (!visit.cancelled_at) {
     throw errors.conflict('not_cancelled', 'この来場は、すでに取り消されていない状態です。今日の来場の画面で確かめてください。');
@@ -81,8 +89,28 @@ export async function undoVisitCancel(db: D1Database, log: AuditRow, ctx: UndoCo
       );
     }
 
-    // 使った無料券を、もう一度使ったことにする(この来場で発行された券は使わない)
-    if (visit.used_ticket === 1) {
+    // 取り消しで未使用に戻した無料券を、もう一度使ったことにする
+    if (usedTickets && usedTickets.length > 0) {
+      const marks = usedTickets.map(() => '?').join(',');
+      const still = await db
+        .prepare(`SELECT COUNT(*) AS n FROM tickets WHERE status = 'unused' AND household_id = ? AND id IN (${marks})`)
+        .bind(visit.household_id, ...usedTickets.map((t) => t.id))
+        .first<{ n: number }>();
+      if ((still?.n ?? 0) !== usedTickets.length) {
+        throw errors.conflict(
+          'no_ticket',
+          'この来場で使った無料券が、そのあとにまた使われたため戻せません。ポイント・無料券の手動登録で調整してください。',
+        );
+      }
+      for (const t of usedTickets) {
+        statements.push(
+          db
+            .prepare(`UPDATE tickets SET status = 'used', used_visit_id = ?, used_at = ? WHERE id = ? AND status = 'unused'`)
+            .bind(visit.id, t.usedAt ?? nowIso, t.id),
+        );
+      }
+    } else if (!usedTickets && visit.used_ticket === 1) {
+      // 以前の記録(チェックインのときに無料券を使っていたころ)。使える券をもう一度「使用済み」にする(この来場で発行された券は使わない)
       const t = await db
         .prepare(
           `SELECT id FROM tickets

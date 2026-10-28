@@ -1,5 +1,3 @@
-import { ticketsFromBalance } from './points';
-
 // 旧カードからの移行の計算(要件定義書 16章、A-05)。
 
 /** 一度に引き継げるポイントの上限(旧カードの残高は 0〜99) */
@@ -14,13 +12,10 @@ export type MigrationPlan = {
 };
 
 /**
- * 移行したポイントを台帳に足し、無料券1枚分以上になれば、その時点で無料券を発行する(16.1)。
+ * 移行したポイントを台帳に足す(16.1)。無料券1枚分以上になっても自動では交換しない(8章)。
  */
-export function planMigration(balance: number, points: number, pointsPerTicket: number): MigrationPlan {
-  const ledger: MigrationPlan['ledger'] = [{ delta: points, kind: 'migration' }];
-  const { tickets, balanceAfter } = ticketsFromBalance(balance + points, pointsPerTicket);
-  for (let i = 0; i < tickets; i++) ledger.push({ delta: -pointsPerTicket, kind: 'ticket_issue' });
-  return { ticketsIssued: tickets, balanceAfter, ledger };
+export function planMigration(balance: number, points: number, _pointsPerTicket?: number): MigrationPlan {
+  return { ticketsIssued: 0, balanceAfter: balance + points, ledger: [{ delta: points, kind: 'migration' }] };
 }
 
 /**

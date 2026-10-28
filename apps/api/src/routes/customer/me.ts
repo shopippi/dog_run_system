@@ -7,6 +7,7 @@ import { parseJson } from '../../lib/validate';
 import { findActiveMember, refreshDisplayName } from '../../services/members';
 import { findVisitOn } from '../../services/checkins';
 import { pointBalance, usableTickets } from '../../services/points';
+import { ticketsUsedOn } from '../../services/tickets';
 import { insertDogStatements, listHouseholdDogs, normalizeDogInputs } from '../../services/dogs';
 import { alreadyRegistered, registerHousehold } from '../../services/register';
 import { customAnswerStatements, loadVisibleQuestions, splitAnswers } from '../../services/survey';
@@ -33,6 +34,7 @@ meRoutes.get('/me', async (c) => {
   const settings = await loadSettings(db);
   const balance = await pointBalance(db, member.householdId);
   const today = await findVisitOn(db, member.householdId, toJstDate(now));
+  const usedToday = await ticketsUsedOn(db, member.householdId, toJstDate(now));
   const body: MeResponse = {
     registered: true,
     member: { id: member.memberId, lineDisplayName: member.lineDisplayName },
@@ -44,6 +46,7 @@ meRoutes.get('/me', async (c) => {
       toNextTicket: pointsToNextTicket(balance, settings.points_per_ticket),
       tickets: await usableTickets(db, member.householdId, now),
       todayVisitId: today?.id ?? null,
+      todayUsedTicketId: usedToday[0]?.id ?? null,
     },
   };
   return c.json(body);

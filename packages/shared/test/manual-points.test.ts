@@ -6,13 +6,14 @@ const plan = (balance: number, usableTickets: number, points: number, tickets: n
 
 describe('A-03 手動の登録の計算', () => {
   it('ポイントを増やすだけ(10 未満)', () => {
-    expect(plan(3, 0, 1, 0)).toEqual({ ok: true, balanceBefore: 3, balanceAfter: 4, ticketsBefore: 0, ticketsAfter: 0, ticketsIssued: 0 });
+    expect(plan(3, 0, 1, 0)).toEqual({ ok: true, balanceBefore: 3, balanceAfter: 4, ticketsBefore: 0, ticketsAfter: 0 });
   });
-  it('9 → 10 になると無料券を1枚発行し、0 ポイントになる', () => {
-    expect(plan(9, 0, 1, 0)).toMatchObject({ ok: true, balanceAfter: 0, ticketsAfter: 1, ticketsIssued: 1 });
+  it('9 → 10 になっても、無料券には自動で替えない(8章)', () => {
+    expect(plan(9, 0, 1, 0)).toEqual({ ok: true, balanceBefore: 9, balanceAfter: 10, ticketsBefore: 0, ticketsAfter: 0 });
   });
-  it('一度に 25 ポイント増やすと 2 枚発行して 5 ポイント残る', () => {
-    expect(plan(0, 1, 25, 0)).toMatchObject({ ok: true, balanceAfter: 5, ticketsAfter: 3, ticketsIssued: 2 });
+  it('一度に 25 ポイント増やすと 25 ポイントたまる。無料券を足すときは枚数で増やす', () => {
+    expect(plan(0, 1, 25, 0)).toMatchObject({ ok: true, balanceAfter: 25, ticketsAfter: 1 });
+    expect(plan(0, 1, 0, 2)).toMatchObject({ ok: true, balanceAfter: 0, ticketsAfter: 3 });
   });
   it('残高ちょうどまで減らせる。マイナスになる減らし方はできない', () => {
     expect(plan(3, 0, -3, 0)).toMatchObject({ ok: true, balanceAfter: 0 });

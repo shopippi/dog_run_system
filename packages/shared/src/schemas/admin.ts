@@ -24,7 +24,6 @@ export const walkinSchema = z.object({
 export const proxyCheckinSchema = z.object({
   householdId: z.number().int().positive(),
   dogIds: z.array(z.number().int().positive()).min(1, { error: '来たワンちゃんを1頭以上選んでください。' }).max(30),
-  useTicket: z.boolean(),
   /** 来場日(日本時間)。省略すると今日 */
   date: z
     .string()
