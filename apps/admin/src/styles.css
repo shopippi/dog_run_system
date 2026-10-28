@@ -310,3 +310,15 @@ input::placeholder { color: var(--text-tertiary); }
   .result-row:hover { background: var(--surface-sunk); }
   .photo-cell:hover { background: var(--surface-sunk); }
 }
+
+/* メニューのグループ(フェーズ2以降) */
+.nav-group { display: flex; flex-direction: row; gap: var(--sp-1); }
+.nav-label { display: none; }
+.nav-badge {
+  margin-left: auto; min-width: 20px; padding: 0 6px; border-radius: 999px; font-size: var(--fs-12); font-weight: var(--fw-strong);
+  line-height: 20px; text-align: center; background: var(--warning-50); color: var(--warning);
+}
+@media (min-width: 960px) {
+  .nav-group { flex-direction: column; gap: 2px; padding-bottom: var(--sp-3); }
+  .nav-label { display: block; margin: 0; padding: var(--sp-2) var(--sp-3) var(--sp-1); font-size: var(--fs-12); color: var(--text-tertiary); font-weight: var(--fw-strong); letter-spacing: .04em; }
+}
