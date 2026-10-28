@@ -16,14 +16,17 @@ test.describe('A-17 システムの状態', () => {
     await backup.getByRole('button', { name: '今すぐ実行' }).click();
     await expect(backup.getByRole('status')).toContainText('個の表');
     await expect(list.getByRole('listitem', { name: 'バックアップ 正常' })).toBeVisible();
-    // 管理者には詳細(データ量)は出さない
-    await expect(page.getByRole('region', { name: 'データ量' })).toHaveCount(0);
+    // 管理者には詳細(記録の件数)は出さない
+    await expect(page.getByRole('region', { name: '記録の件数' })).toHaveCount(0);
   });
 
-  test('製作者は詳細(実行の履歴・データ量)を見られるが、「今すぐ実行」は出ない', async ({ page }) => {
+  test('製作者は詳細(実行の履歴・記録の件数)を見られるが、「今すぐ実行」は出ない', async ({ page }) => {
     await adminLogin(page, 'developer', '/status');
-    await expect(page.getByRole('region', { name: 'データ量' }).getByText('households')).toBeVisible();
+    await expect(page.getByRole('region', { name: '記録の件数' }).getByText('households')).toBeVisible();
     await expect(page.getByRole('region', { name: '自動処理の実行の履歴' })).toBeVisible();
+    // 英語や IT 用語の見出しは出さない
+    await expect(page.getByRole('region', { name: 'うまくいかなかった処理' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /データ|エラー/ })).toHaveCount(0);
     await expect(page.getByRole('button', { name: '今すぐ実行' })).toHaveCount(0);
   });
 

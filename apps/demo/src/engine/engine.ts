@@ -167,7 +167,8 @@ export class DemoEngine {
   }
 
   private env() {
-    return { DB: this.d1, MEDIA: this.r2, ENVIRONMENT: 'local', LINE_CHANNEL_ID: 'demo', LINE_LOGIN_MOCK: '1' };
+    // OFFLINE: ブラウザの中だけで動くので、天気・祝日は外に取りに行かない(スキップとして成功にする)
+    return { DB: this.d1, MEDIA: this.r2, ENVIRONMENT: 'local', LINE_CHANNEL_ID: 'demo', LINE_LOGIN_MOCK: '1', OFFLINE: '1' };
   }
 
   /** 画面から届いた要求を、API(Hono)で処理する。クッキーは画面ごとの入れ物で保つ */

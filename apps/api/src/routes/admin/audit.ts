@@ -24,7 +24,7 @@ auditRoutes.get('/audit', requireRole('admin'), async (c) => {
     action: raw.action || undefined,
     page: raw.page || undefined,
   });
-  const body: AuditListResponse = await listAudit(c.env.DB, q, c.get('staff').role);
+  const body: AuditListResponse = await listAudit(c.env.DB, q, c.get('staff').role, c.get('now'));
   return c.json(body);
 });
 

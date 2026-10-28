@@ -153,7 +153,7 @@ surveyQuestionsRoutes.patch('/survey-questions/:id', requireRole('admin'), async
       throw errors.badRequest('固定の質問は、文と選択肢だけ変えられます。');
     }
     if (q.kind === 'text' && input.options && input.options.length > 0) {
-      throw errors.badRequest('この質問は自由に書く質問なので、選択肢は入れられません。');
+      throw errors.badRequest('この質問は自由に書く質問なので、選択肢は入れられません。選択肢を消してから保存してください。');
     }
   }
   if (next.kind === 'text') next.options = [];

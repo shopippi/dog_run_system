@@ -1,6 +1,7 @@
-import { autoHouseholdName, formatMemberNo, normalizeForSearch, toJstIso } from '@dr/shared';
+import { autoHouseholdName, formatMemberNo, normalizeForSearch, toJstDate, toJstIso } from '@dr/shared';
 import type { LineUser } from '../env';
 import { errors } from '../lib/errors';
+import { refreshDailyStatsQuietly } from './daily-stats';
 import { nextHouseholdId } from './members';
 
 export type HouseholdDraft = {
@@ -74,6 +75,8 @@ export async function registerHousehold(
     ];
     try {
       await db.batch(statements);
+      // 新規おうち数(日ごとの集計)に入れる
+      await refreshDailyStatsQuietly(db, toJstDate(now), now);
       return { householdId, memberNo, householdName };
     } catch (e) {
       const message = String((e as Error)?.message ?? e);

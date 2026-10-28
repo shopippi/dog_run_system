@@ -140,7 +140,7 @@ breedsRoutes.patch('/breeds/:id', requireRole('admin'), async (c) => {
   const db = c.env.DB;
   const row = await findBreed(db, Number(c.req.param('id')) || 0);
   if (row.is_other === 1 && input.visible === false) {
-    throw errors.badRequest('「その他」は、選択肢にない犬種を入れるために使うので、非表示にできません。');
+    throw errors.badRequest('「その他」は、選択肢にない犬種を入れるために使うので、非表示にできません。「表示する」のままにして保存してください。');
   }
   if (input.name !== undefined && input.name !== row.name) await assertNameFree(db, input.name, row.id);
   const current = { name: row.name, defaultSize: row.default_size, visible: row.visible === 1 };

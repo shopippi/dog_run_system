@@ -28,6 +28,20 @@ function mdw(ymd: string) {
   const [y, m, d] = ymd.split('-').map(Number) as [number, number, number];
   return `${m}月${d}日(${WEEKDAYS[new Date(Date.UTC(y, m - 1, d)).getUTCDay()]})`;
 }
+/**
+ * 期間の見出し。年をまたぐ期間や去年の月でも分かるよう、必ず年を入れる。
+ * 1か月まるごと: 「2026年10月」/ 月の初めから途中まで: 「2026年10月(1日〜28日)」/
+ * それ以外: 「2026年8月1日(土)〜10月28日(水)」(年が変われば終わりにも年を入れる)
+ */
+function periodLabel(from: string, to: string) {
+  const [fy, fm, fd] = from.split('-').map(Number) as [number, number, number];
+  const [ty, tm, td] = to.split('-').map(Number) as [number, number, number];
+  if (from === to) return `${fy}年${mdw(from)}`;
+  if (fy === ty && fm === tm && fd === 1) {
+    return to === lastDay(to.slice(0, 7)) ? `${fy}年${fm}月` : `${fy}年${fm}月(1日〜${td}日)`;
+  }
+  return `${fy}年${mdw(from)}〜${fy === ty ? '' : `${ty}年`}${mdw(to)}`;
+}
 function slashDate(ymd: string) {
   const [, m, d] = ymd.split('-').map(Number) as [number, number, number];
   return `${m}/${d}`;
@@ -118,8 +132,8 @@ export function DashboardPage() {
             </div>
           </div>
         )}
-        <p className="sub-text" role="status">
-          {mdw(from)}〜{mdw(to)}
+        <p className="sub-text dash-period-label" role="status">
+          {periodLabel(from, to)}
           {data && data.from === from && data.to === to ? `(営業日 ${data.totals.openDays}日)` : ''}
           {busy ? ' 読み込んでいます…' : ''}
         </p>
@@ -470,7 +484,7 @@ function BarChart({
     const rest = bars.slice(limit).reduce((s, b) => s + b.count, 0);
     return [...bars.slice(0, limit), { label: 'そのほか', count: rest }];
   }, [bars, limit]);
-  if (shown.every((b) => b.count === 0)) return <p className="empty">この期間のデータはまだありません。</p>;
+  if (shown.every((b) => b.count === 0)) return <p className="empty">この期間の記録はまだありません。</p>;
   const fmt = (v: number) => `${decimals ? v.toFixed(1) : num(v)}${unit}`;
   const max = Math.max(...shown.map((b) => b.count));
   return (
@@ -504,7 +518,7 @@ function BarChart({
 
 function ScatterChart({ data }: { data: DashboardResponse }) {
   const points = data.weather.points;
-  if (points.length === 0) return <p className="empty">この期間の気温のデータはまだありません。</p>;
+  if (points.length === 0) return <p className="empty">この期間の気温の記録はまだありません。</p>;
   return (
     <DashChart
       height={280}

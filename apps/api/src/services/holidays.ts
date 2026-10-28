@@ -1,5 +1,5 @@
 import { addDays, dayTypeOf, toJstDate, toJstIso, weekdayOf } from '@dr/shared';
-import type { JobOutcome } from './jobs';
+import { errorText, JobError, type JobOutcome } from './jobs';
 
 /** 内閣府の「国民の祝日」の CSV(Shift_JIS)。1955年から翌年までの祝日・休日が載っている */
 export const HOLIDAY_CSV_URL = 'https://www8.cao.go.jp/chosei/shukujitsu/syukujitsu.csv';
@@ -30,9 +30,14 @@ export async function fetchHolidayCsv(): Promise<string> {
   try {
     res = await fetch(HOLIDAY_CSV_URL, { headers: { 'user-agent': 'dog-run-system (holiday import)' } });
   } catch (e) {
-    throw new Error(`内閣府のサイトにつながりませんでした: ${String((e as Error)?.message ?? e)}`);
+    throw new JobError('祝日の取得先(内閣府のサイト)につながりませんでした。少し待ってから、もう一度お試しください。', errorText(e));
   }
-  if (!res.ok) throw new Error(`内閣府のサイトから祝日のデータを受け取れませんでした(応答 ${res.status})`);
+  if (!res.ok) {
+    throw new JobError(
+      '祝日の取得先(内閣府のサイト)から祝日を受け取れませんでした。少し待ってから、もう一度お試しください。',
+      `応答 ${res.status}`,
+    );
+  }
   const buf = await res.arrayBuffer();
   return new TextDecoder('shift_jis').decode(buf);
 }
@@ -47,7 +52,9 @@ export async function fetchHolidayCsv(): Promise<string> {
 export async function importHolidays(db: D1Database, now: Date, csvText?: string): Promise<JobOutcome> {
   const text = csvText ?? (await fetchHolidayCsv());
   const all = parseHolidayCsv(text);
-  if (all.length === 0) throw new Error('祝日のデータの中身を読み取れませんでした(形式が変わった可能性があります)');
+  if (all.length === 0) {
+    throw new JobError('受け取った祝日の一覧を読み取れませんでした。製作者に連絡してください。', '祝日の CSV に読める行がない(形式が変わった可能性)');
+  }
 
   const today = toJstDate(now);
   const thisYear = Number(today.slice(0, 4));

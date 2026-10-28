@@ -5,6 +5,11 @@ type DemoResult = { status: number; statusText: string; headers: [string, string
 
 const API_PREFIXES = ['/api/', '/admin/api/'];
 
+/** API の URL か(デモで <img src> に直接書けないもの) */
+export function isApiUrl(url: string): boolean {
+  return apiPath(url) !== null;
+}
+
 /** API への要求なら、パス(とクエリ)を返す */
 function apiPath(input: RequestInfo | URL): string | null {
   const raw = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;

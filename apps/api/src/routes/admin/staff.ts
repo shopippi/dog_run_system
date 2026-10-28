@@ -53,6 +53,10 @@ async function listAll(db: D1Database, meId: number, now: Date): Promise<AdminSt
       lastLoginAt: r.last_login_at,
       createdAt: r.created_at,
       locked: !!r.locked_until && r.locked_until > nowIso,
+      lockedMinutes:
+        r.locked_until && r.locked_until > nowIso
+          ? Math.max(1, Math.ceil((new Date(r.locked_until).getTime() - now.getTime()) / 60_000))
+          : null,
       isMe: r.id === meId,
     })),
   };

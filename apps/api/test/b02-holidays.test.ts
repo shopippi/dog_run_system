@@ -95,8 +95,14 @@ describe('B-02 祝日の取り込み', () => {
     const res = await adminCall('/admin/api/holidays/import', { cookie: admin, body: {}, now: NOW });
     expect(res.status).toBe(200);
     expect(res.body.status).toBe('failed');
-    expect(res.body.message).toContain('応答 503');
+    // 画面に出す文は日本語の「何が起きたか」と「次にどうするか」だけ。元の理由は detail に分ける
+    expect(res.body.message).toBe('祝日の取得先(内閣府のサイト)から祝日を受け取れませんでした。少し待ってから、もう一度お試しください。');
+    expect(res.body.detail).toContain('応答 503');
     expect(await lastJob()).toMatchObject({ status: 'failed' });
+    const status = await adminCall('/admin/api/system-status', { cookie: admin, now: NOW });
+    const job = status.body.jobs.find((j: { name: string }) => j.name === 'holidays');
+    expect(job.lastRun.message).toBe(res.body.message);
+    expect(job.lastRun.detail).toBeUndefined();
     const n = await env.DB.prepare('SELECT COUNT(*) AS n FROM calendar').first<{ n: number }>();
     expect(n!.n).toBe(0);
   });

@@ -18,6 +18,7 @@ import { ErrorNotice } from '../components/ErrorNotice';
 import { Icon } from '../components/Icon';
 import { PageHead } from '../components/PageHead';
 import { useLoad } from '../hooks/useLoad';
+import { usePhotoSrc } from '../hooks/usePhotoSrc';
 import { ApiError, adminApi, adminPatch } from '../lib/api';
 import { useAuth } from '../lib/auth';
 import { loadCurrentPhoto, loadImage, renderPhoto, uploadAdminDogPhoto, type RenderedPhoto, type Rotation } from '../lib/dog-photo';
@@ -175,6 +176,7 @@ function Editor({ d, canEdit, onSaved }: { d: AdminDogDetail; canEdit: boolean; 
   };
 
   const previewUrl = photo?.kind === 'remove' ? null : photo?.rendered?.previewUrl ?? (photo ? null : d.dog.photoUrl);
+  const previewSrc = usePhotoSrc(previewUrl);
   const hasPhoto = photo ? photo.kind !== 'remove' : Boolean(d.dog.photoUrl);
   const set = <K extends keyof Form>(k: K, v: Form[K]) => setForm((f) => ({ ...f, [k]: v }));
 
@@ -185,9 +187,9 @@ function Editor({ d, canEdit, onSaved }: { d: AdminDogDetail; canEdit: boolean; 
           写真
         </h2>
         <div className="dg-photo-body">
-          {previewUrl ? (
-            <img className="dg-photo-img" src={previewUrl} alt={`${d.dog.name}の写真`} width={176} height={176} />
-          ) : photo && photo.kind !== 'remove' ? (
+          {previewSrc ? (
+            <img className="dg-photo-img" src={previewSrc} alt={`${d.dog.name}の写真`} width={176} height={176} />
+          ) : previewUrl || (photo && photo.kind !== 'remove') ? (
             <div className="dg-photo-img" aria-label="写真を準備しています" />
           ) : (
             <DogFace name={d.dog.name} breedName={d.dog.breedName} size={176} shape="square" />
