@@ -356,3 +356,20 @@ a { color: var(--accent-text); }
 .mig-file { position: absolute; opacity: 0; width: 1px; height: 1px; pointer-events: none; }
 .w-points { max-width: 120px; }
 .mig-form textarea { min-height: 88px; padding: 10px var(--sp-3); line-height: var(--lh); resize: vertical; }
+
+/* ---- L-08 来場履歴 ---- */
+.hist-row {
+  display: flex; align-items: center; gap: var(--sp-3);
+  min-height: 64px; padding: var(--sp-3) var(--sp-3) var(--sp-3) var(--sp-4);
+}
+.hist-date { display: flex; flex-direction: column; align-items: center; flex: none; width: 28px; line-height: 1.2; }
+.hist-date b { font-size: var(--fs-17); font-weight: var(--fw-strong); font-variant-numeric: tabular-nums; }
+.hist-date span { font-size: var(--fs-12); color: var(--text-secondary); }
+.hist-dogs > .av + .av { margin-left: -14px; }
+.hist-body { display: flex; flex-direction: column; flex: 1; min-width: 0; gap: 2px; }
+.hist-body > b { font-size: var(--fs-15); font-weight: var(--fw-strong); }
+.hist-badges { display: flex; flex-wrap: wrap; gap: var(--sp-1); margin-top: 2px; }
+/* 増えたポイントは、時刻・家族と同じ行に。数字は桁をそろえる */
+.hist-points { font-variant-numeric: tabular-nums; }
+/* 取り消した来場は文字を薄くする(行全体を半透明にはしない) */
+.hist-row.cancelled .hist-body > b, .hist-row.cancelled .hist-date b { color: var(--text-tertiary); }

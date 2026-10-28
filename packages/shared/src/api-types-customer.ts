@@ -52,3 +52,38 @@ export type MigrationRequestsResponse = {
   /** 移行期間(未設定なら null)と、今日が受付期間の中か。notStarted は期間がまだ始まっていないとき */
   period: { start: string | null; end: string | null; open: boolean; notStarted: boolean };
 };
+
+// ---------------------------------------------------------------
+// C-07 来場履歴
+// ---------------------------------------------------------------
+
+/** 来場履歴の1件(L-08) */
+export type HistoryVisit = {
+  id: number;
+  /** 来場日(日本時間) */
+  date: string;
+  /** チェックインの時刻 "09:15" */
+  time: string;
+  /** 来た犬(統合で1頭にまとめた犬は、まとめた後の犬で返す) */
+  dogs: { id: number; name: string; breedName: string; thumbUrl: string | null }[];
+  /** チェックインした家族の LINE の表示名。受付での代理や、抜けた家族の名前が分からないときは null */
+  checkedInBy: string | null;
+  /** 自分がチェックインしたか */
+  checkedInByMe: boolean;
+  method: import('./constants').VisitMethod;
+  /** この来場で付いたポイント */
+  pointsAwarded: number;
+  /** この来場でポイントがたまって発行された無料券の枚数(取り消しで回収されたものは数えない) */
+  ticketsIssued: number;
+  usedTicket: boolean;
+  cancelled: boolean;
+};
+
+/** GET /api/me/visits の応答。next は次のページを読むときに before に渡す(最後のページなら null) */
+export type VisitHistoryResponse = {
+  visits: HistoryVisit[];
+  next: string | null;
+};
+
+/** 来場履歴の1ページの件数 */
+export const VISIT_HISTORY_PAGE_SIZE = 20;

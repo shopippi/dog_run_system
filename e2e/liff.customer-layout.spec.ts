@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { cancelVisit, checkinOn } from './customer-helpers';
 import { makePhoto, newLineUser, openLiff, registerViaUi } from './helpers';
 
 // お客さん向けの残りの画面(担当E)の見え方。確かめ方は e2e/liff.layout.spec.ts と同じ。
@@ -54,10 +55,19 @@ for (const d of DEVICES) {
   test.describe(d.name, () => {
     test.use({ viewport: d.viewport, deviceScaleFactor: d.dpr, isMobile: true, hasTouch: true, userAgent: IOS_UA });
 
-    test('お客さん向けの残りの画面が、LINE の画面の中に収まる', async ({ page }) => {
+    test('お客さん向けの残りの画面が、LINE の画面の中に収まる', async ({ page, request }) => {
       test.setTimeout(90_000);
       const user = newLineUser('ママ');
       await registerViaUi(page, user, ['アルフォンス', 'ニコ']);
+
+      // L-08 来場履歴(取り消した来場・無料券を使った来場を含む)
+      for (let i = 1; i <= 9; i++) await checkinOn(request, user, `2026-09-${String(i).padStart(2, '0')}`);
+      await checkinOn(request, user, '2026-09-30');
+      await checkinOn(request, user, '2026-10-01', true);
+      await cancelVisit(request, await checkinOn(request, user, '2026-10-02'));
+      await openLiff(page, user, '/history');
+      await page.getByRole('heading', { name: '2026年10月' }).waitFor();
+      await checkScreen(page, d.name, 'L-08 来場履歴');
 
       // L-13 旧カードの引き継ぎ(入力中と、申請したあと)
       await openLiff(page, user, '/migration');

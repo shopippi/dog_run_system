@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { cancelVisit, checkinOn } from './customer-helpers';
 import { makePhoto, newLineUser, openLiff, registerViaUi } from './helpers';
 
 // お客さん向けの残りの画面(担当E)の、文字と背景のコントラスト(WCAG の 4.5:1)。
@@ -92,11 +93,20 @@ for (const scheme of ['light', 'dark'] as const) {
   test.describe(scheme === 'light' ? 'ライト' : 'ダーク', () => {
     test.use({ colorScheme: scheme });
 
-    test('お客さん向けの残りの画面の文字が背景に対して読める', async ({ browser }) => {
+    test('お客さん向けの残りの画面の文字が背景に対して読める', async ({ browser, request }) => {
       test.setTimeout(90_000);
       const page = await browser.newPage({ ...PHONE, colorScheme: scheme });
       const user = newLineUser('ママ');
       await registerViaUi(page, user, ['アル']);
+
+      // L-08 来場履歴(取り消した来場・無料券を使った来場を含む)
+      for (let i = 1; i <= 9; i++) await checkinOn(request, user, `2026-09-${String(i).padStart(2, '0')}`);
+      await checkinOn(request, user, '2026-09-30');
+      await checkinOn(request, user, '2026-10-01', true);
+      await cancelVisit(request, await checkinOn(request, user, '2026-10-02'));
+      await openLiff(page, user, '/history');
+      await page.getByRole('heading', { name: '2026年10月' }).waitFor();
+      await check(page, 'L-08 来場履歴');
 
       // L-13 旧カードの引き継ぎ(入力中・申請後の状態の一覧)
       await openLiff(page, user, '/migration');
