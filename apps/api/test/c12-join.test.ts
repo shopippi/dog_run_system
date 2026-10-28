@@ -91,12 +91,12 @@ describe('C-12 招待からの参加', () => {
   it('同時に2人が開いても、参加できるのは1人だけ', async () => {
     await registerUser(PAPA);
     const code = await invite();
-    const [a, b] = await Promise.all(
+    const results = await Promise.all(
       [MAMA, 'U003:ばあば'].map((user) =>
         call(`/api/invites/${code}/accept`, { user, now: T0, body: { consent: true, survey: memberSurvey } }),
       ),
     );
-    expect([a.status, b.status].sort()).toEqual([201, 409]);
+    expect(results.map((r) => r.status).sort()).toEqual([201, 409]);
     const n = await env.DB.prepare('SELECT COUNT(*) AS n FROM family_members').first<{ n: number }>();
     expect(n?.n).toBe(2);
   });
