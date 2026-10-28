@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { startBridge } from './bridge';
 import { DemoEngine } from './engine/engine';
 import { loadSqlJs } from './engine/sqljs';
-import { makeDogPhoto } from './seed/art';
+import { makeCardBackground, makeDogPhoto } from './seed/art';
 import { ACCOUNTS, DEMO_PASSWORD, STAFF } from './seed/fixtures';
 import { SCENES } from './scenes';
 
@@ -44,7 +44,7 @@ let booting: Promise<DemoEngine> | null = null;
 function boot(): Promise<DemoEngine> {
   booting ??= (async () => {
     const SQL = await loadSqlJs();
-    const engine = await DemoEngine.create({ SQL, photos: { makeDogPhoto } });
+    const engine = await DemoEngine.create({ SQL, photos: { makeDogPhoto, makeCardBackground } });
     if (!engine.jar('admin').header(engine.now().getTime())) {
       await engine.loginAs('admin', 'admin@example.com', DEMO_PASSWORD);
     }
@@ -108,7 +108,7 @@ export function App() {
 function Header() {
   return (
     <header className="head">
-      <h1>ドッグラン会員証デモ</h1>
+      <h1>グリーンドーム 会員証デモ</h1>
       <p className="lede">
         左がお客さんの LINE の画面、右が受付・管理画面です。どちらも本物の画面と本物の処理が、このブラウザの中だけで動いています(データは架空です)。
         ポイントは「おうち」ごとにたまり、家族の LINE アカウントをつなげられます。

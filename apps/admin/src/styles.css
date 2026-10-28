@@ -80,7 +80,7 @@ a { color: var(--accent-text); }
   display: inline-flex; align-items: center; justify-content: center; gap: var(--sp-2);
   min-height: var(--control-h); padding: 0 var(--sp-4);
   border: 1px solid transparent; border-radius: var(--radius);
-  background: var(--accent); color: var(--on-accent);
+  background: var(--ink); color: var(--on-ink);
   font-size: var(--fs-14); font-weight: var(--fw-strong); white-space: nowrap; text-decoration: none;
   transition: background-color var(--ease), border-color var(--ease), color var(--ease);
 }
@@ -89,7 +89,7 @@ a { color: var(--accent-text); }
 .btn:disabled { opacity: .45; }
 .btn.sub { background: var(--surface); color: var(--text); border-color: var(--border-strong); }
 .btn.ghost { background: transparent; color: var(--text-secondary); font-weight: var(--fw-regular); padding: 0 var(--sp-3); }
-.btn.danger-fill { background: var(--danger-fill); color: var(--on-accent); }
+.btn.danger-fill { background: var(--danger-fill); color: var(--on-card); }
 .icon-btn { width: var(--control-h); padding: 0; }
 
 /* ---- 案内・バッジ ---- */
@@ -130,7 +130,7 @@ a { color: var(--accent-text); }
 }
 input::placeholder { color: var(--text-tertiary); }
 .check { display: inline-flex; align-items: center; gap: 10px; min-height: var(--control-h); font-size: var(--fs-14); cursor: pointer; }
-.check input { width: 20px; height: 20px; margin: 0; flex: none; accent-color: var(--accent); }
+.check input { width: 20px; height: 20px; margin: 0; flex: none; accent-color: var(--ink); }
 
 /* セグメント(2〜4択)。押せる高さいっぱいをボタンにして、選択中の白い面は内側に描く */
 .segment {
@@ -171,15 +171,15 @@ input::placeholder { color: var(--text-tertiary); }
   border: 1px solid var(--border); border-radius: var(--radius-row); background: var(--surface); cursor: pointer;
   transition: border-color var(--ease);
 }
-.pick-row:has(input:checked) { border-color: var(--accent); }
-.pick-row input { width: 20px; height: 20px; margin: 0; flex: none; accent-color: var(--accent); }
+.pick-row:has(input:checked) { border-color: var(--ink); }
+.pick-row input { width: 20px; height: 20px; margin: 0; flex: none; accent-color: var(--ink); }
 .pick-body { display: flex; flex-direction: column; min-width: 0; }
 .pick-body b { font-size: var(--fs-15); }
 
 /* ---- 犬の写真 ---- */
 .av { display: block; flex: none; max-width: none; border-radius: 50%; object-fit: cover; background: var(--surface-sunk); }
 .av.sq { border-radius: var(--radius); }
-.av-ph text { fill: var(--on-accent); font-family: var(--font-sans); }
+.av-ph text { fill: var(--on-card); font-family: var(--font-sans); }
 .stack { display: flex; flex: none; }
 .stack > .av { box-shadow: 0 0 0 2px var(--surface); }
 .stack > .av + .av { margin-left: -12px; }
@@ -219,7 +219,7 @@ input::placeholder { color: var(--text-tertiary); }
   transition: background-color var(--ease);
 }
 .visit.new { animation: visit-new 2s ease-out; }
-@keyframes visit-new { from { background: var(--accent-50); } to { background: var(--surface); } }
+@keyframes visit-new { from { background: var(--surface-sunk); } to { background: var(--surface); } }
 @media (prefers-reduced-motion: reduce) { .visit.new { animation: none; } }
 .visit .t { font-size: var(--fs-13); color: var(--text-secondary); }
 .walkin-mark { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; background: var(--surface-sunk); color: var(--text-tertiary); }
@@ -302,7 +302,7 @@ input::placeholder { color: var(--text-tertiary); }
 /* ホバーはマウスで使う端末だけ(指で押したあとに色が残らないように) */
 @media (hover: hover) {
   .nav a:hover { background: var(--surface-sunk); color: var(--text); }
-  .btn:hover:not(:disabled) { background: var(--accent-hover); }
+  .btn:hover:not(:disabled) { background: var(--ink-hover); }
   .btn.sub:hover:not(:disabled) { background: var(--surface-sunk); }
   .btn.ghost:hover:not(:disabled) { background: var(--surface-sunk); color: var(--text); }
   .btn.danger-fill:hover:not(:disabled) { background: var(--danger-fill); filter: brightness(.92); }
@@ -398,7 +398,7 @@ input::placeholder { color: var(--text-tertiary); }
 }
 .status-level { display: inline-flex; align-items: center; gap: var(--sp-2); padding-top: 2px; font-size: var(--fs-14); font-weight: var(--fw-strong); }
 .status-dot { width: 10px; height: 10px; border-radius: 50%; flex: none; }
-.status-level.green { color: var(--accent-text); }
+.status-level.green { color: var(--text); }
 .status-level.green .status-dot { background: var(--accent); }
 .status-level.yellow { color: var(--warning); }
 .status-level.yellow .status-dot { background: var(--warning); }
@@ -434,7 +434,7 @@ input::placeholder { color: var(--text-tertiary); }
 .picker .result-row:disabled { color: var(--text-secondary); cursor: not-allowed; }
 .picker-grid { padding: 0; }
 .mg-keep { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: var(--sp-2); }
-.mg-keep .pick-row input { accent-color: var(--accent); }
+.mg-keep .pick-row input { accent-color: var(--ink); }
 .mg-dogs { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
 .mg-dog { display: flex; flex-direction: column; gap: var(--sp-4); padding: var(--sp-4) 0; }
 .mg-dog + .mg-dog { border-top: 1px solid var(--border); }
@@ -679,7 +679,7 @@ input::placeholder { color: var(--text-tertiary); }
 .cfg-bars li { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) auto; align-items: center; gap: var(--sp-3); }
 .cfg-bar-label { display: flex; flex-direction: column; min-width: 0; overflow-wrap: anywhere; }
 .cfg-bar-track { height: 8px; border-radius: 4px; background: var(--surface-sunk); overflow: hidden; }
-.cfg-bar { display: block; height: 100%; background: var(--accent); border-radius: 4px; }
+.cfg-bar { display: block; height: 100%; background: var(--ink); border-radius: 4px; }
 .cfg-bar-n { min-width: 40px; text-align: right; font-variant-numeric: tabular-nums; }
 .cfg-texts { list-style: none; margin: 0; padding: 0; max-height: 320px; overflow: auto; }
 .cfg-texts li { display: flex; flex-direction: column; padding: var(--sp-2) 0; overflow-wrap: anywhere; }
@@ -717,12 +717,12 @@ input::placeholder { color: var(--text-tertiary); }
 .cfg-cal-cell.closed { background: var(--surface-sunk); }
 .cfg-cal-cell.closed[aria-pressed="true"] { background: var(--accent-50); }
 .cfg-cal-d { font-size: var(--fs-13); font-variant-numeric: tabular-nums; }
-.cfg-cal-cell.today .cfg-cal-d { font-weight: var(--fw-strong); color: var(--accent-text); }
+.cfg-cal-cell.today .cfg-cal-d { font-weight: var(--fw-strong); color: var(--text); text-decoration: underline; text-underline-offset: 3px; }
 .cfg-cal-hol { max-width: 100%; font-size: var(--fs-12); color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .cfg-cal-ev, .cfg-cal-more {
   max-width: 100%; font-size: var(--fs-12); line-height: 1.4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.cfg-cal-ev { padding-left: 6px; border-left: 2px solid var(--accent); }
+.cfg-cal-ev { padding-left: 6px; border-left: 2px solid var(--text-tertiary); }
 .cfg-cal-more { color: var(--text-secondary); }
 @media (hover: hover) { .cfg-cal-cell:not([aria-pressed="true"]):hover { background: var(--surface-sunk); } }
 @media (max-width: 600px) { .cfg-cal-cell { min-height: 56px; padding: 4px; } .cfg-cal-ev, .cfg-cal-hol { display: none; } }
@@ -801,7 +801,7 @@ input::placeholder { color: var(--text-tertiary); }
   min-height: var(--control-h); padding: 0 14px 0 var(--sp-3); border: 1px solid var(--border); border-radius: var(--radius);
   background: var(--surface); font-size: var(--fs-14); color: var(--text); cursor: pointer;
 }
-.hp-checks input { width: 18px; height: 18px; margin: 0; flex: none; accent-color: var(--accent); }
+.hp-checks input { width: 18px; height: 18px; margin: 0; flex: none; accent-color: var(--ink); }
 .hp-checks label:has(input:checked) { background: var(--accent-50); border-color: var(--accent); color: var(--accent-text); }
 .hp-checks label:has(input:focus-visible) { outline: 2px solid var(--focus-color); outline-offset: 2px; }
 .hp-checks input:focus-visible { outline: none; }

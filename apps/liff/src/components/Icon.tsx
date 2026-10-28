@@ -5,6 +5,14 @@ const PATHS = {
   'chevron-left': <path d="m14.5 18-6-6 6-6" />,
   'chevron-right': <path d="m9.5 18 6-6-6-6" />,
   plus: <path d="M12 5v14M5 12h14" />,
+  image: (
+    <>
+      <rect x="3.5" y="4.5" width="17" height="15" rx="2" />
+      <circle cx="9" cy="10" r="1.75" />
+      <path d="m20.5 16-4.5-4.5-8.5 8" />
+    </>
+  ),
+  check: <path d="m5 12.5 4.5 4.5L19 7.5" />,
 } satisfies Record<string, ReactNode>;
 
 export type IconName = keyof typeof PATHS;

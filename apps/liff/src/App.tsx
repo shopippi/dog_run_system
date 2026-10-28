@@ -19,6 +19,7 @@ import { HelpPage } from './pages/help/HelpPage';
 import { useMergeNotice } from './hooks/useMergeNotice';
 import { MergeNoticeScreen } from './pages/family/MergeNoticeScreen';
 import { TicketUsedPage } from './pages/tickets/TicketUsedPage';
+import { CardBackgroundPage } from './pages/card/CardBackgroundPage';
 
 export function App() {
   const { me, error, loading, reload } = useMe();
@@ -74,6 +75,7 @@ function backFor(path: string): HeaderBack | null {
   if (path === '/history') return { to: '/', label: '会員証' };
   if (path === '/profile') return { to: '/', label: '会員証' };
   if (path === '/help') return { to: '/', label: '会員証' };
+  if (path === '/card/background') return { to: '/', label: '会員証' };
   return null;
 }
 
@@ -96,6 +98,7 @@ function Registered() {
       <Route path="/profile" element={<ProfilePage />} />
       <Route path="/help" element={<HelpPage />} />
       <Route path="/tickets/:id" element={<TicketUsedPage />} />
+      <Route path="/card/background" element={<CardBackgroundPage />} />
       <Route path="*" element={<CardPage />} />
     </Routes>
   );

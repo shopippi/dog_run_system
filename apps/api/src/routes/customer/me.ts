@@ -12,6 +12,8 @@ import { insertDogStatements, listHouseholdDogs, normalizeDogInputs } from '../.
 import { alreadyRegistered, registerHousehold } from '../../services/register';
 import { customAnswerStatements, loadVisibleQuestions, splitAnswers } from '../../services/survey';
 import { MEDIA_BASE } from './media';
+import { toCardBackgroundView } from '@dr/shared';
+import { loadCardBackground } from '../../services/card-background';
 
 export const meRoutes = new Hono<AppEnv>();
 
@@ -48,6 +50,7 @@ meRoutes.get('/me', async (c) => {
     member: { id: member.memberId, lineDisplayName: member.lineDisplayName },
     household: { memberNo: member.memberNo, displayName: member.householdName },
     optionalSurveyPending: optional?.pending === 1,
+    cardBackground: toCardBackgroundView(await loadCardBackground(db, member.householdId), MEDIA_BASE),
     card: {
       dogs: await listHouseholdDogs(db, member.householdId, MEDIA_BASE),
       balance,

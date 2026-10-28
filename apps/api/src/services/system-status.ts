@@ -10,11 +10,11 @@ import {
 } from '@dr/shared';
 import { splitJobMessage } from './jobs';
 
-// A-17・D-02 システムの状態。system_jobs の記録から、処理ごとに緑・黄・赤を決める。
+// A-17・D-02 システムの状態。system_jobs の記録から、処理ごとに正常(green)・注意(yellow)・止まっている(red)を決める。
 
 const HOUR = 3600_000;
 
-/** 処理ごとの、正常とみなす間隔(最後の成功からこれ以内なら緑) */
+/** 処理ごとの、正常とみなす間隔(最後の成功からこれ以内なら正常) */
 const EXPECTED: Record<SystemJobName, { hours: number; schedule: string }> = {
   weather: { hours: 30, schedule: '毎朝 5:10' },
   daily_stats: { hours: 30, schedule: '毎晩 3:10(来場のたびにも更新)' },
@@ -45,7 +45,7 @@ const toRunWithDetail = (r: Row): SystemJobRun => ({ ...toRun(r), detail: splitJ
 
 /**
  * 1つの処理の色を決める。
- * - 緑: 最後の成功が、決まった間隔(毎日の処理は30時間)以内で、最後の実行が「失敗」でない
+ * - 正常(green): 最後の成功が、決まった間隔(毎日の処理は30時間)以内で、最後の実行が「失敗」でない
  * - 黄: 最後の実行が「一部だけ」、または最後の成功が間隔の2倍以内(失敗して次の実行でやり直す・予定より遅れている)、
  *       またはまだ一度も動いていない(使い始めたばかり)
  * - 赤: それ以外(しばらく成功していない)

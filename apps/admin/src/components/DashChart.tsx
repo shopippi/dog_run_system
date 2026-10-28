@@ -2,15 +2,17 @@ import type { Chart, ChartConfiguration, Plugin } from 'chart.js';
 import { useEffect, useRef, useState } from 'react';
 
 // ダッシュボード(M-05)のグラフ。Chart.js を canvas に直接描く(react-chartjs-2 は使わない)。
-// 色は docs/design.md のトークン(アクセント色と灰色の濃淡)を CSS 変数から読む。多色にしない。
+// 色は docs/design.md のトークンを CSS 変数から読む。墨(主な系列)・灰(比べる系列)・青(3つ目)の落ち着いた3色だけ。
 // Chart.js は、ダッシュボードを開いたときにだけ読み込む(chart-lib.ts)。
 
 let chartLib: Promise<typeof import('./chart-lib')> | null = null;
 const loadChart = () => (chartLib ??= import('./chart-lib'));
 
 export type ChartColors = {
-  accent: string;
-  accent100: string;
+  /** 主な系列(墨) */
+  ink: string;
+  /** 3つ目の系列(落ち着いた青) */
+  blue: string;
   text: string;
   secondary: string;
   tertiary: string;
@@ -23,8 +25,8 @@ function readColors(): ChartColors {
   const css = getComputedStyle(document.documentElement);
   const v = (name: string) => css.getPropertyValue(name).trim();
   return {
-    accent: v('--accent'),
-    accent100: v('--accent-100'),
+    ink: v('--ink'),
+    blue: v('--accent'),
     text: v('--text'),
     secondary: v('--text-secondary'),
     tertiary: v('--text-tertiary'),
