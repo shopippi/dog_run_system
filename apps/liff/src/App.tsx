@@ -13,6 +13,7 @@ import { DogsPage } from './pages/dogs/DogsPage';
 import { FamilyPage } from './pages/family/FamilyPage';
 import { JoinPage } from './pages/family/JoinPage';
 import { SurveyPrompt } from './pages/SurveyPrompt';
+import { MigrationRequestPage } from './pages/migration/MigrationRequestPage';
 
 export function App() {
   const { me, error, loading, reload } = useMe();
@@ -65,6 +66,7 @@ export function App() {
 function backFor(path: string): HeaderBack | null {
   if (path === '/dogs/new' || /^\/dogs\/\d+$/.test(path)) return { to: '/dogs', label: 'ワンちゃん' };
   if (path === '/dogs' || path === '/family' || path === '/checkin') return { to: '/', label: '会員証' };
+  if (path === '/migration') return { to: '/', label: '会員証' };
   return null;
 }
 
@@ -81,6 +83,7 @@ function Registered() {
       <Route path="/family" element={<FamilyPage />} />
       <Route path="/dogs/new" element={<DogNewPage />} />
       <Route path="/dogs/:id" element={<DogEditPage />} />
+      <Route path="/migration" element={<MigrationRequestPage />} />
       <Route path="*" element={<CardPage />} />
     </Routes>
   );

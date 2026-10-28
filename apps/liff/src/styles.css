@@ -327,3 +327,32 @@ a { color: var(--accent-text); }
   .menu a:hover, .menu a:active { background: var(--surface-sunk); }
   .dog-row:hover, .dog-row:active { background: var(--surface-sunk); }
 }
+
+/* ================================================================
+ * お客さん向けの残りの画面(担当E: L-08 来場履歴・L-10 プロフィール・L-11 家族の一覧・L-13 旧カードの引き継ぎ・使い方)
+ * ================================================================ */
+.badge.cu-info { background: var(--info-50); color: var(--info); }
+.badge.cu-danger { background: var(--danger-50); color: var(--danger); }
+/* 言葉の途中で折り返さない(行の中の「だいたい7ポイント」など) */
+.cu-nowrap { display: inline-block; }
+/* 空の状態(中央に一文) */
+.cu-empty { padding: var(--sp-6) 0; text-align: center; font-size: var(--fs-14); color: var(--text-secondary); }
+
+/* ---- L-13 旧カードの引き継ぎ ---- */
+.mig-row {
+  display: flex; align-items: center; gap: var(--sp-3);
+  min-height: 64px; padding: var(--sp-3) var(--sp-4);
+}
+.mig-row-body { display: flex; flex-direction: column; flex: 1; min-width: 0; gap: 2px; }
+.mig-row-body b { font-size: var(--fs-15); font-weight: var(--fw-strong); }
+.mig-row .badge { flex: none; white-space: normal; max-width: 9em; text-align: center; }
+.mig-form .section-title { margin: -4px 0; }
+.mig-preview {
+  display: block; max-width: 100%; max-height: 240px; width: auto; height: auto; object-fit: contain;
+  border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface-sunk);
+}
+.mig-photo-btn { align-self: flex-start; width: auto; min-height: 44px; font-size: var(--fs-14); cursor: pointer; }
+.mig-photo-btn:has(+ input:focus-visible) { outline: 2px solid var(--focus-color); outline-offset: 2px; }
+.mig-file { position: absolute; opacity: 0; width: 1px; height: 1px; pointer-events: none; }
+.w-points { max-width: 120px; }
+.mig-form textarea { min-height: 88px; padding: 10px var(--sp-3); line-height: var(--lh); resize: vertical; }
