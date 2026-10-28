@@ -57,7 +57,7 @@ describe('A-08 まとめる申請の確認', () => {
       migration: null,
       attachmentUrl: null,
     });
-    expect(merge.household.dogs).toEqual([{ id: mama.dogs[0]!.id, name: 'あるくん', breedName: 'トイプードル', thumbUrl: null }]);
+    expect(merge.household.dogs).toEqual([{ id: mama.dogs[0]!.id, name: 'あるくん', breedName: 'プードル', thumbUrl: null }]);
     const migration = res.body.requests.find((r: { id: number }) => r.id === migrationId);
     expect(migration).toMatchObject({
       kind: 'migration',

@@ -1,6 +1,8 @@
 import {
   DOG_SEX_LABELS,
   DOG_SIZE_LABELS,
+  DOG_SOCIABILITY_LABELS,
+  surveyAnswerText,
   EXPORTS,
   EXPORT_NAMES,
   LEDGER_KIND_LABELS,
@@ -12,7 +14,9 @@ import {
   toJstIso,
   type DogSex,
   type DogSize,
+  type DogSociability,
   type ExportName,
+  type FixedSurveyKey,
   type LedgerKind,
   type MigrationSource,
   type SurveyTarget,
@@ -25,6 +29,8 @@ import { requireRole } from '../../lib/staff-auth';
 import { parseInput } from '../../lib/validate';
 import { auditStatement } from '../../services/audit';
 import { toCsv, type CsvValue } from '../../services/csv';
+import { HOUSEHOLD_FIXED_COLUMNS, householdColumnText } from '../../services/profile-fields';
+import { surveyKindOf } from '../../services/survey';
 
 // A-14 CSV出力(M-18)
 // - おうち・家族・ワンちゃん・来場・ポイント台帳・アンケートの回答。列の見出しは日本語、値も画面と同じ言葉にする
@@ -37,7 +43,7 @@ const HOUSEHOLD_STATUS: Record<string, string> = { active: '有効', merged: '�
 const SOURCE: Record<string, string> = { new: '新規', migration: '旧カードから移行' };
 const MEMBER_STATUS: Record<string, string> = { active: '参加中', left: 'おうちから抜けた', withdrawn: '退会' };
 const JOIN_METHOD: Record<string, string> = { register: '初回登録', invite: '家族の招待', reception: '受付で追加', merge: 'おうちの統合' };
-const DOG_STATUS: Record<string, string> = { active: '登録中', retired: '登録解除', merged: '統合済み' };
+const DOG_STATUS: Record<string, string> = { active: '登録中', retired: 'おやすみ中', merged: '統合済み' };
 const label = (map: Record<string, string>, v: string | null | undefined) => (v == null ? '' : (map[v] ?? v));
 
 type Period = { from?: string; to?: string };
@@ -47,7 +53,7 @@ async function households(db: D1Database, now: Date): Promise<Table> {
   const { results } = await db
     .prepare(
       `SELECT h.member_no, h.display_name, h.registered_at, h.source, h.status, m.member_no AS merged_into,
-              h.postal_code, h.referral, h.transport,
+              h.postal_code, h.referral, h.transport, h.preferred_times, h.event_interests, h.uses_other_runs, h.wants_news,
               (SELECT COUNT(*) FROM family_members f WHERE f.household_id = h.id AND f.status = 'active') AS family,
               (SELECT COUNT(*) FROM dogs d WHERE d.household_id = h.id AND d.status = 'active') AS dogs,
               (SELECT COALESCE(SUM(p.delta), 0) FROM point_ledger p WHERE p.household_id = h.id) AS points,
@@ -65,10 +71,14 @@ async function households(db: D1Database, now: Date): Promise<Table> {
     header: [
       '会員ID', 'おうちの呼び名', '登録日時', '登録のしかた', '状態', '統合先の会員ID', '郵便番号', '知ったきっかけ', '来場手段',
       '家族の人数', 'ワンちゃんの数', 'ポイント', '使える無料券', '来場回数', '最初の来場日', '最後の来場日',
+      // 2026-10-28 に足した項目(担当J)。列は後ろに足す(前の列の位置を変えない)
+      '来たい時間帯', '興味のあるイベント', 'ほかのドッグランの利用', 'お知らせの受け取り',
     ],
     rows: results.map((r) => [
       r.member_no, r.display_name, r.registered_at, label(SOURCE, r.source as string), label(HOUSEHOLD_STATUS, r.status as string),
       r.merged_into, r.postal_code, r.referral, r.transport, r.family, r.dogs, r.points, r.tickets, r.visits, r.first_visit, r.last_visit,
+      householdColumnText('preferred_times', r.preferred_times), householdColumnText('event_interests', r.event_interests),
+      householdColumnText('uses_other_runs', r.uses_other_runs), householdColumnText('wants_news', r.wants_news),
     ]),
   };
 }
@@ -95,6 +105,7 @@ async function dogs(db: D1Database): Promise<Table> {
     .prepare(
       `SELECT d.dog_no, h.member_no, h.display_name, d.name, COALESCE(d.breed_other, b.name) AS breed, d.size, d.sex, d.birth_ym,
               d.status, d.photo_key IS NOT NULL AS has_photo, d.created_at,
+              d.weight_kg, d.sociability, d.rabies_vaccine_year, d.combo_vaccine_year,
               (SELECT COUNT(*) FROM visit_dogs vd JOIN visits v ON v.id = vd.visit_id
                 WHERE vd.dog_id = d.id AND v.cancelled_at IS NULL) AS visits
          FROM dogs d JOIN households h ON h.id = d.household_id JOIN breeds b ON b.id = d.breed_id
@@ -102,11 +113,17 @@ async function dogs(db: D1Database): Promise<Table> {
     )
     .all<Record<string, string | number | null>>();
   return {
-    header: ['犬ID', '会員ID', 'おうちの呼び名', '名前', '犬種', 'サイズ', '性別', '生まれた年月', '状態', '写真', '登録日時', '来場回数'],
+    header: [
+      '犬ID', '会員ID', 'おうちの呼び名', '名前', '犬種', 'サイズ', '性別', '生まれた年月', '状態', '写真', '登録日時', '来場回数',
+      // 2026-10-28 に足した項目(担当J)。列は後ろに足す
+      '体重(kg)', 'ほかの犬との相性', '狂犬病の予防注射の年', '混合ワクチンの年',
+    ],
     rows: results.map((r) => [
       r.dog_no, r.member_no, r.display_name, r.name, r.breed, DOG_SIZE_LABELS[r.size as DogSize] ?? r.size,
       r.sex ? DOG_SEX_LABELS[r.sex as DogSex] : '', r.birth_ym, label(DOG_STATUS, r.status as string),
       r.has_photo ? 'あり' : 'なし', r.created_at, r.visits,
+      r.weight_kg == null ? '' : Number(r.weight_kg).toFixed(1), r.sociability ? DOG_SOCIABILITY_LABELS[r.sociability as DogSociability] : '',
+      r.rabies_vaccine_year, r.combo_vaccine_year,
     ]),
   };
 }
@@ -182,8 +199,8 @@ async function ledger(db: D1Database, p: Period): Promise<Table> {
 
 async function survey(db: D1Database): Promise<Table> {
   const { results: questions } = await db
-    .prepare('SELECT id, fixed_key, target, label FROM survey_questions ORDER BY sort_order, id')
-    .all<{ id: number; fixed_key: string | null; target: SurveyTarget; label: string }>();
+    .prepare('SELECT id, fixed_key, target, kind, multiple, label FROM survey_questions ORDER BY sort_order, id')
+    .all<{ id: number; fixed_key: string | null; target: SurveyTarget; kind: 'choice' | 'text'; multiple: number; label: string }>();
   const labelOf = (key: string) => questions.find((q) => q.fixed_key === key)?.label ?? key;
   const { results: fixedMembers } = await db
     .prepare(
@@ -192,7 +209,10 @@ async function survey(db: D1Database): Promise<Table> {
     )
     .all<Record<string, string | number | null>>();
   const { results: fixedHouseholds } = await db
-    .prepare('SELECT id AS hid, member_no, display_name, postal_code, referral, transport, registered_at FROM households ORDER BY id')
+    .prepare(
+      `SELECT id AS hid, member_no, display_name, postal_code, referral, transport, preferred_times, event_interests,
+              uses_other_runs, wants_news, registered_at FROM households ORDER BY id`,
+    )
     .all<Record<string, string | number | null>>();
   const { results: custom } = await db
     .prepare(
@@ -219,14 +239,16 @@ async function survey(db: D1Database): Promise<Table> {
     }
   }
   for (const r of fixedHouseholds) {
-    for (const key of ['postal_code', 'referral', 'transport'] as const) {
-      if (r[key]) push(r, 'おうち', 'household', labelOf(key), r[key], r.registered_at, questions.findIndex((q) => q.fixed_key === key));
+    for (const key of Object.keys(HOUSEHOLD_FIXED_COLUMNS) as FixedSurveyKey[]) {
+      const text = householdColumnText(key, r[HOUSEHOLD_FIXED_COLUMNS[key]!]);
+      if (text) push(r, 'おうち', 'household', labelOf(key), text, r.registered_at, questions.findIndex((q) => q.fixed_key === key));
     }
   }
   for (const r of custom) {
     const q = questions.find((x) => x.id === r.question_id);
     if (!q) continue;
-    push(r, q.target === 'member' ? r.line_display_name : 'おうち', q.target, q.label, r.skipped ? '(答えない)' : r.answer, r.answered_at, orderOf(q.id));
+    const answer = r.skipped ? '(答えない)' : surveyAnswerText(surveyKindOf(q), r.answer as string | null);
+    push(r, q.target === 'member' ? r.line_display_name : 'おうち', q.target, q.label, answer, r.answered_at, orderOf(q.id));
   }
   out.sort((a, b) => a.hid - b.hid || a.order - b.order);
   return {

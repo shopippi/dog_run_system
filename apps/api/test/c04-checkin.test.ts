@@ -130,7 +130,7 @@ describe('C-04 チェックイン', () => {
     expect(res.body.error.message).toMatch(/QRコード/);
   });
 
-  it('よそのおうちの犬や、登録解除した犬は選べない', async () => {
+  it('よそのおうちの犬や、おやすみ中の犬は選べない', async () => {
     const r = await registerUser(PAPA, [dog('アル'), dog('ニコ')]);
     const other = await registerUser('U900:よそ', [dog('ハナ')]);
     expect((await checkin(PAPA, [other.dogs[0]!.id], { now: DAY1 })).status).toBe(400);

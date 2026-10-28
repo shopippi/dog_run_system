@@ -39,7 +39,7 @@ describe('C-06 会員証', () => {
     expect(mama.body.card).toEqual(papa.body.card);
   });
 
-  it('登録解除した犬は会員証に出さない', async () => {
+  it('登録をおやすみした犬は会員証に出さない', async () => {
     const r = await registerUser(PAPA, [dog('アル'), dog('ニコ')]);
     await call(`/api/dogs/${r.dogs[1]!.id}/retire`, { user: PAPA, method: 'POST' });
     const res = await call('/api/me', { user: PAPA });

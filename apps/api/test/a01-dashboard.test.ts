@@ -270,7 +270,7 @@ describe('A-01 ダッシュボード(数値の検算)', () => {
     // 2頭で来た日は2頭とも数える。同じ犬は1頭として数える
     expect(res.body.dogs.total).toBe(3);
     expect(res.body.dogs.breeds).toEqual([
-      { label: 'トイプードル', count: 2 },
+      { label: 'プードル', count: 2 },
       { label: '柴犬', count: 1 },
     ]);
     expect(res.body.dogs.sizes).toEqual([

@@ -5,9 +5,14 @@ import { nextHouseholdId } from './members';
 
 export type HouseholdDraft = {
   dogNames: string[];
-  postal_code?: string | null;
-  referral?: string | null;
-  transport?: string | null;
+  /** おうちへの固定の質問の回答(列の名前 → 値。services/profile-fields.ts) */
+  postal_code?: string | number | null;
+  referral?: string | number | null;
+  transport?: string | number | null;
+  preferred_times?: string | number | null;
+  event_interests?: string | number | null;
+  uses_other_runs?: string | number | null;
+  wants_news?: string | number | null;
   age_group?: string | null;
   gender?: string | null;
 };
@@ -38,8 +43,9 @@ export async function registerHousehold(
         .prepare(
           `INSERT INTO households
              (id, member_no, display_name, display_name_search, display_name_auto, registered_at, source,
-              postal_code, referral, transport, status, updated_at)
-           VALUES (?, ?, ?, ?, 1, ?, 'new', ?, ?, ?, 'active', ?)`,
+              postal_code, referral, transport, preferred_times, event_interests, uses_other_runs, wants_news,
+              status, updated_at)
+           VALUES (?, ?, ?, ?, 1, ?, 'new', ?, ?, ?, ?, ?, ?, ?, 'active', ?)`,
         )
         .bind(
           householdId,
@@ -50,6 +56,10 @@ export async function registerHousehold(
           draft.postal_code ?? null,
           draft.referral ?? null,
           draft.transport ?? null,
+          draft.preferred_times ?? null,
+          draft.event_interests ?? null,
+          draft.uses_other_runs ?? null,
+          draft.wants_news ?? null,
           nowIso,
         ),
       db

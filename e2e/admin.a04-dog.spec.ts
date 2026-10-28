@@ -32,7 +32,7 @@ test('A-04 管理者が写真(回して)・名前・犬種を変えると、会�
   await expect(page.getByRole('status')).toContainText('保存しました');
 
   const history = page.getByRole('list', { name: '変更の履歴' });
-  await expect(history).toContainText('犬種: トイプードル → 柴犬');
+  await expect(history).toContainText('犬種: プードル → 柴犬');
   await expect(history).toContainText('理由: 登録のときの選びまちがい');
   await expect(history).toContainText('名前: マメスケ → マメタロウ');
   const photo = page.getByRole('img', { name: 'マメタロウの写真' });
@@ -51,7 +51,7 @@ test('A-04 管理者が写真(回して)・名前・犬種を変えると、会�
   await expect(card.locator('img.av[alt="マメタロウ"]')).toBeVisible();
 });
 
-test('A-04 写真を外し、操作ログから元に戻せる。登録解除は確認してから行う', async ({ browser }) => {
+test('A-04 写真を外し、操作ログから元に戻せる。登録のおやすみは確認してから行う', async ({ browser }) => {
   const customer = await browser.newPage();
   const user = newLineUser('ママ');
   await registerViaUi(customer, user, ['チョビ', 'クッキー']);
@@ -88,11 +88,13 @@ test('A-04 写真を外し、操作ログから元に戻せる。登録解除は
   await page.getByRole('link', { name: 'クッキーの情報を見る・変える' }).click();
   await expect(page.getByRole('img', { name: 'クッキーの写真' })).toBeVisible();
 
-  // 登録解除(確認つき)
-  await page.getByRole('button', { name: '登録を解除する' }).click();
-  const dialog = page.getByRole('dialog', { name: 'ワンちゃんの登録を解除する' });
-  await expect(dialog).toContainText('これまでの来場の記録は残ります');
-  await dialog.getByRole('button', { name: '登録を解除する' }).click();
-  await expect(page.getByRole('status')).toContainText('登録を解除しました');
-  await expect(page.getByRole('button', { name: '登録解除を取り消す' })).toBeVisible();
+  // 登録をおやすみする(確認つき)
+  await page.getByRole('button', { name: '登録をおやすみする' }).click();
+  const dialog = page.getByRole('dialog', { name: 'ワンちゃんの登録をおやすみする' });
+  await expect(dialog).toContainText('これまでの来場の記録は、そのまま残ります');
+  await dialog.getByRole('button', { name: 'おやすみする' }).click();
+  await expect(page.getByRole('status')).toContainText('登録をおやすみしました');
+  await expect(page.getByRole('button', { name: '登録に戻す' })).toBeVisible();
+  await expect(page.getByRole('region', { name: /登録の内容/ }).getByText('おやすみ中', { exact: true })).toBeVisible();
+  await expect(page.locator('body')).not.toContainText(/登録解除|登録を解除|亡くな|手放/);
 });

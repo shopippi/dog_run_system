@@ -5,7 +5,14 @@ import {
   DAY_TYPES,
   DOG_SIZES,
   DOG_SIZE_LABELS,
+  DOG_SOCIABILITY,
+  DOG_SOCIABILITY_LABELS,
+  EVENT_INTERESTS,
   GENDERS,
+  PREFERRED_TIMES,
+  YES_NO,
+  decodeMultiAnswer,
+  type DogSociability,
   REFERRALS,
   TRANSPORTS,
   WEATHER_KINDS,
@@ -230,7 +237,7 @@ dashboardRoutes.get('/dashboard', async (c) => {
   const [dogRes, memberRes, householdRes, fixedRes] = await db.batch([
     db
       .prepare(
-        `SELECT DISTINCT COALESCE(d.merged_into_id, d.id) AS id, b.name AS breed, d.size, d.birth_ym
+        `SELECT DISTINCT COALESCE(d.merged_into_id, d.id) AS id, b.name AS breed, d.size, d.birth_ym, d.sociability
            FROM visit_dogs vd JOIN visits v ON v.id = vd.visit_id JOIN dogs d ON d.id = vd.dog_id JOIN breeds b ON b.id = d.breed_id
           WHERE ${inRange}`,
       )
@@ -243,13 +250,14 @@ dashboardRoutes.get('/dashboard', async (c) => {
       .bind(from, rangeEnd),
     db
       .prepare(
-        `SELECT DISTINCT h.id, h.postal_code, h.referral, h.transport FROM visits v JOIN households h ON h.id = v.household_id
+        `SELECT DISTINCT h.id, h.postal_code, h.referral, h.transport, h.preferred_times, h.event_interests, h.uses_other_runs
+           FROM visits v JOIN households h ON h.id = v.household_id
           WHERE ${inRange}`,
       )
       .bind(from, rangeEnd),
     db.prepare('SELECT fixed_key, options FROM survey_questions WHERE fixed_key IS NOT NULL'),
   ]);
-  type DogRow = { id: number; breed: string; size: keyof typeof DOG_SIZE_LABELS; birth_ym: string | null };
+  type DogRow = { id: number; breed: string; size: keyof typeof DOG_SIZE_LABELS; birth_ym: string | null; sociability: DogSociability | null };
   const dogRows = hasDays ? (dogRes!.results as DogRow[]) : [];
   const seenDog = new Set<number>();
   const uniqueDogs = dogRows.filter((d) => {
@@ -266,7 +274,25 @@ dashboardRoutes.get('/dashboard', async (c) => {
     }
   }
   const members = hasDays ? (memberRes!.results as { id: number; age_group: string | null; gender: string | null }[]) : [];
-  type HouseholdRow = { id: number; postal_code: string | null; referral: string | null; transport: string | null };
+  type HouseholdRow = {
+    id: number;
+    postal_code: string | null;
+    referral: string | null;
+    transport: string | null;
+    /** 来たい時間帯・興味のあるイベント(JSON の配列)、ほかのドッグランの利用(1 / 0)。担当J */
+    preferred_times: string | null;
+    event_interests: string | null;
+    uses_other_runs: number | null;
+  };
+  /** 複数選択の内訳: 選んだ選択肢ごとにおうちを数える(1軒が複数に入る)。答えていないおうちは「未回答」 */
+  const multiBars = (stored: (string | null)[], order: readonly string[]) =>
+    countBars(
+      stored.flatMap((v) => {
+        const list = decodeMultiAnswer(v);
+        return list.length ? list : [null];
+      }),
+      order,
+    );
   const households = hasDays ? (householdRes!.results as HouseholdRow[]) : [];
   const areaBars = countBars(
     households.map((h) => (h.postal_code && /^\d{3}/.test(h.postal_code) ? `〒${h.postal_code.slice(0, 3)}` : null)),
@@ -318,6 +344,10 @@ dashboardRoutes.get('/dashboard', async (c) => {
         uniqueDogs.map((d) => ageBucket(d.birth_ym, rangeEnd)),
         AGE_BUCKETS,
       ),
+      sociability: countBars(
+        uniqueDogs.map((d) => (d.sociability ? DOG_SOCIABILITY_LABELS[d.sociability] : null)),
+        DOG_SOCIABILITY.map((x) => DOG_SOCIABILITY_LABELS[x]),
+      ),
     },
     owners: {
       members: members.length,
@@ -327,6 +357,12 @@ dashboardRoutes.get('/dashboard', async (c) => {
       areas,
       referrals: countBars(households.map((h) => h.referral), fixedOptions.get('referral') ?? REFERRALS),
       transports: countBars(households.map((h) => h.transport), fixedOptions.get('transport') ?? TRANSPORTS),
+      preferredTimes: multiBars(households.map((h) => h.preferred_times), fixedOptions.get('preferred_times') ?? PREFERRED_TIMES),
+      eventInterests: multiBars(households.map((h) => h.event_interests), fixedOptions.get('event_interests') ?? EVENT_INTERESTS),
+      otherRuns: countBars(
+        households.map((h) => (h.uses_other_runs === 1 ? YES_NO[0] : h.uses_other_runs === 0 ? YES_NO[1] : null)),
+        YES_NO,
+      ),
     },
     cohort: null,
     dormant: null,
@@ -428,7 +464,7 @@ async function familyUsage(
 /** 管理者が追加したアンケートの回答の構成(管理者・製作者)。これまでのすべての回答 */
 async function surveySummaries(db: D1Database): Promise<SurveySummary[]> {
   const [qRes, aRes, tRes] = await db.batch([
-    db.prepare(`SELECT id, label, kind, target, options, visible FROM survey_questions WHERE is_fixed = 0 ORDER BY sort_order, id`),
+    db.prepare(`SELECT id, label, kind, multiple, target, options, visible FROM survey_questions WHERE is_fixed = 0 ORDER BY sort_order, id`),
     db.prepare(
       `SELECT a.question_id, a.answer, COUNT(*) AS n FROM survey_answers a JOIN survey_questions q ON q.id = a.question_id
         WHERE q.is_fixed = 0 AND q.kind = 'choice' AND a.skipped = 0 AND a.answer IS NOT NULL
@@ -440,7 +476,7 @@ async function surveySummaries(db: D1Database): Promise<SurveySummary[]> {
         ORDER BY a.answered_at DESC, a.id DESC`,
     ),
   ]);
-  type Q = { id: number; label: string; kind: 'choice' | 'text'; target: 'member' | 'household'; options: string; visible: number };
+  type Q = { id: number; label: string; kind: 'choice' | 'text'; multiple: number; target: 'member' | 'household'; options: string; visible: number };
   const choiceCounts = aRes!.results as { question_id: number; answer: string; n: number }[];
   const texts = tRes!.results as { question_id: number; answer: string }[];
   return (qRes!.results as Q[]).map((q) => {
@@ -453,6 +489,12 @@ async function surveySummaries(db: D1Database): Promise<SurveySummary[]> {
     const base = { id: q.id, label: q.label, kind: q.kind, target: q.target, visible: q.visible === 1 };
     if (q.kind === 'choice') {
       const rows = choiceCounts.filter((r) => r.question_id === q.id);
+      if (q.multiple === 1) {
+        // いくつでも選ぶ質問(担当J): 選んだ選択肢ごとに数える。答えた人の数は回答の数
+        const picked = rows.flatMap((r) => decodeMultiAnswer(r.answer).flatMap((o) => Array<string>(r.n).fill(o)));
+        const answered = rows.reduce((acc, r) => acc + r.n, 0);
+        return { ...base, answered, answers: countBars(picked, options), recentTexts: [] };
+      }
       const values = rows.flatMap((r) => Array<string>(r.n).fill(r.answer));
       return { ...base, answered: values.length, answers: countBars(values, options), recentTexts: [] };
     }

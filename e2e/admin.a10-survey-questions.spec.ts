@@ -15,7 +15,7 @@ test('A-10 管理者が追加した質問が、登録済みのお客さんに1�
   const label = `ほかのドッグランも使っていますか${Date.now().toString(36).slice(-3)}`;
   const add = page.getByRole('region', { name: '質問を追加' });
   await add.getByRole('radio', { name: '家族一人ひとり' }).click();
-  await add.getByRole('radio', { name: '選ぶ' }).click();
+  await add.getByRole('radio', { name: '選ぶ', exact: true }).click();
   await add.getByLabel('質問の文').fill(label);
   await add.getByLabel('選択肢(1行に1つ)').fill('よく使う\nときどき使う\n使わない');
   await add.getByRole('button', { name: '追加する' }).click();
@@ -75,7 +75,7 @@ test('A-10 固定の質問の文を変えると、登録のアンケートに出
     await customer.getByRole('button', { name: '同意して次へ' }).click();
     const form = customer.locator('fieldset.dog-form').first();
     await form.getByLabel('名前').fill('モモ');
-    await form.getByRole('combobox', { name: /犬種/ }).selectOption({ label: 'トイプードル' });
+    await form.getByRole('combobox', { name: /犬種/ }).selectOption({ label: 'プードル' });
     await customer.getByRole('button', { name: '次へ' }).click();
     await expect(customer.getByRole('radiogroup', { name: /ふだん何で来ますか/ })).toBeVisible();
     await customer.close();

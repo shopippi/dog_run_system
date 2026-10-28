@@ -2,7 +2,9 @@ import {
   type HouseholdFamilyMember,
   DOG_SEX_LABELS,
   DOG_SIZE_LABELS,
+  DOG_SOCIABILITY_LABELS,
   DOG_STATUS_LABELS,
+  formatWeight,
   type DogSummary,
   type HouseholdDetail,
 } from '@dr/shared';
@@ -10,6 +12,7 @@ import { useState, type ReactNode } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { DogFace } from '../components/DogFace';
 import { FamilyInviteDialog, RemoveFamilyDialog } from '../components/FamilyDialogs';
+import { HouseholdProfileDialog } from '../components/HouseholdProfileDialog';
 import { ManualPointsDialog } from '../components/ManualPointsDialog';
 import { ErrorNotice } from '../components/ErrorNotice';
 import { Icon } from '../components/Icon';
@@ -73,6 +76,7 @@ function Detail({
   const activeDogs = d.dogs.filter((x) => x.status === 'active');
   const activeFamily = d.family.filter((m) => m.status === 'active').length;
   const [removing, setRemoving] = useState<HouseholdFamilyMember | null>(null);
+  const [profileOpen, setProfileOpen] = useState(false);
   return (
     <>
       <section className="panel hh-head" aria-label="おうちの概要">
@@ -255,7 +259,14 @@ function Detail({
         <Section title="アンケート">
           <div className="hh-survey">
             <div>
-              <h3 className="hh-sub">おうち</h3>
+              <div className="hp-head">
+                <h3 className="hh-sub">おうち</h3>
+                {canEdit && (
+                  <button type="button" className="btn ghost" onClick={() => setProfileOpen(true)}>
+                    おうちの回答を変える
+                  </button>
+                )}
+              </div>
               <Answers list={d.survey.household} />
             </div>
             {d.survey.members.map((m) => (
@@ -266,6 +277,21 @@ function Detail({
             ))}
           </div>
         </Section>
+      )}
+      {profileOpen && (
+        <HouseholdProfileDialog
+          d={d}
+          onClose={() => setProfileOpen(false)}
+          onDone={() => {
+            setProfileOpen(false);
+            onChanged(
+              true,
+              <p>
+                おうちの回答を変えました。間違えたときは、<Link to="/audit">操作ログ</Link>から元に戻せます。
+              </p>,
+            );
+          }}
+        />
       )}
     </>
   );
@@ -285,7 +311,14 @@ function Answers({ list }: { list: { label: string; answer: string | null }[] })
 }
 
 function DogRow({ dog }: { dog: DogSummary }) {
-  const facts = [dog.breedName, DOG_SIZE_LABELS[dog.size], dog.sex ? DOG_SEX_LABELS[dog.sex] : null, dog.birthYm ? `${formatYm(dog.birthYm)}生まれ` : null]
+  const facts = [
+    dog.breedName,
+    DOG_SIZE_LABELS[dog.size],
+    dog.sex ? DOG_SEX_LABELS[dog.sex] : null,
+    dog.birthYm ? `${formatYm(dog.birthYm)}生まれ` : null,
+    formatWeight(dog.weightKg),
+    dog.sociability ? `ほかの犬: ${DOG_SOCIABILITY_LABELS[dog.sociability]}` : null,
+  ]
     .filter(Boolean)
     .join(' · ');
   return (

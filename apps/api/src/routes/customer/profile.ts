@@ -1,22 +1,23 @@
-import { profilePatchSchema, toJstIso, type ProfileResponse } from '@dr/shared';
+import { decodeMultiAnswer, profilePatchSchema, toJstIso, type FixedSurveyKey, type ProfileResponse, type SurveyAnswerValue } from '@dr/shared';
 import { Hono } from 'hono';
 import type { AppEnv } from '../../env';
 import { parseJson } from '../../lib/validate';
 import { requireMember, type MemberContext } from '../../services/members';
+import { HOUSEHOLD_FIXED_COLUMNS, HOUSEHOLD_PROFILE_SELECT, MEMBER_FIXED_COLUMNS, fromHouseholdColumnValue } from '../../services/profile-fields';
 import { customAnswerStatements, loadVisibleQuestions, splitAnswers } from '../../services/survey';
 
 // C-09 プロフィール
 export const profileRoutes = new Hono<AppEnv>();
 
-/** 固定の質問の回答を入れている列(services/survey.ts と同じ対応) */
-const MEMBER_FIXED = { age_group: 'age_group', gender: 'gender' } as const;
-const HOUSEHOLD_FIXED = { postal_code: 'postal_code', referral: 'referral', transport: 'transport' } as const;
+/** 固定の質問の回答を入れている列(services/profile-fields.ts) */
+const MEMBER_FIXED = MEMBER_FIXED_COLUMNS;
+const HOUSEHOLD_FIXED = HOUSEHOLD_FIXED_COLUMNS;
 
 async function loadProfile(db: D1Database, member: MemberContext): Promise<ProfileResponse> {
   const questions = await loadVisibleQuestions(db);
   const [self, household, answers] = await db.batch([
     db.prepare('SELECT age_group, gender FROM family_members WHERE id = ?').bind(member.memberId),
-    db.prepare('SELECT postal_code, referral, transport FROM households WHERE id = ?').bind(member.householdId),
+    db.prepare(`SELECT ${HOUSEHOLD_PROFILE_SELECT} FROM households WHERE id = ?`).bind(member.householdId),
     db
       .prepare(
         `SELECT question_id, answer FROM survey_answers WHERE member_id = ?
@@ -25,17 +26,18 @@ async function loadProfile(db: D1Database, member: MemberContext): Promise<Profi
       .bind(member.memberId, member.householdId),
   ]);
   const selfRow = (self!.results[0] ?? {}) as Record<string, string | null>;
-  const householdRow = (household!.results[0] ?? {}) as Record<string, string | null>;
+  const householdRow = (household!.results[0] ?? {}) as Record<string, string | number | null>;
   const custom = new Map((answers!.results as { question_id: number; answer: string | null }[]).map((a) => [a.question_id, a.answer]));
   return {
     questions,
     answers: questions.map((q) => {
-      let value: string | null = null;
+      let value: SurveyAnswerValue = null;
       if (q.fixedKey && q.fixedKey in MEMBER_FIXED) value = selfRow[q.fixedKey] ?? null;
-      else if (q.fixedKey && q.fixedKey in HOUSEHOLD_FIXED) value = householdRow[q.fixedKey] ?? null;
+      else if (q.fixedKey && q.fixedKey in HOUSEHOLD_FIXED) value = fromHouseholdColumnValue(q.fixedKey as FixedSurveyKey, householdRow[q.fixedKey]);
       else if (!q.fixedKey) {
-        // 家族向けの質問は自分の回答、おうち向けの質問はおうちの回答
-        value = custom.get(q.id) ?? null;
+        // 家族向けの質問は自分の回答、おうち向けの質問はおうちの回答。複数選択は配列にする
+        const stored = custom.get(q.id) ?? null;
+        value = q.kind === 'multi' ? (stored ? decodeMultiAnswer(stored) : null) : stored;
       }
       return { questionId: q.id, value };
     }),
@@ -73,7 +75,7 @@ profileRoutes.patch('/me/profile', async (c) => {
   }
   const householdCols = Object.entries(split.household);
   if (householdCols.length > 0) {
-    // おうち向けの固定の質問(郵便番号・きっかけ・来場手段)は、おうちの列。家族みんなで共通
+    // おうち向けの固定の質問(郵便番号・きっかけ・来場手段・来たい時間帯など)は、おうちの列。家族みんなで共通
     statements.push(
       db
         .prepare(`UPDATE households SET ${householdCols.map(([col]) => `${col} = ?`).join(', ')}, updated_at = ? WHERE id = ?`)

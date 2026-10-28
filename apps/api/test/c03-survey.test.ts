@@ -25,6 +25,10 @@ describe('C-03 アンケート(登録のとき)', () => {
       'postal_code',
       'referral',
       'transport',
+      'preferred_times',
+      'event_interests',
+      'uses_other_runs',
+      'wants_news',
     ]);
     expect(res.body.questions[2]).toMatchObject({ label: 'お住まいの郵便番号', required: false });
   });

@@ -16,7 +16,7 @@ describe('C-02 犬の登録', () => {
   it('犬種の選択肢を返す。「その他」は自由入力の印つき', async () => {
     const res = await call('/api/breeds', { user: PAPA });
     expect(res.status).toBe(200);
-    expect(res.body.breeds[0]).toEqual({ id: 1, name: 'トイプードル', defaultSize: 'small', isOther: false });
+    expect(res.body.breeds[0]).toEqual({ id: 1, name: 'プードル', defaultSize: 'small', isOther: false });
     expect(res.body.breeds.at(-1)).toMatchObject({ name: 'その他', isOther: true });
   });
 
@@ -60,7 +60,7 @@ describe('C-02 犬の登録', () => {
 
   it('「その他」以外では自由入力を保存しない', async () => {
     const r = await registerUser(PAPA, [dog('アル', { breedOther: 'いたずら' })]);
-    expect(r.dogs[0]).toMatchObject({ breedName: 'トイプードル', breedOther: null });
+    expect(r.dogs[0]).toMatchObject({ breedName: 'プードル', breedOther: null });
   });
 
   it('ない犬種を選ぶと 400 で、選び直すよう案内する', async () => {

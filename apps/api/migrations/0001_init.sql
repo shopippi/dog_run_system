@@ -352,19 +352,36 @@ CREATE INDEX idx_audit_log_target ON audit_log(target_type, target_id);
 -- 初期データ
 -- ============================================================
 
--- 犬種の選択肢(未決事項。管理画面で追加・並べ替えできる)
-INSERT INTO breeds (name, default_size, sort_order, is_other) VALUES
-  ('トイプードル', 'small', 10, 0),
-  ('チワワ', 'small', 20, 0),
-  ('ミニチュアダックスフンド', 'small', 30, 0),
-  ('ポメラニアン', 'small', 40, 0),
-  ('柴犬', 'medium', 50, 0),
-  ('フレンチブルドッグ', 'medium', 60, 0),
-  ('ボーダーコリー', 'medium', 70, 0),
-  ('ゴールデンレトリバー', 'large', 80, 0),
-  ('ラブラドールレトリバー', 'large', 90, 0),
-  ('ミックス', 'small', 100, 0),
-  ('その他', 'small', 999, 1);
+-- 犬種の選択肢(6.1。管理画面で追加・名前の変更・並べ替え・非表示ができる)
+-- 大まかな分け方(ダックスフンド・プードルなど)で、日本で多い順。「ミックス」「その他」が最後(sort_order)。
+-- id は以前の初期の11件と同じ番号を保つ(1 プードル、5 柴犬、10 ミックス、11 その他)。packages/shared の INITIAL_BREEDS と同じ。
+INSERT INTO breeds (id, name, default_size, sort_order, is_other) VALUES
+  (1, 'プードル', 'small', 10, 0),
+  (2, 'チワワ', 'small', 20, 0),
+  (3, 'ダックスフンド', 'small', 30, 0),
+  (4, 'ポメラニアン', 'small', 40, 0),
+  (5, '柴犬', 'medium', 50, 0),
+  (6, 'フレンチブルドッグ', 'medium', 60, 0),
+  (7, 'ボーダーコリー', 'medium', 170, 0),
+  (8, 'ゴールデンレトリバー', 'large', 110, 0),
+  (9, 'ラブラドールレトリバー', 'large', 150, 0),
+  (10, 'ミックス', 'small', 900, 0),
+  (11, 'その他', 'small', 999, 1),
+  (12, 'ミニチュアシュナウザー', 'small', 70, 0),
+  (13, 'ヨークシャーテリア', 'small', 80, 0),
+  (14, 'マルチーズ', 'small', 90, 0),
+  (15, 'シーズー', 'small', 100, 0),
+  (16, 'パピヨン', 'small', 120, 0),
+  (17, 'コーギー', 'medium', 130, 0),
+  (18, 'ジャックラッセルテリア', 'small', 140, 0),
+  (19, 'ペキニーズ', 'small', 160, 0),
+  (20, 'キャバリア', 'small', 180, 0),
+  (21, 'パグ', 'small', 190, 0),
+  (22, 'ビーグル', 'medium', 200, 0),
+  (23, 'ボストンテリア', 'small', 210, 0),
+  (24, 'ミニチュアピンシャー', 'small', 220, 0),
+  (25, 'イタリアングレーハウンド', 'small', 230, 0),
+  (26, 'バーニーズマウンテンドッグ', 'large', 240, 0);
 
 -- 固定のアンケート(要件定義書 7.1)。回答は households / family_members の列に入る。
 INSERT INTO survey_questions (fixed_key, target, kind, label, options, required, sort_order, is_fixed, created_at) VALUES
