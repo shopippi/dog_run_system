@@ -1,4 +1,12 @@
-import { checkSettingsPatch, checkinUrlFor, toJstIso, type SettingKey, type Settings, type SettingsResponse } from '@dr/shared';
+import {
+  checkSettingsPatch,
+  checkinUrlFor,
+  toJstIso,
+  type PublicSettingsResponse,
+  type SettingKey,
+  type Settings,
+  type SettingsResponse,
+} from '@dr/shared';
 import { Hono } from 'hono';
 import type { AppEnv } from '../../env';
 import { errors } from '../../lib/errors';
@@ -57,6 +65,13 @@ async function saveSettings(db: D1Database, patch: Partial<Settings>, staffId: n
   ]);
   return loadSettings(db);
 }
+
+// 受付スタッフも見られる設定(A-16 使い方・困ったとき)。製作者の連絡先だけを返す
+settingsRoutes.get('/settings/public', async (c) => {
+  const settings = await loadSettings(c.env.DB);
+  const body: PublicSettingsResponse = { developerContact: settings.developer_contact };
+  return c.json(body);
+});
 
 // ルールの設定を見る。管理者(製作者は見るだけ)
 settingsRoutes.get('/settings', requireRole('admin'), async (c) => c.json(toResponse(await loadSettings(c.env.DB))));

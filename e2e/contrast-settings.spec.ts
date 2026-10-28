@@ -130,6 +130,10 @@ for (const scheme of ['light', 'dark'] as const) {
       await page.getByRole('link', { name: 'CSV出力' }).click();
       await page.getByRole('radio', { name: '来場' }).check();
       await check(page, 'M-18 CSV出力');
+
+      await page.getByRole('link', { name: '使い方・困ったとき' }).click();
+      await page.getByText('ポイントが付かない').click();
+      await check(page, 'M-16 使い方・困ったとき');
       await page.close();
 
       const dev = await browser.newPage({ ...TABLET, colorScheme: scheme });

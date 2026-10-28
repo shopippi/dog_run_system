@@ -158,9 +158,23 @@ test.describe('設定まわりの画面の見え方', () => {
       await page.getByRole('radio', { name: '来場' }).check();
       await checkScreen(page, v.name, 'M-18 CSV出力', v.touch);
 
+      // M-16 使い方・困ったとき(よくある質問を1つ開いたところ)
+      await page.getByRole('link', { name: '使い方・困ったとき' }).click();
+      await page.getByText('ポイントが付かない').click();
+      await checkScreen(page, v.name, 'M-16 使い方・困ったとき', v.touch);
+
       await page.close();
     });
   }
+
+  test('受付スタッフの使い方・困ったとき', async ({ browser }) => {
+    const v = VIEWPORTS[1];
+    const page = await browser.newPage({ viewport: v.viewport, hasTouch: v.touch });
+    await adminLogin(page, 'staff', '/help');
+    await page.getByText('ポイントが付かない').waitFor();
+    await checkScreen(page, v.name, 'M-16 使い方・困ったとき(受付スタッフ)', v.touch);
+    await page.close();
+  });
 
   test('製作者(見るだけ)のルールの設定', async ({ browser }) => {
     const v = VIEWPORTS[0];

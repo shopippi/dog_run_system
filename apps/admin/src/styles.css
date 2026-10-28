@@ -445,3 +445,28 @@ input::placeholder { color: var(--text-tertiary); }
 .cfg-day-events li + li { border-top: 1px solid var(--border); }
 .cfg-day .cfg-fieldset .field input { max-width: 560px; }
 .cfg-period-hint { align-self: flex-end; padding-bottom: 12px; }
+
+/* M-16 使い方・困ったとき */
+.cfg-help .cfg-section-body { padding-top: var(--sp-2); }
+.cfg-faqs { display: flex; flex-direction: column; }
+.cfg-faq + .cfg-faq { border-top: 1px solid var(--border); }
+.cfg-faq summary {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3);
+  min-height: 48px; padding: var(--sp-2) 0; font-size: var(--fs-15); font-weight: var(--fw-strong); cursor: pointer; list-style: none;
+}
+.cfg-faq summary::-webkit-details-marker { display: none; }
+.cfg-faq summary::after {
+  content: ""; flex: none; width: 8px; height: 8px; margin-right: 4px;
+  border-right: 1.75px solid var(--text-tertiary); border-bottom: 1.75px solid var(--text-tertiary);
+  transform: rotate(45deg); transition: transform var(--ease);
+}
+.cfg-faq[open] summary::after { transform: rotate(-135deg); }
+.cfg-faq summary:focus-visible { outline: 2px solid var(--focus-color); outline-offset: 2px; border-radius: var(--radius-sm); }
+.cfg-faq-a { display: flex; flex-direction: column; gap: var(--sp-2); padding: 0 0 var(--sp-4); color: var(--text-secondary); }
+.cfg-howtos { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: var(--sp-5) var(--sp-6); }
+.cfg-howto { display: flex; flex-direction: column; gap: var(--sp-2); min-width: 0; }
+.cfg-howto h3 { font-size: var(--fs-15); }
+.cfg-howto h3 a { display: inline-flex; align-items: center; min-height: var(--control-h); color: var(--accent-text); text-decoration: none; }
+.cfg-howto .plain-list { font-size: var(--fs-13); }
+.cfg-contact { white-space: pre-wrap; overflow-wrap: anywhere; font-size: var(--fs-15); }
+@media (hover: hover) { .cfg-howto h3 a:hover { text-decoration: underline; } }

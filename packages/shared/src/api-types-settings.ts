@@ -94,3 +94,9 @@ export type AdminClosuresResponse = {
   closures: { date: string; note: string | null }[];
   holidays: { date: string; name: string }[];
 };
+
+/** 受付スタッフも見られる設定(GET /admin/api/settings/public。A-16 使い方・困ったとき) */
+export type PublicSettingsResponse = {
+  /** 製作者の連絡先(ルールの設定で入れる。未設定なら空) */
+  developerContact: string;
+};
