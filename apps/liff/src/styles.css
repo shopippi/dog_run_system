@@ -19,7 +19,7 @@
 .panel { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
 .field { display: flex; flex-direction: column; gap: 4px; }
 .field > label, .field > .label { font-size: .85rem; font-weight: 700; }
-.field input, .field select, .field textarea {
+.field input:not([type=radio]):not([type=checkbox]):not([type=file]), .field select, .field textarea {
   padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); width: 100%; min-height: 44px;
   font-size: 16px; /* iPhone で入力時に拡大されないよう 16px 以上 */
 }
@@ -46,7 +46,7 @@
   border: 1.5px solid var(--line); border-radius: 999px; background: var(--surface); font-size: .9rem;
 }
 .choices label:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); font-weight: 700; }
-.choices input { accent-color: var(--accent); }
+.choices input { accent-color: var(--accent); width: 18px; height: 18px; margin: 0; flex: none; }
 .check { display: flex; gap: 10px; align-items: flex-start; font-size: .9rem; }
 .check input { margin-top: 4px; width: 20px; height: 20px; accent-color: var(--accent); flex: none; }
 .loading { padding: 40px 0; text-align: center; color: var(--muted); }
@@ -65,3 +65,19 @@ summary { cursor: pointer; font-weight: 700; color: var(--accent); min-height: 3
 }
 .welcome-card .name { font-family: var(--f-display); font-size: 1.3rem; }
 .welcome-card .id { font-size: 1.6rem; letter-spacing: .06em; }
+fieldset { border: 1px solid var(--line); margin: 0; min-width: 0; }
+.dog-form-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.dog-form legend { font-family: var(--f-display); font-weight: 700; padding: 0; float: left; }
+.link-btn { border: 0; background: none; color: var(--bad); font-weight: 700; font-size: .85rem; min-height: 44px; padding: 0 4px; }
+.photo-pick { display: flex; align-items: center; gap: 14px; }
+.photo-pick-body { display: flex; flex-direction: column; gap: 4px; align-items: flex-start; }
+.photo-pick label.up {
+  display: inline-flex; align-items: center; min-height: 44px; padding: 8px 14px; cursor: pointer;
+  border: 1.5px dashed var(--accent); color: var(--accent); border-radius: 10px; font-weight: 700; font-size: .88rem;
+}
+.photo-pick input[type="file"] { position: absolute; opacity: 0; width: 1px; height: 1px; pointer-events: none; }
+.photo-pick .hint { font-size: .75rem; color: var(--muted); }
+.photo-pick .err { font-size: .8rem; color: var(--bad); font-weight: 700; }
+.row2 select { padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); min-height: 44px; font-size: 16px; }
+.faces { display: flex; justify-content: center; }
+.faces > * { margin: 0 -6px; }

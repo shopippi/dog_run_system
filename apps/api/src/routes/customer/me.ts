@@ -5,7 +5,9 @@ import type { AppEnv } from '../../env';
 import { loadSettings } from '../../lib/settings';
 import { parseJson } from '../../lib/validate';
 import { findActiveMember, refreshDisplayName } from '../../services/members';
+import { insertDogStatements, listHouseholdDogs, normalizeDogInputs } from '../../services/dogs';
 import { alreadyRegistered, registerHousehold } from '../../services/register';
+import { MEDIA_BASE } from './media';
 
 export const meRoutes = new Hono<AppEnv>();
 
@@ -34,9 +36,20 @@ meRoutes.get('/me', async (c) => {
 // 初回登録。おうちと会員IDを作る(C-01)
 meRoutes.post('/register', async (c) => {
   const lineUser = c.get('lineUser');
-  await parseJson(c, registerSchema);
+  const input = await parseJson(c, registerSchema);
   if (await findActiveMember(c.env.DB, lineUser.userId)) throw alreadyRegistered();
-  const result = await registerHousehold(c.env.DB, c.get('now'), lineUser, { dogNames: [] });
-  const body: RegisterResponse = { memberNo: result.memberNo, householdName: result.householdName };
+  const dogs = await normalizeDogInputs(c.env.DB, input.dogs);
+  const result = await registerHousehold(
+    c.env.DB,
+    c.get('now'),
+    lineUser,
+    { dogNames: dogs.map((d) => d.name) },
+    ({ householdId, memberNo, nowIso }) => insertDogStatements(c.env.DB, householdId, memberNo, 1, dogs, nowIso),
+  );
+  const body: RegisterResponse = {
+    memberNo: result.memberNo,
+    householdName: result.householdName,
+    dogs: await listHouseholdDogs(c.env.DB, result.householdId, MEDIA_BASE),
+  };
   return c.json(body, 201);
 });

@@ -1,0 +1,46 @@
+import { useAuthedImage } from '../hooks/useAuthedImage';
+
+const PALETTE = ['#2e7a4e', '#b9741b', '#3d6a9e', '#8a4f9e', '#bf3f35', '#4f7f8a', '#7a6a2e'];
+
+function colorFor(text: string): string {
+  let h = 0;
+  for (const ch of text) h = (h * 31 + ch.codePointAt(0)!) >>> 0;
+  return PALETTE[h % PALETTE.length]!;
+}
+
+/** 写真がない犬は、犬種の色と名前の頭文字で作った絵を出す(6.2) */
+export function DogPlaceholder({ name, breedName, size }: { name: string; breedName: string; size: number }) {
+  const initial = [...(name.trim() || '?')][0];
+  return (
+    <svg
+      className="av"
+      width={size}
+      height={size}
+      viewBox="0 0 100 100"
+      role="img"
+      aria-label={`${name}(写真なし)`}
+    >
+      <circle cx="50" cy="50" r="50" fill={colorFor(breedName || name)} />
+      <text x="50" y="50" dy=".36em" textAnchor="middle" fontSize="46" fontWeight="700" fill="#fff">
+        {initial}
+      </text>
+    </svg>
+  );
+}
+
+type Props = {
+  name: string;
+  breedName: string;
+  /** 認証つき API の写真の URL */
+  url?: string | null;
+  /** 端末の中のプレビュー(登録前の写真) */
+  previewUrl?: string | null;
+  size?: number;
+};
+
+export function DogAvatar({ name, breedName, url, previewUrl, size = 56 }: Props) {
+  const loaded = useAuthedImage(previewUrl ? null : url);
+  const src = previewUrl ?? loaded;
+  if (!src) return <DogPlaceholder name={name} breedName={breedName} size={size} />;
+  return <img className="av" src={src} width={size} height={size} alt={name} style={{ width: size, height: size }} />;
+}
