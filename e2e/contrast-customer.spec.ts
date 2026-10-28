@@ -108,6 +108,14 @@ for (const scheme of ['light', 'dark'] as const) {
       await page.getByRole('heading', { name: '2026年10月' }).waitFor();
       await check(page, 'L-08 来場履歴');
 
+      // L-10 プロフィール
+      await openLiff(page, user, '/profile');
+      await page.getByRole('heading', { name: 'プロフィール' }).waitFor();
+      await page.getByLabel('お住まいの郵便番号').fill('1234567');
+      await page.getByRole('button', { name: '保存する' }).click();
+      await page.getByRole('status').waitFor();
+      await check(page, 'L-10 プロフィール');
+
       // L-13 旧カードの引き継ぎ(入力中・申請後の状態の一覧)
       await openLiff(page, user, '/migration');
       await page.getByRole('heading', { name: '旧カードの引き継ぎ' }).waitFor();

@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { MIGRATION_SOURCES } from '../constants';
+import { surveyAnswersSchema } from './survey';
 
 // 入力チェック(customer)。お客さん向けの残りの機能(C-07・C-09・C-10・C-13)
 
@@ -49,3 +50,10 @@ export function migrationFormToInput(fields: {
     note: note === '' ? null : note,
   };
 }
+
+// ---------------------------------------------------------------
+// C-09 プロフィール
+// ---------------------------------------------------------------
+
+/** PATCH /api/me/profile。送った質問の回答だけを変える(null は「答えない」) */
+export const profilePatchSchema = z.object({ answers: surveyAnswersSchema });

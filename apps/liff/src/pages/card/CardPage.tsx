@@ -87,6 +87,10 @@ function Card({ me }: { me: MeRegistered }) {
           <span>来場履歴</span>
           <Icon name="chevron-right" />
         </Link>
+        <Link to="/profile">
+          <span>プロフィール</span>
+          <Icon name="chevron-right" />
+        </Link>
         <Link to="/migration">
           <span>旧カードの引き継ぎ</span>
           <Icon name="chevron-right" />

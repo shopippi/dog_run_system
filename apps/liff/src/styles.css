@@ -373,3 +373,8 @@ a { color: var(--accent-text); }
 .hist-points { font-variant-numeric: tabular-nums; }
 /* 取り消した来場は文字を薄くする(行全体を半透明にはしない) */
 .hist-row.cancelled .hist-body > b, .hist-row.cancelled .hist-date b { color: var(--text-tertiary); }
+
+/* ---- L-10 プロフィール ---- */
+.prof-section { gap: var(--sp-4); }
+.prof-section + .prof-section { padding-top: var(--sp-6); border-top: 1px solid var(--border); }
+.prof-head { display: flex; flex-direction: column; gap: var(--sp-1); }

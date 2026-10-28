@@ -87,3 +87,15 @@ export type VisitHistoryResponse = {
 
 /** 来場履歴の1ページの件数 */
 export const VISIT_HISTORY_PAGE_SIZE = 20;
+
+// ---------------------------------------------------------------
+// C-09 プロフィール
+// ---------------------------------------------------------------
+
+/** GET /api/me/profile・PATCH /api/me/profile の応答(L-10) */
+export type ProfileResponse = {
+  /** 表示している質問(並び順どおり)。家族一人ひとりへの質問と、おうちへの質問 */
+  questions: import('./schemas/survey').SurveyQuestion[];
+  /** いまの回答。家族向けは自分の回答、おうち向けはおうちの回答(最初の1人や家族が答えたもの) */
+  answers: { questionId: number; value: string | null }[];
+};

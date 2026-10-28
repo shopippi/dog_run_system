@@ -69,6 +69,14 @@ for (const d of DEVICES) {
       await page.getByRole('heading', { name: '2026年10月' }).waitFor();
       await checkScreen(page, d.name, 'L-08 来場履歴');
 
+      // L-10 プロフィール
+      await openLiff(page, user, '/profile');
+      await page.getByRole('heading', { name: 'プロフィール' }).waitFor();
+      await page.getByLabel('お住まいの郵便番号').fill('1234567');
+      await page.getByRole('button', { name: '保存する' }).click();
+      await page.getByRole('status').waitFor();
+      await checkScreen(page, d.name, 'L-10 プロフィール');
+
       // L-13 旧カードの引き継ぎ(入力中と、申請したあと)
       await openLiff(page, user, '/migration');
       await page.getByRole('heading', { name: '旧カードの引き継ぎ' }).waitFor();
