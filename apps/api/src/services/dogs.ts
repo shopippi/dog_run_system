@@ -131,7 +131,7 @@ export function toDogSummary(r: DogRow, mediaBase: string): DogSummary {
   };
 }
 
-/** おうちの犬の一覧。登録解除した犬は includeRetired のときだけ含める。 */
+/** おうちの犬の一覧。登録をおやすみしている犬(retired)は includeRetired のときだけ含める。 */
 export async function listHouseholdDogs(
   db: D1Database,
   householdId: number,

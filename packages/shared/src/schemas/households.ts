@@ -62,7 +62,7 @@ export function manualReasonText(input: { reason: ManualPointReason; note: strin
 
 /**
  * 管理者による犬の情報の変更(A-04)。犬種とサイズを変えるときは理由が必要(6.1)。
- * status は登録解除(retired)と、その取り消し(active)。
+ * status は登録のおやすみ(retired)と、登録に戻す(active)。
  */
 export const adminDogPatchSchema = z
   .object({

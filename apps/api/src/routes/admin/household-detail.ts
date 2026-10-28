@@ -197,7 +197,7 @@ householdDetailRoutes.get('/dogs/:id', requireRole('admin'), async (c) => {
   return c.json(body);
 });
 
-// 名前・犬種・サイズ・性別・生まれた年月・登録解除とその取り消し。犬種とサイズは理由つきで履歴に残す(6.1)
+// 名前・犬種・サイズ・性別・生まれた年月・登録のおやすみと戻す操作。犬種とサイズは理由つきで履歴に残す(6.1)
 householdDetailRoutes.patch('/dogs/:id', requireRole('admin'), async (c) => {
   const db = c.env.DB;
   const id = Number(c.req.param('id'));

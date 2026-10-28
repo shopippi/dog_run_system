@@ -221,7 +221,7 @@ export async function patchDog(db: D1Database, id: number, patch: AdminDogPatch,
     if (patch.status === 'retired' && (await activeDogCount(db, dog.household_id)) <= 1) {
       throw errors.conflict(
         'last_dog',
-        '最後の1頭は登録解除できません。新しいワンちゃんを追加してから、登録解除してください。',
+        '最後の1頭は、登録をおやすみできません。新しいワンちゃんを追加してから、おやすみにしてください。',
       );
     }
     before.status = cur.status;
@@ -267,7 +267,7 @@ export async function undoDogUpdate(db: D1Database, log: AuditRow, ctx: UndoCont
     );
   }
   if (after.status === 'active' && before.status === 'retired' && (await activeDogCount(db, dog.household_id)) <= 1) {
-    throw errors.conflict('last_dog', '最後の1頭のため、登録解除には戻せません。ワンちゃんの編集画面で確かめてください。');
+    throw errors.conflict('last_dog', '最後の1頭のため、おやすみの状態には戻せません。ワンちゃんの編集画面で確かめてください。');
   }
   await writeDogValues(db, dog, after, before, { staffId: ctx.staffId, reason: '操作ログから元に戻した', now: ctx.now });
 }

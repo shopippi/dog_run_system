@@ -404,3 +404,17 @@ a { color: var(--accent-text); }
 @media (hover: hover) {
   .help-rows summary:hover { background: var(--surface-sunk); }
 }
+
+/* ---- L-09 ワンちゃんの登録をおやすみする(担当J) ---- */
+/* 変更画面の一番下に、小さい文字のリンク風ボタンだけを置く。指で押せるよう高さ 44px */
+.dog-rest { display: flex; flex-direction: column; gap: var(--sp-3); margin-top: var(--sp-2); }
+.dog-rest-link {
+  align-self: flex-start; display: inline-flex; align-items: center; min-height: 44px; padding: 0;
+  border: 0; background: none; color: var(--text-secondary); font: inherit; font-size: var(--fs-13);
+  text-decoration: underline; text-underline-offset: 3px; cursor: pointer;
+}
+.dog-rest-link:focus-visible { outline: 2px solid var(--focus-color); outline-offset: 2px; border-radius: var(--radius-sm); }
+.dog-rest .confirm-inline { padding-top: var(--sp-4); border-top: 1px solid var(--border); }
+.dog-rest .confirm-inline p { font-size: var(--fs-15); }
+.retired-list .dog-rest-name { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.retired-list .dog-rest-back { width: auto; min-height: 44px; padding: 0 var(--sp-4); font-size: var(--fs-14); }

@@ -333,8 +333,8 @@ function Editor({ d, canEdit, onSaved }: { d: AdminDogDetail; canEdit: boolean; 
               <button type="button" className="btn" disabled={!ready || busy} onClick={save}>
                 {busy ? '保存しています…' : '保存する'}
               </button>
-              <button type="button" className="btn ghost danger-text" disabled={busy} onClick={() => setRetireOpen(true)}>
-                {d.dog.status === 'active' ? '登録を解除する' : '登録解除を取り消す'}
+              <button type="button" className="btn ghost" disabled={busy} onClick={() => setRetireOpen(true)}>
+                {d.dog.status === 'active' ? '登録をおやすみする' : '登録に戻す'}
               </button>
             </div>
           </div>
@@ -385,7 +385,7 @@ function Editor({ d, canEdit, onSaved }: { d: AdminDogDetail; canEdit: boolean; 
   );
 }
 
-/** 登録解除・その取り消しの確認(6.1。過去の来場記録は残り、チェックインの選択肢に出なくなる) */
+/** 登録をおやすみする(内部の値は retired)・登録に戻す の確認(6.1。過去の来場記録は残り、チェックインの選択肢に出なくなる) */
 function RetireDialog({ d, onClose, onDone }: { d: AdminDogDetail; onClose: () => void; onDone: (m: ReactNode) => void }) {
   const retire = d.dog.status === 'active';
   const [busy, setBusy] = useState(false);
@@ -395,7 +395,7 @@ function RetireDialog({ d, onClose, onDone }: { d: AdminDogDetail; onClose: () =
     setError(null);
     try {
       await adminPatch(`/dogs/${d.dog.id}`, { status: retire ? 'retired' : 'active' });
-      onDone(<p>{retire ? `${d.dog.name}の登録を解除しました。` : `${d.dog.name}の登録解除を取り消しました。`}間違えたときは、操作ログから元に戻せます。</p>);
+      onDone(<p>{retire ? `${d.dog.name}の登録をおやすみしました。` : `${d.dog.name}を登録に戻しました。`}間違えたときは、操作ログから元に戻せます。</p>);
     } catch (e) {
       setError(e);
       setBusy(false);
@@ -403,26 +403,27 @@ function RetireDialog({ d, onClose, onDone }: { d: AdminDogDetail; onClose: () =
   };
   return (
     <Dialog
-      title={retire ? 'ワンちゃんの登録を解除する' : '登録解除を取り消す'}
+      title={retire ? 'ワンちゃんの登録をおやすみする' : '登録に戻す'}
       onClose={() => !busy && onClose()}
       footer={
         <>
           <button type="button" className="btn sub" data-autofocus disabled={busy} onClick={onClose}>
             やめる
           </button>
-          <button type="button" className={retire ? 'btn danger-fill' : 'btn'} disabled={busy} onClick={submit}>
-            {busy ? '変えています…' : retire ? '登録を解除する' : '取り消す'}
+          <button type="button" className="btn" disabled={busy} onClick={submit}>
+            {busy ? '変えています…' : retire ? 'おやすみする' : '登録に戻す'}
           </button>
         </>
       }
     >
       <p>
-        <b>{d.dog.name}</b>({d.household.displayName}){retire ? 'の登録を解除します。' : 'を、もう一度チェックインで選べるようにします。'}
+        <b>{d.dog.name}</b>({d.household.displayName}){retire ? 'の登録をおやすみします。' : 'を登録に戻して、もう一度チェックインで選べるようにします。'}
       </p>
       {retire && (
         <ul className="plain-list">
-          <li>これまでの来場の記録は残ります</li>
+          <li>これまでの来場の記録は、そのまま残ります</li>
           <li>チェックインのときに、選べなくなります</li>
+          <li>いつでも登録に戻せます</li>
         </ul>
       )}
       {error ? <ErrorNotice error={error} /> : null}

@@ -8,7 +8,7 @@ import { useDogs } from '../../hooks/useDogs';
 import { patchJson, postJson } from '../../lib/api';
 import { uploadDogPhoto } from '../../lib/photo';
 
-/** ワンちゃんの変更・登録解除(C-08)。犬種とサイズは受付で変える(6.1) */
+/** ワンちゃんの変更と、登録のおやすみ(C-08)。犬種とサイズは受付で変える(6.1) */
 export function DogEditPage() {
   const { id } = useParams();
   const { dogs, error: dogsError } = useDogs();
@@ -97,20 +97,15 @@ export function DogEditPage() {
         {busy ? '保存しています…' : '保存する'}
       </button>
 
-      <section className="section retire">
-        <h3 className="section-label">登録解除</h3>
-        <p className="body-text muted-text">
-          亡くなった子や手放した子は、登録解除できます。これまでの来場の記録は残り、チェックインの選択肢に出なくなります。
-        </p>
+      {/* 登録をおやすみする(内部の値は retired)。見出しも説明も置かず、一番下に小さく置く */}
+      <div className="dog-rest">
         {retireError ? <ErrorNotice error={retireError} /> : null}
         {confirmRetire ? (
-          <div className="confirm-inline">
-            <p>
-              <b>{dog.name}</b>を登録解除します。よろしいですか?
-            </p>
+          <div className="confirm-inline" role="group" aria-label="登録のおやすみの確認">
+            <p>{dog.name}の登録をおやすみします。来場の記録はそのまま残り、いつでも戻せます。</p>
             <div className="actions">
-              <button type="button" className="btn sub danger" disabled={busy} onClick={retire}>
-                登録解除する
+              <button type="button" className="btn sub" disabled={busy} onClick={retire}>
+                おやすみする
               </button>
               <button type="button" className="btn ghost" disabled={busy} onClick={() => setConfirmRetire(false)}>
                 やめる
@@ -118,11 +113,11 @@ export function DogEditPage() {
             </div>
           </div>
         ) : (
-          <button type="button" className="btn sub danger" onClick={() => setConfirmRetire(true)}>
-            {dog.name}を登録解除する
+          <button type="button" className="dog-rest-link" onClick={() => setConfirmRetire(true)}>
+            この子の登録をおやすみする
           </button>
         )}
-      </section>
+      </div>
     </main>
   );
 }

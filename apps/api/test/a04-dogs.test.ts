@@ -92,7 +92,7 @@ describe('A-04 犬の情報の変更', () => {
     expect(ok.body.dog).toMatchObject({ breedName: 'ビーグルミックス', breedOther: 'ビーグルミックス' });
   });
 
-  it('性別・生まれた年月・登録解除とその取り消し。最後の1頭は登録解除できない', async () => {
+  it('性別・生まれた年月・登録のおやすみと登録に戻す操作。最後の1頭はおやすみできない', async () => {
     const s = await setup();
     const [a, n] = [s.r.dogs[0]!.id, s.r.dogs[1]!.id];
     const res = await patch(s.admin, a, { sex: 'male', birthYm: '2019-05' });
@@ -102,7 +102,7 @@ describe('A-04 犬の情報の変更', () => {
     expect(me.body.card.dogs.map((d: any) => d.name)).toEqual(['ニコ']);
     const last = await patch(s.admin, n, { status: 'retired' });
     expect(last.status).toBe(409);
-    expect(last.body.error.message).toMatch(/最後の1頭は登録解除できません/);
+    expect(last.body.error.message).toMatch(/最後の1頭は、登録をおやすみできません/);
     expect((await patch(s.admin, a, { status: 'active' })).body.dog.status).toBe('active');
   });
 

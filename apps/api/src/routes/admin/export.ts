@@ -37,7 +37,7 @@ const HOUSEHOLD_STATUS: Record<string, string> = { active: '有効', merged: '�
 const SOURCE: Record<string, string> = { new: '新規', migration: '旧カードから移行' };
 const MEMBER_STATUS: Record<string, string> = { active: '参加中', left: 'おうちから抜けた', withdrawn: '退会' };
 const JOIN_METHOD: Record<string, string> = { register: '初回登録', invite: '家族の招待', reception: '受付で追加', merge: 'おうちの統合' };
-const DOG_STATUS: Record<string, string> = { active: '登録中', retired: '登録解除', merged: '統合済み' };
+const DOG_STATUS: Record<string, string> = { active: '登録中', retired: 'おやすみ中', merged: '統合済み' };
 const label = (map: Record<string, string>, v: string | null | undefined) => (v == null ? '' : (map[v] ?? v));
 
 type Period = { from?: string; to?: string };
