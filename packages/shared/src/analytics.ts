@@ -38,3 +38,24 @@ export function classifyWeather(input: { precipitation: number | null; sunshineH
   if (sunshineHours === null || Number.isNaN(sunshineHours)) return null;
   return sunshineHours >= SUNNY_HOURS ? '晴れ' : '曇り';
 }
+
+/**
+ * 日付に月数を足す(日にちは同じ。その月にない日は月末にする)。
+ * 例: 2026-01-31 + 1か月 = 2026-02-28。ポイントの有効期限(expiryFor)と同じ数え方。
+ */
+export function addMonthsToDate(date: string, months: number): string {
+  const [y, m, d] = date.split('-').map(Number) as [number, number, number];
+  const total = y * 12 + (m - 1) + months;
+  const ty = Math.floor(total / 12);
+  const tm = (total % 12) + 1;
+  const lastDay = new Date(Date.UTC(ty, tm, 0)).getUTCDate();
+  return `${ty}-${String(tm).padStart(2, '0')}-${String(Math.min(d, lastDay)).padStart(2, '0')}`;
+}
+
+/**
+ * 「最後に来場した日から○か月」の有効期限が切れているか(B-05)。
+ * 期限の日(最後の来場日 + ○か月)までは使え、その翌日から失効する。
+ */
+export function isExpiredSinceLastVisit(lastDate: string, months: number, today: string): boolean {
+  return addMonthsToDate(lastDate, months) < today;
+}

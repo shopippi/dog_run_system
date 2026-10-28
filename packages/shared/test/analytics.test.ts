@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { classifyWeather, dayTypeOf } from '../src';
+import { addMonthsToDate, classifyWeather, dayTypeOf, isExpiredSinceLastVisit } from '../src';
 
 describe('曜日区分(calendar.day_type)', () => {
   it('平日・土曜・日曜。平日の祝日だけを「祝日」にする', () => {
@@ -25,5 +25,19 @@ describe('B-01 天気の判定', () => {
   it('降水量が分からない日、雨でなく日照も分からない日は判定しない', () => {
     expect(classifyWeather({ precipitation: null, sunshineHours: 8 })).toBeNull();
     expect(classifyWeather({ precipitation: 0, sunshineHours: null })).toBeNull();
+  });
+});
+
+describe('B-05 最後の来場からの有効期限', () => {
+  it('月を足す。その月にない日は月末にする', () => {
+    expect(addMonthsToDate('2026-01-31', 1)).toBe('2026-02-28');
+    expect(addMonthsToDate('2028-01-31', 1)).toBe('2028-02-29');
+    expect(addMonthsToDate('2026-10-15', 6)).toBe('2027-04-15');
+    expect(addMonthsToDate('2026-12-01', 12)).toBe('2027-12-01');
+  });
+  it('期限の日までは失効しない。翌日から失効する(境界値)', () => {
+    expect(isExpiredSinceLastVisit('2026-01-15', 6, '2026-07-14')).toBe(false);
+    expect(isExpiredSinceLastVisit('2026-01-15', 6, '2026-07-15')).toBe(false);
+    expect(isExpiredSinceLastVisit('2026-01-15', 6, '2026-07-16')).toBe(true);
   });
 });
