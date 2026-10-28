@@ -444,3 +444,4 @@ input::placeholder { color: var(--text-tertiary); }
 .cfg-day-events li { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); min-height: 56px; }
 .cfg-day-events li + li { border-top: 1px solid var(--border); }
 .cfg-day .cfg-fieldset .field input { max-width: 560px; }
+.cfg-period-hint { align-self: flex-end; padding-bottom: 12px; }

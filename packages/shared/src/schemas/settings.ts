@@ -212,3 +212,28 @@ export const closureCreateSchema = z.object({
   date: dateSchema,
   note: z.string().trim().max(100, { error: '休業の理由は100文字までで入力してください。' }).nullish(),
 });
+
+// ============================================================
+// A-14 CSV出力
+// ============================================================
+
+export const EXPORT_NAMES = ['households', 'members', 'dogs', 'visits', 'ledger', 'survey'] as const;
+export type ExportName = (typeof EXPORT_NAMES)[number];
+
+/** 出力の種類。period: 期間を指定できるか */
+export const EXPORTS: Record<ExportName, { label: string; desc: string; period: boolean }> = {
+  households: { label: 'おうち', desc: '会員ID・呼び名・ポイント・無料券・来場回数など。1おうち1行', period: false },
+  members: { label: '家族', desc: 'LINEの名前・年代・性別・参加日など。1人1行', period: false },
+  dogs: { label: 'ワンちゃん', desc: '犬ID・名前・犬種・サイズ・来場回数など。1頭1行', period: false },
+  visits: { label: '来場', desc: '来場日・時刻・来たワンちゃん・無料券・取り消しなど。1回の来場で1行', period: true },
+  ledger: { label: 'ポイント台帳', desc: 'ポイントの増減と理由。1回の増減で1行', period: true },
+  survey: { label: 'アンケートの回答', desc: '固定の質問と追加した質問の回答。1つの回答で1行', period: false },
+};
+
+/** 出力の期間(来場・ポイント台帳)。どちらも空なら、すべて */
+export const exportQuerySchema = z
+  .object({
+    from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, { error: '期間の始めの日を選び直してください。' }).optional(),
+    to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, { error: '期間の終わりの日を選び直してください。' }).optional(),
+  })
+  .refine((v) => !v.from || !v.to || v.from <= v.to, { error: '期間の終わりの日は、始めの日より後にしてください。' });

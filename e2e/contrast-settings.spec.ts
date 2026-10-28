@@ -126,6 +126,10 @@ for (const scheme of ['light', 'dark'] as const) {
       await page.getByRole('link', { name: 'イベント・休業日' }).click();
       await page.getByRole('region', { name: 'カレンダー' }).getByRole('button', { name: /今日/ }).waitFor();
       await check(page, 'M-10 イベント・休業日');
+
+      await page.getByRole('link', { name: 'CSV出力' }).click();
+      await page.getByRole('radio', { name: '来場' }).check();
+      await check(page, 'M-18 CSV出力');
       await page.close();
 
       const dev = await browser.newPage({ ...TABLET, colorScheme: scheme });

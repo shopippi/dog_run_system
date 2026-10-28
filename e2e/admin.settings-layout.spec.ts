@@ -153,6 +153,11 @@ test.describe('設定まわりの画面の見え方', () => {
       await page.getByRole('region', { name: 'カレンダー' }).getByRole('button', { name: /今日/ }).waitFor();
       await checkScreen(page, v.name, 'M-10 イベント・休業日', v.touch);
 
+      // M-18 CSV出力
+      await page.getByRole('link', { name: 'CSV出力' }).click();
+      await page.getByRole('radio', { name: '来場' }).check();
+      await checkScreen(page, v.name, 'M-18 CSV出力', v.touch);
+
       await page.close();
     });
   }
