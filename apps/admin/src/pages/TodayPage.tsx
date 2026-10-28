@@ -2,6 +2,7 @@ import { CANCEL_REASONS, type AdminVisit, type TodayResponse } from '@dr/shared'
 import { useEffect, useRef, useState } from 'react';
 import { DogFace } from '../components/DogFace';
 import { ErrorNotice } from '../components/ErrorNotice';
+import { WalkinForm } from '../components/WalkinForm';
 import { usePolling } from '../hooks/usePolling';
 import { adminApi, adminPost } from '../lib/api';
 import { useAuth } from '../lib/auth';
@@ -43,6 +44,7 @@ export function TodayPage() {
           <div className="today-head">
             <h2>{formatDate(data.date)}の来場</h2>
           </div>
+          {!readOnly && <WalkinForm onDone={reload} />}
           <div className="kpis">
             <Kpi label="来場組数" value={`${data.totals.groups}組`} />
             <Kpi label="ワンちゃん" value={`${data.totals.memberDogs + data.totals.walkinDogs}頭`} />

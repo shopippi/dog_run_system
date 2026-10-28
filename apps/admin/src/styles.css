@@ -87,3 +87,7 @@ body { font-size: 16px; }
 }
 .choices label:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); font-weight: 700; }
 .choices input { accent-color: var(--accent); width: 18px; height: 18px; margin: 0; }
+.walkin-row { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.stepper { display: flex; align-items: center; gap: 10px; }
+.stepper .btn { min-width: 48px; font-size: 1.2rem; }
+.stepper .count { min-width: 3em; text-align: center; font-family: var(--f-display); font-size: 1.3rem; }
