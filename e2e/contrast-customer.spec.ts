@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { cancelVisit, checkinOn } from './customer-helpers';
+import { cancelVisit, checkinOn, joinFamily } from './customer-helpers';
 import { makePhoto, newLineUser, openLiff, registerViaUi } from './helpers';
 
 // お客さん向けの残りの画面(担当E)の、文字と背景のコントラスト(WCAG の 4.5:1)。
@@ -115,6 +115,14 @@ for (const scheme of ['light', 'dark'] as const) {
       await page.getByRole('button', { name: '保存する' }).click();
       await page.getByRole('status').waitFor();
       await check(page, 'L-10 プロフィール');
+
+      // L-11 家族(招待と、いまの家族・抜ける確認)
+      await joinFamily(request, user, newLineUser('パパ'));
+      await openLiff(page, user, '/family');
+      await page.getByRole('region', { name: 'いまの家族' }).getByRole('listitem').nth(1).waitFor();
+      await page.getByRole('button', { name: 'このおうちから抜ける' }).click();
+      await page.getByRole('button', { name: '抜ける', exact: true }).waitFor();
+      await check(page, 'L-11 家族の一覧');
 
       // L-13 旧カードの引き継ぎ(入力中・申請後の状態の一覧)
       await openLiff(page, user, '/migration');

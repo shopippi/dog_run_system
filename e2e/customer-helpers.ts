@@ -34,3 +34,15 @@ export async function cancelVisit(request: APIRequestContext, visitId: number) {
   const res = await request.post(`/admin/api/checkins/${visitId}/cancel`, { headers: adminHeaders, data: { reason: '入力ミス' } });
   expect(res.status(), await res.text()).toBe(200);
 }
+
+/** API で家族を招待し、joiner をそのおうちに参加させる(年代・性別の質問は id 1・2) */
+export async function joinFamily(request: APIRequestContext, inviter: string, joiner: string) {
+  const invite = await request.post('/api/invites', { headers: authHeaders(inviter), data: {} });
+  expect(invite.status(), await invite.text()).toBe(201);
+  const { code } = (await invite.json()) as { code: string };
+  const res = await request.post(`/api/invites/${code}/accept`, {
+    headers: authHeaders(joiner),
+    data: { consent: true, survey: [{ questionId: 1, value: '40代' }, { questionId: 2, value: '男性' }] },
+  });
+  expect(res.status(), await res.text()).toBe(201);
+}

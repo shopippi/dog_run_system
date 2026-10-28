@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { cancelVisit, checkinOn } from './customer-helpers';
+import { cancelVisit, checkinOn, joinFamily } from './customer-helpers';
 import { makePhoto, newLineUser, openLiff, registerViaUi } from './helpers';
 
 // お客さん向けの残りの画面(担当E)の見え方。確かめ方は e2e/liff.layout.spec.ts と同じ。
@@ -76,6 +76,14 @@ for (const d of DEVICES) {
       await page.getByRole('button', { name: '保存する' }).click();
       await page.getByRole('status').waitFor();
       await checkScreen(page, d.name, 'L-10 プロフィール');
+
+      // L-11 家族(招待と、いまの家族・抜ける確認)
+      await joinFamily(request, user, newLineUser('パパ'));
+      await openLiff(page, user, '/family');
+      await page.getByRole('region', { name: 'いまの家族' }).getByRole('listitem').nth(1).waitFor();
+      await page.getByRole('button', { name: 'このおうちから抜ける' }).click();
+      await page.getByRole('button', { name: '抜ける', exact: true }).waitFor();
+      await checkScreen(page, d.name, 'L-11 家族の一覧');
 
       // L-13 旧カードの引き継ぎ(入力中と、申請したあと)
       await openLiff(page, user, '/migration');

@@ -99,3 +99,30 @@ export type ProfileResponse = {
   /** いまの回答。家族向けは自分の回答、おうち向けはおうちの回答(最初の1人や家族が答えたもの) */
   answers: { questionId: number; value: string | null }[];
 };
+
+// ---------------------------------------------------------------
+// C-13 家族の一覧と、自分が抜ける
+// ---------------------------------------------------------------
+
+/** おうちの家族の1人(L-11) */
+export type FamilyMemberItem = {
+  id: number;
+  /** LINE の表示名。分からないときは null */
+  name: string | null;
+  /** 自分かどうか */
+  isMe: boolean;
+  /** 参加した日時(日本時間) */
+  joinedAt: string;
+  joinMethod: import('./constants').JoinMethod;
+};
+
+/** GET /api/family の応答 */
+export type FamilyResponse = { members: FamilyMemberItem[] };
+
+/** 参加方法の画面の言葉 */
+export const JOIN_METHOD_LABELS: Record<import('./constants').JoinMethod, string> = {
+  register: 'はじめに登録',
+  invite: '招待で参加',
+  reception: '受付で参加',
+  merge: 'おうちをまとめて参加',
+};
