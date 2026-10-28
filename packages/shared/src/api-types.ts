@@ -192,3 +192,11 @@ export type HouseholdHit = {
 export type HouseholdSearchResponse = {
   households: HouseholdHit[];
 };
+
+/** 代理チェックインの前に見せる内容(S-04) */
+export type ProxyStatus = {
+  date: string;
+  unusedTickets: number;
+  /** その日にすでにチェックインしていれば、その来場 */
+  visitId: number | null;
+};

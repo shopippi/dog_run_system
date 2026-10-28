@@ -7,8 +7,8 @@ export function auditStatement(
     staffId: number;
     action: string;
     targetType: string;
-    /** 対象のID。直前に追加した行を指すときは { sql: 'last_insert_rowid()' } */
-    targetId: string | number | { sql: string };
+    /** 対象のID。SQL で指すときは { sql: 'last_insert_rowid()' } のように書く */
+    targetId: string | number | { sql: string; args?: unknown[] };
     before?: unknown;
     after?: unknown;
     reason?: string | null;
@@ -24,7 +24,7 @@ export function auditStatement(
     args.staffId,
     args.action,
     args.targetType,
-    ...(typeof args.targetId === 'object' ? [] : [String(args.targetId)]),
+    ...(typeof args.targetId === 'object' ? (args.targetId.args ?? []) : [String(args.targetId)]),
     args.before === undefined ? null : JSON.stringify(args.before),
     args.after === undefined ? null : JSON.stringify(args.after),
     args.reason ?? null,

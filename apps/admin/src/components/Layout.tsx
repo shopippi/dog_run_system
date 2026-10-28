@@ -23,6 +23,7 @@ export function Layout({ children }: { children: ReactNode }) {
         <NavLink to="/" end>
           今日の来場
         </NavLink>
+        {!readOnly && <NavLink to="/proxy">代理チェックイン</NavLink>}
         <NavLink to="/search">おうちを探す</NavLink>
       </nav>
       {readOnly && <div className="ro-bar">製作者のアカウントは見るだけです。変更のボタンは押せません。</div>}
