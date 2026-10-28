@@ -6,7 +6,7 @@ test('A-05 受付で旧カードを確かめて直接入力する。確認の印
   test.setTimeout(90_000);
   const customer = await browser.newPage();
   const user = newLineUser('パパ');
-  const memberNo = await registerViaUi(customer, user, ['ダイフク']);
+  const memberNo = await registerViaUi(customer, user, ['ダイフクマル']);
 
   const page = await browser.newPage({ viewport: { width: 1024, height: 768 }, hasTouch: true });
   await adminLogin(page, 'admin');
@@ -50,7 +50,7 @@ test('A-05 受付で旧カードを確かめて直接入力する。確認の印
 
   // 引き継ぎ済みの一覧に、いつ・誰が・どのおうち・何ポイントが出る
   const list = page.getByRole('region', { name: '引き継ぎ済みの一覧' });
-  const row = list.getByRole('listitem', { name: `ダイフクのおうち ${memberNo} 紙のスタンプカード` });
+  const row = list.getByRole('listitem', { name: `ダイフクマルのおうち ${memberNo} 紙のスタンプカード` });
   await expect(row).toContainText('12ポイント');
   await expect(row).toContainText('管理者');
 });
