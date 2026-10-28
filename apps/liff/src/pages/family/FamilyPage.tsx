@@ -5,6 +5,7 @@ import { QrImage } from '../../components/QrImage';
 import { useMe } from '../../hooks/useMe';
 import { postJson } from '../../lib/api';
 import { inviteUrl, isInLineApp, shareToLine } from '../../lib/liff';
+import { FamilyMembers } from './FamilyMembers';
 
 function formatExpiry(iso: string) {
   const [date, time] = [iso.slice(5, 10).replace('-', '/'), iso.slice(11, 16)];
@@ -85,7 +86,7 @@ export function FamilyPage() {
       {error ? <ErrorNotice error={error} /> : null}
       <div className="actions">
         {isInLineApp() && (
-          <button type="button" className="btn" disabled={busy} onClick={sendByLine}>
+          <button type="button" className="btn" disabled={busy || !householdName} onClick={sendByLine}>
             LINEで招待を送る
           </button>
         )}
@@ -93,6 +94,8 @@ export function FamilyPage() {
           招待のQRコードを表示する
         </button>
       </div>
+
+      <FamilyMembers />
     </main>
   );
 }

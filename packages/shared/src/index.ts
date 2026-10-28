@@ -23,3 +23,7 @@ export * from './api-types-analytics';
 export * from './schemas/analytics';
 export * from './api-types-customer';
 export * from './schemas/customer';
+export * from './analytics';
+export * from './merge';
+export * from './migration';
+export * from './manual-points';

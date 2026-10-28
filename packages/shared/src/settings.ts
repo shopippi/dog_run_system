@@ -39,11 +39,23 @@ export const settingsSchema = z.object({
     start: z.string().nullable(),
     end: z.string().nullable(),
   }),
+  /**
+   * おうちの統合で、統合前に同じ日に両方のおうちが来場していた分のポイントを、そのまま残すか(5.3、20章の未決事項。初期案は残す)。
+   * false にすると、その日のまとめる側の来場で付いたポイントを、統合のときに差し引く
+   */
+  merge_keep_same_day_points: z.boolean(),
   /** 「困ったとき」に出す製作者の連絡先 */
   developer_contact: z.string().max(500),
   /** 利用規約とプライバシーポリシーの本文 */
   terms_text: z.string().max(20000),
   privacy_text: z.string().max(20000),
+  /** 天気を取る観測地点(気象庁のアメダスの地点番号5桁と名前)。未決事項(20章)。初期値は東京 */
+  weather_station: z.object({
+    code: z.string().regex(/^\d{5}$/),
+    name: z.string().min(1).max(40),
+  }),
+  /** LINE ミニアプリ(LIFF)の ID。受付で出す招待QRの URL に使う(未設定なら、同じドメインの /liff/ の URL) */
+  liff_id: z.string().regex(/^$|^\d+-[A-Za-z0-9]+$/, { error: 'LIFF ID の形(例: 1234567890-AbCdEfGh)で入力してください。' }),
 });
 export type Settings = z.infer<typeof settingsSchema>;
 export type SettingKey = keyof Settings;
@@ -60,7 +72,10 @@ export const DEFAULT_SETTINGS: Omit<Settings, 'checkin_passphrase'> = {
   invite_ttl_hours: 24,
   reception_invite_ttl_minutes: 10,
   migration_period: { start: null, end: null },
+  merge_keep_same_day_points: true,
   developer_contact: '',
   terms_text: '(利用規約の本文は準備中です。管理画面の設定から差し替えてください)',
   privacy_text: '(プライバシーポリシーの本文は準備中です。管理画面の設定から差し替えてください)',
+  weather_station: { code: '44132', name: '東京' },
+  liff_id: '',
 };
