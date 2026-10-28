@@ -7,6 +7,9 @@
 - 本物の動きのデモ:[docs/demo.md](docs/demo.md)(Cloudflare なしで、ブラウザだけでシステムを動かす)
 - 開発ルールとコマンド:[CLAUDE.md](CLAUDE.md)
 - デプロイの手順:[docs/deploy.md](docs/deploy.md)
+- 操作マニュアル(管理者用):[docs/manual-admin.md](docs/manual-admin.md)
+- 操作マニュアル(受付スタッフ用):[docs/manual-staff.md](docs/manual-staff.md)
+- お客さま向けのご案内:[docs/manual-customer.md](docs/manual-customer.md)
 
 ```
 apps/api         Cloudflare Workers + Hono(API・自動処理・画面の配信)
