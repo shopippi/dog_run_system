@@ -618,3 +618,150 @@ input::placeholder { color: var(--text-tertiary); }
 @media (min-width: 960px) {
   .side { overflow-y: auto; overscroll-behavior: contain; }
 }
+/* ==== 設定まわり(担当C: ルール・犬種・アンケート・スタッフ・イベント・CSV出力・使い方)。接頭辞 cfg- ==== */
+.cfg-page { max-width: 880px; }
+.cfg-section { display: flex; flex-direction: column; }
+.cfg-section-head { display: flex; flex-direction: column; gap: var(--sp-1); padding: var(--sp-5) var(--sp-5) 0; }
+.cfg-section-head h2 { font-size: var(--fs-17); }
+.cfg-section-body { display: flex; flex-direction: column; gap: var(--sp-4); padding: var(--sp-4) var(--sp-5) var(--sp-5); min-width: 0; }
+.cfg-section-foot {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: var(--sp-2) var(--sp-3);
+  padding: var(--sp-3) var(--sp-5); border-top: 1px solid var(--border);
+}
+.cfg-foot-msg { flex: 1; min-width: 200px; }
+.cfg-fieldset { display: flex; flex-direction: column; gap: var(--sp-4); min-width: 0; margin: 0; padding: 0; border: 0; }
+.cfg-row { display: flex; flex-wrap: wrap; gap: var(--sp-4) var(--sp-8); }
+.cfg-num { display: flex; align-items: center; gap: var(--sp-2); }
+.cfg-num input { width: 112px; }
+.cfg-expiry { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2) var(--sp-4); }
+.cfg-seg button[aria-checked="true"] { color: var(--text); font-weight: var(--fw-strong); }
+.cfg-seg button[aria-checked="true"]::before { background: var(--surface); box-shadow: var(--shadow-seg); }
+.cfg-seg button:disabled { cursor: not-allowed; }
+.field .cfg-textarea { width: 100%; min-height: 120px; padding: 10px var(--sp-3); line-height: var(--lh); resize: vertical; }
+.cfg-wide { width: 100%; max-width: 420px; }
+.cfg-date { width: 200px; max-width: 100%; }
+.cfg-break { overflow-wrap: anywhere; word-break: break-all; }
+.cfg-acts { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
+.cfg-fieldset:disabled input, .cfg-fieldset:disabled textarea, .cfg-fieldset:disabled select { background: var(--surface-sunk); color: var(--text); }
+
+/* 受付のQRコード */
+.cfg-qr-row { display: flex; flex-wrap: wrap; align-items: flex-start; gap: var(--sp-5); }
+.cfg-qr-frame { flex: none; padding: var(--sp-4); border: 1px solid var(--border); border-radius: var(--radius); background: var(--paper); }
+.cfg-qr { display: block; image-rendering: pixelated; }
+.cfg-qr-side { display: flex; flex-direction: column; gap: var(--sp-4); flex: 1; min-width: 240px; }
+.cfg-qr-meta { display: flex; flex-direction: column; gap: var(--sp-3); margin: 0; }
+.cfg-qr-meta dt { font-size: var(--fs-12); color: var(--text-secondary); }
+.cfg-qr-meta dd { margin: 0; font-size: var(--fs-13); }
+
+/* 一覧(犬種・アンケート・スタッフ) */
+.cfg-list { list-style: none; margin: 0; padding: 0; }
+.cfg-list > li + li { border-top: 1px solid var(--border); }
+.cfg-item {
+  display: grid; grid-template-columns: 28px minmax(0, 1fr) auto auto; align-items: center; gap: var(--sp-2) var(--sp-4);
+  min-height: 64px; padding: var(--sp-2) var(--sp-3) var(--sp-2) var(--sp-5);
+}
+.cfg-item-no { font-size: var(--fs-13); color: var(--text-secondary); }
+.cfg-item-body { display: flex; flex-direction: column; min-width: 0; }
+.cfg-item-body b { font-size: var(--fs-15); overflow-wrap: anywhere; }
+.cfg-item-acts { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 2px; }
+.cfg-off .cfg-item-body b, .cfg-off .cfg-item-body .sub-text, .cfg-off .cfg-item-no { color: var(--text-tertiary); }
+.cfg-list-msg { padding: var(--sp-3) var(--sp-5) 0; }
+@media (max-width: 640px) {
+  .cfg-item { grid-template-columns: 28px minmax(0, 1fr) auto; }
+  .cfg-item-acts { grid-column: 2 / -1; justify-content: flex-start; margin-left: calc(-1 * var(--sp-3)); }
+}
+.cfg-add { display: flex; flex-direction: column; gap: var(--sp-3); padding: var(--sp-4) var(--sp-5); }
+.cfg-add-row { display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--sp-3) var(--sp-4); }
+.cfg-add-row .field:first-child { flex: 1; min-width: 220px; }
+
+/* アンケートの集計 */
+.cfg-bars { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--sp-2); }
+.cfg-bars li { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) auto; align-items: center; gap: var(--sp-3); }
+.cfg-bar-label { display: flex; flex-direction: column; min-width: 0; overflow-wrap: anywhere; }
+.cfg-bar-track { height: 8px; border-radius: 4px; background: var(--surface-sunk); overflow: hidden; }
+.cfg-bar { display: block; height: 100%; background: var(--accent); border-radius: 4px; }
+.cfg-bar-n { min-width: 40px; text-align: right; font-variant-numeric: tabular-nums; }
+.cfg-texts { list-style: none; margin: 0; padding: 0; max-height: 320px; overflow: auto; }
+.cfg-texts li { display: flex; flex-direction: column; padding: var(--sp-2) 0; overflow-wrap: anywhere; }
+.cfg-texts li + li { border-top: 1px solid var(--border); }
+
+/* スタッフ */
+.cfg-item.cfg-staff { grid-template-columns: minmax(0, 1fr) auto auto; }
+@media (max-width: 640px) {
+  .cfg-item.cfg-staff { grid-template-columns: minmax(0, 1fr) auto; }
+  .cfg-staff .cfg-item-acts { grid-column: 1 / -1; margin-left: calc(-1 * var(--sp-3)); }
+}
+.cfg-grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--sp-4) var(--sp-5); align-items: start; }
+@media (max-width: 640px) { .cfg-grid2 { grid-template-columns: minmax(0, 1fr); } }
+.btn.ghost.cfg-danger-text { color: var(--danger); }
+.cfg-password { padding: var(--sp-3) var(--sp-4); border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface-sunk); font-size: var(--fs-20); font-weight: var(--fw-strong); user-select: all; }
+@media (hover: hover) { .btn.ghost.cfg-danger-text:hover:not(:disabled) { color: var(--danger); } }
+
+/* M-10 イベント・休業日 */
+.cfg-cal-layout { display: flex; flex-direction: column; gap: var(--sp-4); }
+.cfg-cal { padding: var(--sp-3) var(--sp-3) var(--sp-4); }
+.cfg-cal-head { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2); padding: 0 0 var(--sp-3); }
+.cfg-cal-head h2 { font-size: var(--fs-17); }
+.cfg-cal-grid { display: flex; flex-direction: column; gap: var(--sp-1); }
+.cfg-cal-row { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: var(--sp-1); }
+.cfg-cal-w { padding: var(--sp-1) 0; text-align: center; font-size: var(--fs-12); color: var(--text-secondary); }
+.cfg-cal-gc { display: flex; min-width: 0; }
+.cfg-cal-cell {
+  width: 100%; min-height: 80px; display: flex; flex-direction: column; align-items: flex-start; gap: 2px;
+  padding: 6px var(--sp-2); border: 1px solid var(--border); border-radius: var(--radius);
+  background: var(--surface); color: var(--text); text-align: left; overflow: hidden;
+  transition: background-color var(--ease), border-color var(--ease);
+}
+.cfg-cal-blank { border-color: transparent; background: transparent; }
+.cfg-cal-cell[aria-pressed="true"] { background: var(--accent-50); border-color: var(--accent); }
+.cfg-cal-cell.closed { background: var(--surface-sunk); }
+.cfg-cal-cell.closed[aria-pressed="true"] { background: var(--accent-50); }
+.cfg-cal-d { font-size: var(--fs-13); font-variant-numeric: tabular-nums; }
+.cfg-cal-cell.today .cfg-cal-d { font-weight: var(--fw-strong); color: var(--accent-text); }
+.cfg-cal-hol { max-width: 100%; font-size: var(--fs-12); color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cfg-cal-ev, .cfg-cal-more {
+  max-width: 100%; font-size: var(--fs-12); line-height: 1.4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.cfg-cal-ev { padding-left: 6px; border-left: 2px solid var(--accent); }
+.cfg-cal-more { color: var(--text-secondary); }
+@media (hover: hover) { .cfg-cal-cell:not([aria-pressed="true"]):hover { background: var(--surface-sunk); } }
+@media (max-width: 600px) { .cfg-cal-cell { min-height: 56px; padding: 4px; } .cfg-cal-ev, .cfg-cal-hol { display: none; } }
+
+.cfg-day { display: flex; flex-direction: column; gap: var(--sp-4); padding: var(--sp-5); }
+.cfg-day-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--sp-1) var(--sp-3); }
+.cfg-day-head h2 { font-size: var(--fs-17); }
+.cfg-day-block { display: flex; flex-direction: column; gap: var(--sp-3); padding-top: var(--sp-4); border-top: 1px solid var(--border); }
+.cfg-day-block h3 { font-size: var(--fs-15); }
+.cfg-day-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--sp-2); }
+.cfg-day-form { display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--sp-3); }
+.cfg-day-form .field { flex: 1; min-width: 220px; max-width: 420px; }
+.cfg-day-events { list-style: none; margin: 0; padding: 0; }
+.cfg-day-events li { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); min-height: 56px; }
+.cfg-day-events li + li { border-top: 1px solid var(--border); }
+.cfg-day .cfg-fieldset .field input { max-width: 560px; }
+.cfg-period-hint { align-self: flex-end; padding-bottom: 12px; }
+
+/* M-16 使い方・困ったとき */
+.cfg-help .cfg-section-body { padding-top: var(--sp-2); }
+.cfg-faqs { display: flex; flex-direction: column; }
+.cfg-faq + .cfg-faq { border-top: 1px solid var(--border); }
+.cfg-faq summary {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3);
+  min-height: 48px; padding: var(--sp-2) 0; font-size: var(--fs-15); font-weight: var(--fw-strong); cursor: pointer; list-style: none;
+}
+.cfg-faq summary::-webkit-details-marker { display: none; }
+.cfg-faq summary::after {
+  content: ""; flex: none; width: 8px; height: 8px; margin-right: 4px;
+  border-right: 1.75px solid var(--text-tertiary); border-bottom: 1.75px solid var(--text-tertiary);
+  transform: rotate(45deg); transition: transform var(--ease);
+}
+.cfg-faq[open] summary::after { transform: rotate(-135deg); }
+.cfg-faq summary:focus-visible { outline: 2px solid var(--focus-color); outline-offset: 2px; border-radius: var(--radius-sm); }
+.cfg-faq-a { display: flex; flex-direction: column; gap: var(--sp-2); padding: 0 0 var(--sp-4); color: var(--text-secondary); }
+.cfg-howtos { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: var(--sp-5) var(--sp-6); }
+.cfg-howto { display: flex; flex-direction: column; gap: var(--sp-2); min-width: 0; }
+.cfg-howto h3 { font-size: var(--fs-15); }
+.cfg-howto h3 a { display: inline-flex; align-items: center; min-height: var(--control-h); color: var(--accent-text); text-decoration: none; }
+.cfg-howto .plain-list { font-size: var(--fs-13); }
+.cfg-contact { white-space: pre-wrap; overflow-wrap: anywhere; font-size: var(--fs-15); }
+@media (hover: hover) { .cfg-howto h3 a:hover { text-decoration: underline; } }
