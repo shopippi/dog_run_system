@@ -1,6 +1,7 @@
 import { expiryFor, planCheckin, toJstDate, toJstIso, type CheckinResult, type Settings, type TodayVisit, type VisitMethod } from '@dr/shared';
 import { errors } from '../lib/errors';
 import { auditStatement } from './audit';
+import { refreshDailyStatsQuietly } from './daily-stats';
 import { nextUsableTicket, pointBalance } from './points';
 
 /** そのおうちの、指定した日の来場(取り消し済みを除く) */
@@ -161,6 +162,7 @@ export async function recordCheckin(
     throw e;
   }
   const visitId = results[0]!.meta.last_row_id;
+  await refreshDailyStatsQuietly(db, visitDate, now);
   return {
     visitId,
     pointsAwarded: plan.pointsAwarded,
@@ -193,6 +195,7 @@ export async function addDogsToVisit(
       .prepare('UPDATE visits SET dog_count = (SELECT COUNT(*) FROM visit_dogs WHERE visit_id = ?1) WHERE id = ?1')
       .bind(visitId),
   ]);
+  await refreshDailyStatsQuietly(db, visitDate, now);
 }
 
 /**
@@ -283,4 +286,5 @@ export async function cancelCheckin(
   if (results.at(-1)!.meta.changes !== 1) {
     throw errors.conflict('already_cancelled', 'このチェックインは、すでに取り消されています。画面を読み込み直してください。');
   }
+  await refreshDailyStatsQuietly(db, visit.visit_date, args.now);
 }

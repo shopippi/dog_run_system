@@ -17,6 +17,7 @@ import { parseJson } from '../../lib/validate';
 import { auditStatement } from '../../services/audit';
 import { cancelCheckin, findVisitOn, recordCheckin, requireActiveDogs } from '../../services/checkins';
 import { unusedTicketCount } from '../../services/points';
+import { refreshDailyStatsQuietly } from '../../services/daily-stats';
 
 export const adminCheckinRoutes = new Hono<AppEnv>();
 
@@ -54,6 +55,7 @@ adminCheckinRoutes.post('/walkins', requireRole('staff', 'admin'), async (c) => 
       now,
     }),
   ]);
+  await refreshDailyStatsQuietly(db, toJstDate(now), now);
   return c.json({ id: results[0]!.meta.last_row_id }, 201);
 });
 

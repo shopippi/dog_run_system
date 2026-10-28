@@ -323,3 +323,98 @@ input::placeholder { color: var(--text-tertiary); }
   .nav-group { flex-direction: column; gap: 2px; padding-bottom: var(--sp-3); }
   .nav-label { display: block; margin: 0; padding: var(--sp-2) var(--sp-3) var(--sp-1); font-size: var(--fs-12); color: var(--text-tertiary); font-weight: var(--fw-strong); letter-spacing: .04em; }
 }
+
+/* ---- M-05 ダッシュボード(担当D: dash-) ---- */
+.dash { display: flex; flex-direction: column; gap: var(--sp-4); transition: opacity var(--ease); }
+.dash[aria-busy="true"] { opacity: .6; }
+.dash-period { display: flex; flex-direction: column; gap: var(--sp-3); padding: var(--sp-4) var(--sp-5); }
+.dash-custom { display: flex; flex-wrap: wrap; gap: var(--sp-3) var(--sp-4); }
+.dash-custom input { width: 200px; max-width: 100%; }
+.dash-kpis { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); }
+.dash-kpis .kpi + .kpi { border-left: 1px solid var(--border); }
+.dash-kpi-note { font-size: var(--fs-12); color: var(--text-secondary); }
+@media (max-width: 1180px) {
+  .dash-kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .dash-kpis .kpi:nth-child(3n + 1) { border-left: 0; }
+  .dash-kpis .kpi:nth-child(n + 4) { border-top: 1px solid var(--border); }
+}
+@media (max-width: 600px) {
+  .dash-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .dash-kpis .kpi:nth-child(3n + 1) { border-left: 1px solid var(--border); }
+  .dash-kpis .kpi:nth-child(2n + 1) { border-left: 0; }
+  .dash-kpis .kpi:nth-child(n + 3) { border-top: 1px solid var(--border); }
+}
+.dash-kpis.dash-kpis-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.dash-kpis.dash-kpis-3 .kpi { padding: var(--sp-2) var(--sp-3); }
+.dash-kpis.dash-kpis-3 .kpi:first-child { padding-left: 0; }
+.dash-kpis.dash-kpis-3 .kpi:nth-child(n) { border-top: 0; }
+.dash-kpis.dash-kpis-3 .kpi + .kpi { border-left: 1px solid var(--border); }
+.dash-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--sp-4); align-items: start; }
+@media (max-width: 1100px) { .dash-grid { grid-template-columns: minmax(0, 1fr); } }
+.dash-panel { display: flex; flex-direction: column; gap: var(--sp-3); padding: var(--sp-5); }
+.dash-panel-head { display: flex; flex-direction: column; gap: 2px; }
+.dash-panel-head h2 { font-size: var(--fs-15); }
+.dash-panel-head-row { flex-direction: row; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: var(--sp-3); }
+.dash-panel-head-row .segment { grid-auto-columns: minmax(88px, 1fr); }
+.dash-note { font-size: var(--fs-13); color: var(--text-secondary); }
+.dash-chart { position: relative; width: 100%; min-width: 0; }
+.dash-panel .empty { padding: var(--sp-6) var(--sp-3); }
+.dash-table-wrap { overflow-x: auto; margin: 0 calc(-1 * var(--sp-5)); padding: 0 var(--sp-5); }
+.dash-table { width: 100%; border-collapse: collapse; font-size: var(--fs-14); font-variant-numeric: tabular-nums; }
+.dash-table th, .dash-table td { padding: 10px var(--sp-3); text-align: left; border-bottom: 1px solid var(--border); white-space: nowrap; }
+.dash-table thead th { font-size: var(--fs-12); font-weight: var(--fw-strong); color: var(--text-secondary); }
+.dash-table tbody th { font-weight: var(--fw-regular); }
+.dash-table tr > :first-child { padding-left: 0; }
+.dash-table .n { text-align: right; }
+.dash-table tbody tr:last-child > * { border-bottom: 0; }
+.dash-texts { list-style: none; margin: 0; padding: 0; }
+.dash-texts li { padding: var(--sp-2) 0; border-top: 1px solid var(--border); }
+.dash-texts li:first-child { border-top: 0; }
+.dash-dormant { list-style: none; margin: 0 calc(-1 * var(--sp-5)) calc(-1 * var(--sp-5)); padding: 0; border-top: 1px solid var(--border); }
+.dash-dormant > li + li { border-top: 1px solid var(--border); }
+.dash-dormant-row {
+  display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: var(--sp-4);
+  min-height: 64px; padding: var(--sp-3) var(--sp-5); color: var(--text); text-decoration: none;
+  transition: background-color var(--ease);
+}
+.dash-dormant-row:focus-visible { outline-offset: -2px; }
+.dash-dormant-body { display: flex; flex-direction: column; min-width: 0; }
+.dash-dormant-body b { font-size: var(--fs-15); }
+.dash-dormant-meta { display: flex; flex-direction: column; align-items: flex-end; text-align: right; font-variant-numeric: tabular-nums; }
+@media (max-width: 600px) {
+  .dash-dormant-row { grid-template-columns: auto minmax(0, 1fr); }
+  .dash-dormant-meta { grid-column: 2; align-items: flex-start; text-align: left; }
+}
+@media (hover: hover) {
+  .dash-dormant-row:hover { background: var(--surface-sunk); }
+}
+
+/* ---- M-17 システムの状態(担当D: status-) ---- */
+.status-list { list-style: none; margin: 0; padding: 0; }
+.status-list > li + li { border-top: 1px solid var(--border); }
+.status-row {
+  display: grid; grid-template-columns: 132px minmax(0, 1fr) auto; align-items: start; gap: var(--sp-4);
+  min-height: 64px; padding: var(--sp-4) var(--sp-4) var(--sp-4) var(--sp-5);
+}
+.status-level { display: inline-flex; align-items: center; gap: var(--sp-2); padding-top: 2px; font-size: var(--fs-14); font-weight: var(--fw-strong); }
+.status-dot { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+.status-level.green { color: var(--accent-text); }
+.status-level.green .status-dot { background: var(--accent); }
+.status-level.yellow { color: var(--warning); }
+.status-level.yellow .status-dot { background: var(--warning); }
+.status-level.red { color: var(--danger); }
+.status-level.red .status-dot { background: var(--danger); }
+.status-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.status-body b { font-size: var(--fs-15); }
+.status-summary { font-size: var(--fs-14); }
+.status-message, .status-result { font-size: var(--fs-13); color: var(--text-secondary); overflow-wrap: anywhere; }
+.status-result { color: var(--text); }
+.status-body .alert { margin-top: var(--sp-2); }
+.status-acts { display: flex; justify-content: flex-end; }
+@media (max-width: 720px) {
+  .status-row { grid-template-columns: minmax(0, 1fr); gap: var(--sp-2); }
+  .status-acts { justify-content: flex-start; }
+}
+.status-panel { display: flex; flex-direction: column; gap: var(--sp-3); padding: var(--sp-5); }
+.status-panel h2 { font-size: var(--fs-15); }
+.status-runs .status-msg-cell { white-space: normal; min-width: 240px; color: var(--text-secondary); }
