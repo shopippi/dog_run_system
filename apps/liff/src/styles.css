@@ -163,3 +163,8 @@ fieldset { border: 1px solid var(--line); margin: 0; min-width: 0; }
   background: var(--surface); border: 1px solid var(--line); border-radius: 12px; color: var(--ink); font-weight: 700;
 }
 .center { text-align: center; }
+.invite-card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 16px;
+  display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center;
+}
+.qr { background: #fff; border-radius: 8px; padding: 6px; image-rendering: pixelated; }

@@ -110,3 +110,9 @@ export type CheckinDetail = {
   unusedTickets: number;
   pointsPerTicket: number;
 };
+
+/** 作った招待(C-11) */
+export type InviteCreated = {
+  code: string;
+  expiresAt: string;
+};

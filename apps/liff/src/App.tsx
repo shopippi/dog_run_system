@@ -10,6 +10,7 @@ import { CheckinPage } from './pages/checkin/CheckinPage';
 import { DogEditPage } from './pages/dogs/DogEditPage';
 import { DogNewPage } from './pages/dogs/DogNewPage';
 import { DogsPage } from './pages/dogs/DogsPage';
+import { FamilyPage } from './pages/family/FamilyPage';
 import { SurveyPrompt } from './pages/SurveyPrompt';
 
 export function App() {
@@ -45,6 +46,7 @@ function Registered() {
       <Route path="/checkin" element={<CheckinPage />} />
       <Route path="/checkin/done/:id" element={<CheckinDonePage />} />
       <Route path="/dogs" element={<DogsPage />} />
+      <Route path="/family" element={<FamilyPage />} />
       <Route path="/dogs/new" element={<DogNewPage />} />
       <Route path="/dogs/:id" element={<DogEditPage />} />
       <Route path="*" element={<CardPage />} />
