@@ -93,3 +93,19 @@ fieldset { border: 1px solid var(--line); margin: 0; min-width: 0; }
 .dog-row-body b { font-family: var(--f-display); font-size: 1.05rem; }
 .chev { color: var(--muted); font-size: 1.4rem; }
 .panel.retire { margin-top: 12px; }
+.dogpick { display: flex; flex-direction: column; gap: 8px; }
+.dogpick label {
+  display: flex; align-items: center; gap: 12px; background: var(--surface); border: 1.5px solid var(--line);
+  border-radius: 12px; padding: 8px 12px; min-height: 64px;
+}
+.dogpick label:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); }
+.dogpick input { accent-color: var(--accent); width: 22px; height: 22px; flex: none; margin: 0; }
+.dogpick label > span { display: flex; flex-direction: column; }
+.dogpick b { font-family: var(--f-display); font-size: 1.05rem; }
+.ticket-toggle {
+  display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 12px;
+  background: var(--gold-soft); color: var(--ink); border: 1.5px solid var(--gold);
+}
+.ticket-toggle input { width: 22px; height: 22px; accent-color: var(--gold); flex: none; margin: 0; }
+.ticket-toggle > span { display: flex; flex-direction: column; }
+.ticket-toggle b { color: var(--gold); }

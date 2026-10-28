@@ -8,3 +8,5 @@ export * from './schemas/register';
 export * from './schemas/dog';
 export * from './image';
 export * from './schemas/survey';
+export * from './points';
+export * from './schemas/checkin';

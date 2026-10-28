@@ -4,6 +4,8 @@ import { ErrorNotice } from './components/ErrorNotice';
 import { useMe } from './hooks/useMe';
 import { usePendingSurvey } from './hooks/usePendingSurvey';
 import { RegisterFlow } from './pages/register/RegisterFlow';
+import { CheckinDonePage } from './pages/checkin/CheckinDonePage';
+import { CheckinPage } from './pages/checkin/CheckinPage';
 import { DogEditPage } from './pages/dogs/DogEditPage';
 import { DogNewPage } from './pages/dogs/DogNewPage';
 import { DogsPage } from './pages/dogs/DogsPage';
@@ -39,6 +41,8 @@ function Registered({ memberNo, name }: { memberNo: string; name: string }) {
   }
   return (
     <Routes>
+      <Route path="/checkin" element={<CheckinPage />} />
+      <Route path="/checkin/done/:id" element={<CheckinDonePage />} />
       <Route path="/dogs" element={<DogsPage />} />
       <Route path="/dogs/new" element={<DogNewPage />} />
       <Route path="/dogs/:id" element={<DogEditPage />} />
@@ -54,6 +58,9 @@ function Home({ memberNo, name }: { memberNo: string; name: string }) {
         <h2>{name}</h2>
         <p className="mono">{memberNo}</p>
       </div>
+      <Link to="/checkin" className="btn as-link">
+        チェックイン
+      </Link>
       <Link to="/dogs" className="btn sub as-link">
         ワンちゃん
       </Link>
