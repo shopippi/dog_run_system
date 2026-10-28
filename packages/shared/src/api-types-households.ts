@@ -15,6 +15,10 @@ export const AUDIT_ACTION_LABELS: Record<string, string> = {
   'audit.undo': '元に戻す',
   'household.rename': 'おうちの呼び名の変更',
   'points.manual': 'ポイント・無料券の手動登録',
+  'dog.update': 'ワンちゃんの情報の変更',
+  'dog.photo': 'ワンちゃんの写真の差し替え',
+  'dog.photo_rotate': 'ワンちゃんの写真の回転',
+  'dog.photo_remove': 'ワンちゃんの写真の削除',
 };
 
 export function auditActionLabel(action: string): string {
@@ -192,4 +196,42 @@ export type ManualPointsPreview = {
   /** ポイントがたまって発行する無料券 */
   ticketsIssued: number;
   pointsPerTicket: number;
+};
+
+// ============================================================
+// A-04 犬の情報の変更
+// ============================================================
+
+/** 犬の変更履歴の項目(dog_changes.field)の言葉 */
+export const DOG_FIELD_LABELS: Record<string, string> = {
+  name: '名前',
+  breed: '犬種',
+  size: 'サイズ',
+  sex: '性別',
+  birth_ym: '生まれた年月',
+  status: '登録の状態',
+  photo: '写真',
+};
+
+/** 犬の変更履歴の1行 */
+export type DogChangeEntry = {
+  id: number;
+  at: string;
+  fieldLabel: string;
+  /** 画面に出す形にした変更前・変更後 */
+  before: string | null;
+  after: string | null;
+  reason: string | null;
+  /** 変えた人(スタッフの名前、またはお客さん) */
+  actorName: string;
+};
+
+/** 犬の編集画面(M-07)の内容 */
+export type AdminDogDetail = {
+  dog: import('./api-types').DogSummary;
+  household: { id: number; memberNo: string; displayName: string; status: import('./constants').HouseholdStatus };
+  /** 選べる犬種(表示しない犬種でも、今の犬種は含める) */
+  breeds: import('./api-types').Breed[];
+  /** 変更の履歴(新しい順) */
+  changes: DogChangeEntry[];
 };

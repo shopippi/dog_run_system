@@ -60,6 +60,19 @@ for (const scheme of ['light', 'dark'] as const) {
       await confirm.getByRole('button', { name: '登録する' }).click();
       await page.getByRole('status').waitFor();
       await check(page, 'M-06 おうちの詳細(登録後)');
+
+      // M-07 犬の編集
+      await page.getByRole('link', { name: 'ルルの情報を見る・変える' }).click();
+      await page.getByRole('heading', { name: 'ワンちゃんの情報の変更' }).waitFor();
+      await page.getByRole('combobox', { name: /犬種/ }).selectOption({ label: '柴犬' });
+      await page.getByLabel('犬種・サイズを変える理由').fill('まちがい');
+      await check(page, 'M-07 犬の編集(変更中)');
+      await page.getByRole('button', { name: '保存する' }).click();
+      await page.getByRole('status').waitFor();
+      await check(page, 'M-07 犬の編集(保存後・履歴)');
+      await page.getByRole('button', { name: '登録を解除する' }).click();
+      await page.getByRole('dialog', { name: 'ワンちゃんの登録を解除する' }).waitFor();
+      await check(page, 'M-07 登録解除の確認');
       await page.close();
     });
   });

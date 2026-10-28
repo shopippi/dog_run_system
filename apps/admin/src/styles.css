@@ -420,3 +420,29 @@ input::placeholder { color: var(--text-tertiary); }
 .mp-result > div + div { border-top: 1px solid var(--border); }
 .mp-result dt { color: var(--text-secondary); font-size: var(--fs-13); }
 .mp-result dd { margin: 0; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+
+/* ---- M-07 犬の編集(A-04) ---- */
+.hh-link { color: var(--text); text-decoration: none; transition: background-color var(--ease); }
+.hh-link:focus-visible { outline-offset: -2px; }
+.hh-link .icon { color: var(--text-tertiary); }
+.danger-text { color: var(--danger); }
+.btn.ghost.danger-text { color: var(--danger); }
+.dg-photo-body { display: flex; flex-wrap: wrap; align-items: flex-start; gap: var(--sp-5); padding: var(--sp-5); }
+.dg-photo-img { display: block; width: 176px; height: 176px; border-radius: var(--radius-lg); object-fit: cover; background: var(--surface-sunk); }
+.dg-photo-side { display: flex; flex-direction: column; gap: var(--sp-3); flex: 1; min-width: 240px; }
+.dg-photo-acts { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
+.dg-photo-acts label.btn { cursor: pointer; }
+.dg-photo-acts label.btn:has(input:focus-visible) { outline: 2px solid var(--focus-color); outline-offset: 2px; }
+.dg-form .hh-section-title { flex-wrap: wrap; }
+.dg-form .hh-section-title .mono { font-size: var(--fs-13); }
+.dg-fields { margin: 0; padding: var(--sp-5); border: 0; min-width: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: var(--sp-5) var(--sp-6); }
+.dg-fields .segment { grid-auto-columns: minmax(88px, 1fr); }
+.dg-fields .segment button[aria-checked="true"] { color: var(--text); font-weight: var(--fw-strong); }
+.dg-fields .segment button[aria-checked="true"]::before { background: var(--surface); box-shadow: var(--shadow-seg); }
+.dg-fields select { appearance: auto; }
+.dg-foot { display: flex; flex-direction: column; gap: var(--sp-3); padding: var(--sp-4) var(--sp-5); border-top: 1px solid var(--border); }
+.dg-foot-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--sp-3); }
+@media (hover: hover) {
+  .hh-link:hover { background: var(--surface-sunk); }
+}
+.dg-photo-acts input[type="file"] { font-size: var(--fs-input); }

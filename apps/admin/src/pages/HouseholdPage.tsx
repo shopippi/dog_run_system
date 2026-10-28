@@ -135,7 +135,7 @@ function Detail({
       <Section title="ワンちゃん" count={activeDogs.length} unit="頭">
         <ul className="hh-list" aria-label="ワンちゃん">
           {d.dogs.map((x) => (
-            <DogRow key={x.id} dog={x} householdId={d.id} />
+            <DogRow key={x.id} dog={x} />
           ))}
         </ul>
       </Section>
@@ -258,20 +258,24 @@ function Answers({ list }: { list: { label: string; answer: string | null }[] })
   );
 }
 
-function DogRow({ dog, householdId }: { dog: DogSummary; householdId: number }) {
-  void householdId;
+function DogRow({ dog }: { dog: DogSummary }) {
   const facts = [dog.breedName, DOG_SIZE_LABELS[dog.size], dog.sex ? DOG_SEX_LABELS[dog.sex] : null, dog.birthYm ? `${formatYm(dog.birthYm)}生まれ` : null]
     .filter(Boolean)
     .join(' · ');
   return (
-    <li className={`hh-row hh-dog${dog.status !== 'active' ? ' off' : ''}`}>
-      <DogFace name={dog.name} breedName={dog.breedName} url={dog.thumbUrl} size={48} />
-      <span className="hh-main">
-        <b>{dog.name}</b>
-        <span className="sub-text">{facts}</span>
-      </span>
-      <span className="hh-meta mono">{dog.dogNo}</span>
-      <span className="hh-end">{dog.status !== 'active' && <span className="badge">{DOG_STATUS_LABELS[dog.status]}</span>}</span>
+    <li>
+      <Link to={`/dogs/${dog.id}`} className={`hh-row hh-dog hh-link${dog.status !== 'active' ? ' off' : ''}`} aria-label={`${dog.name}の情報を見る・変える`}>
+        <DogFace name={dog.name} breedName={dog.breedName} url={dog.thumbUrl} size={48} />
+        <span className="hh-main">
+          <b>{dog.name}</b>
+          <span className="sub-text">{facts}</span>
+        </span>
+        <span className="hh-meta mono">{dog.dogNo}</span>
+        <span className="hh-end">
+          {dog.status !== 'active' && <span className="badge">{DOG_STATUS_LABELS[dog.status]}</span>}
+          <Icon name="chevron-right" />
+        </span>
+      </Link>
     </li>
   );
 }

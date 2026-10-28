@@ -1,4 +1,6 @@
 import { z } from 'zod';
+import { DOG_SEXES, DOG_SIZES } from '../constants';
+import { birthYmSchema, dogNameSchema } from './dog';
 
 // 入力チェック(households: おうちの詳細と記録、操作ログ)
 
@@ -57,3 +59,25 @@ export function manualReasonText(input: { reason: ManualPointReason; note: strin
   if (!input.note) return input.reason;
   return input.reason === 'その他' ? `その他: ${input.note}` : `${input.reason}(${input.note})`;
 }
+
+/**
+ * 管理者による犬の情報の変更(A-04)。犬種とサイズを変えるときは理由が必要(6.1)。
+ * status は登録解除(retired)と、その取り消し(active)。
+ */
+export const adminDogPatchSchema = z
+  .object({
+    name: dogNameSchema,
+    breedId: z.number({ error: '犬種を選んでください。' }).int().positive({ error: '犬種を選んでください。' }),
+    breedOther: z.string().trim().max(30, { error: '犬種は30文字までで入力してください。' }).nullable(),
+    size: z.enum(DOG_SIZES, { error: 'サイズ(小型・中型・大型)を選んでください。' }),
+    sex: z.enum(DOG_SEXES).nullable(),
+    birthYm: birthYmSchema.nullable(),
+    status: z.enum(['active', 'retired']),
+    reason: z.string().trim().max(100, { error: '理由は100文字までで入力してください。' }),
+  })
+  .partial();
+export type AdminDogPatch = z.infer<typeof adminDogPatchSchema>;
+
+/** 写真の変更の種類(A-04)。回転は画面側で回した JPEG を送る */
+export const DOG_PHOTO_KINDS = ['replace', 'rotate'] as const;
+export type DogPhotoKind = (typeof DOG_PHOTO_KINDS)[number];

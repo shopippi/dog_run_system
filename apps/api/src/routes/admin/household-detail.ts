@@ -1,8 +1,15 @@
 import {
+  DOG_PHOTO_KINDS,
+  DOG_FIELD_LABELS,
+  DOG_SEX_LABELS,
+  DOG_SIZE_LABELS,
+  DOG_STATUS_LABELS,
+  adminDogPatchSchema,
   householdRenameSchema,
   manualPointsSchema,
   normalizeForSearch,
   toJstIso,
+  type AdminDogDetail,
   type HouseholdDetail,
   type ManualPointsPreview,
 } from '@dr/shared';
@@ -14,7 +21,17 @@ import { requireRole } from '../../lib/staff-auth';
 import { parseJson } from '../../lib/validate';
 import { auditStatement } from '../../services/audit';
 import { registerAuditDetail } from '../../services/audit-view';
-import { refreshAutoNameStatement, syncHouseholdSearchName } from '../../services/dogs';
+import { ADMIN_MEDIA_BASE } from '../../services/admin-visits';
+import {
+  getAdminDogDetail,
+  patchDog,
+  photoAuditStatement,
+  removeDogPhoto,
+  requireEditableDog,
+  undoDogPhoto,
+  undoDogUpdate,
+} from '../../services/admin-dogs';
+import { getDog, refreshAutoNameStatement, saveDogPhoto, syncHouseholdSearchName } from '../../services/dogs';
 import { getHouseholdRow, householdNotFound, loadHouseholdDetail } from '../../services/household-detail';
 import { applyManualPoints, previewManualPoints, undoManualPoints } from '../../services/manual-points';
 import { registerUndo } from '../../services/undo';
@@ -167,3 +184,85 @@ registerAuditDetail('points.manual', (_b, a) => {
 });
 
 registerUndo('points.manual', async (db, log, ctx) => undoManualPoints(db, log, ctx, await loadSettings(db)));
+
+// ------------------------------------------------------------
+// A-04 犬の情報の変更(管理者。製作者は見るだけ)
+// ------------------------------------------------------------
+
+// 犬の編集画面(M-07)の内容: 犬・おうち・選べる犬種・変更の履歴
+householdDetailRoutes.get('/dogs/:id', requireRole('admin'), async (c) => {
+  const body: AdminDogDetail = await getAdminDogDetail(c.env.DB, Number(c.req.param('id')));
+  return c.json(body);
+});
+
+// 名前・犬種・サイズ・性別・生まれた年月・登録解除とその取り消し。犬種とサイズは理由つきで履歴に残す(6.1)
+householdDetailRoutes.patch('/dogs/:id', requireRole('admin'), async (c) => {
+  const db = c.env.DB;
+  const id = Number(c.req.param('id'));
+  const patch = await parseJson(c, adminDogPatchSchema);
+  await patchDog(db, id, patch, c.get('staff').id, c.get('now'));
+  const body: AdminDogDetail = await getAdminDogDetail(db, id);
+  return c.json(body);
+});
+
+// 写真の差し替え・回転。画面側で縮小(と回転)した JPEG を受け取る。前の写真は R2 に残し、元に戻せる
+householdDetailRoutes.post('/dogs/:id/photo', requireRole('admin'), async (c) => {
+  const db = c.env.DB;
+  const id = Number(c.req.param('id'));
+  const dog = await requireEditableDog(db, id);
+  let form: FormData;
+  try {
+    form = await c.req.formData();
+  } catch {
+    throw errors.badRequest('写真を受け取れませんでした。写真を選び直して、もう一度お試しください。');
+  }
+  const kind = (DOG_PHOTO_KINDS as readonly string[]).includes(String(form.get('kind'))) ? String(form.get('kind')) : 'replace';
+  const staffId = c.get('staff').id;
+  const now = c.get('now');
+  const saved = await saveDogPhoto(db, c.env.MEDIA, id, form, { type: 'staff', id: staffId }, now);
+  await photoAuditStatement(db, {
+    staffId,
+    dogId: id,
+    action: kind === 'rotate' ? 'dog.photo_rotate' : 'dog.photo',
+    before: { photo: dog.photo_key, thumb: dog.thumb_key },
+    after: { photo: saved.photoKey, thumb: saved.thumbKey },
+    now,
+  }).run();
+  return c.json({ dog: await getDog(db, id, ADMIN_MEDIA_BASE) });
+});
+
+// 写真の削除(photo_key を空にする。R2 の写真は消さない)
+householdDetailRoutes.delete('/dogs/:id/photo', requireRole('admin'), async (c) => {
+  const db = c.env.DB;
+  const id = Number(c.req.param('id'));
+  await removeDogPhoto(db, id, c.get('staff').id, c.get('now'));
+  return c.json({ dog: await getDog(db, id, ADMIN_MEDIA_BASE) });
+});
+
+const DOG_VALUE_TEXT: Record<string, (v: any) => string> = {
+  name: (v) => v,
+  breedName: (v) => v,
+  size: (v) => DOG_SIZE_LABELS[v as keyof typeof DOG_SIZE_LABELS] ?? v,
+  sex: (v) => (v ? (DOG_SEX_LABELS[v as keyof typeof DOG_SEX_LABELS] ?? v) : '未登録'),
+  birthYm: (v) => (v ? `${String(v).slice(0, 4)}年${Number(String(v).slice(5, 7))}月` : '未登録'),
+  status: (v) => DOG_STATUS_LABELS[v as keyof typeof DOG_STATUS_LABELS] ?? v,
+};
+const DOG_VALUE_LABEL: Record<string, string> = {
+  name: DOG_FIELD_LABELS.name!,
+  breedName: DOG_FIELD_LABELS.breed!,
+  size: DOG_FIELD_LABELS.size!,
+  sex: DOG_FIELD_LABELS.sex!,
+  birthYm: DOG_FIELD_LABELS.birth_ym!,
+  status: DOG_FIELD_LABELS.status!,
+};
+registerAuditDetail('dog.update', (b, a) => {
+  if (!a) return null;
+  return Object.keys(DOG_VALUE_LABEL)
+    .filter((k) => k in a)
+    .map((k) => `${DOG_VALUE_LABEL[k]}: ${DOG_VALUE_TEXT[k]!(b?.[k])} → ${DOG_VALUE_TEXT[k]!(a[k])}`)
+    .join('、');
+});
+registerUndo('dog.update', undoDogUpdate);
+registerUndo('dog.photo', undoDogPhoto);
+registerUndo('dog.photo_rotate', undoDogPhoto);
+registerUndo('dog.photo_remove', undoDogPhoto);

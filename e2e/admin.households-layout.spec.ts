@@ -1,6 +1,6 @@
 import { expect, test, type Browser } from '@playwright/test';
 import { cancelOnToday, checkScreen, checkinViaLiff } from './households-helpers';
-import { adminLogin, newLineUser, registerViaUi } from './helpers';
+import { adminLogin, makePhoto, newLineUser, registerViaUi } from './helpers';
 
 // おうちの詳細と記録(M-06、M-07、M-15)の見え方。PC(1280)とタブレット縦(768)で確かめる。
 const VIEWPORTS = [
@@ -73,6 +73,20 @@ test.describe('おうちの詳細と記録の見え方', () => {
       await checkScreen(page, v.name, 'M-06 ポイントの手動登録(確認)', v.touch);
       await confirm.getByRole('button', { name: '戻る' }).click();
       await page.getByRole('dialog', { name: 'ポイント・無料券の手動登録' }).getByRole('button', { name: 'やめる' }).click();
+
+      // M-07 犬の編集(犬種を変えて理由の入力欄を出したところ・写真を選んだところ)
+      await page.getByRole('link', { name: 'ココアの情報を見る・変える' }).click();
+      await expect(page.getByRole('heading', { name: '登録の内容' })).toBeVisible();
+      await checkScreen(page, v.name, 'M-07 犬の編集', v.touch);
+      await page.getByRole('combobox', { name: /犬種/ }).selectOption({ label: '柴犬' });
+      await page.locator('input[type=file]').setInputFiles({ name: 'a.jpg', mimeType: 'image/jpeg', buffer: await makePhoto(page, 1200, 900) });
+      await expect(page.getByRole('img', { name: 'ココアの写真' })).toBeVisible();
+      await expect(page.getByLabel('犬種・サイズを変える理由')).toBeVisible();
+      await checkScreen(page, v.name, 'M-07 犬の編集(変更中)', v.touch);
+      await page.getByRole('button', { name: '登録を解除する' }).click();
+      await expect(page.getByRole('dialog', { name: 'ワンちゃんの登録を解除する' })).toBeVisible();
+      await checkScreen(page, v.name, 'M-07 登録解除の確認', v.touch);
+      await page.getByRole('dialog', { name: 'ワンちゃんの登録を解除する' }).getByRole('button', { name: 'やめる' }).click();
 
       await page.close();
     });

@@ -19,6 +19,7 @@ import { HelpPage } from './pages/HelpPage';
 import { StatusPage } from './pages/StatusPage';
 import { ExportPage } from './pages/ExportPage';
 import { DashboardPage } from './pages/DashboardPage';
+import { DogEditPage } from './pages/DogEditPage';
 
 export function App() {
   return (
@@ -58,6 +59,7 @@ function Gate() {
           }
         />
         <Route path="/households/:id" element={<HouseholdPage />} />
+        <Route path="/dogs/:id" element={<DogEditPage />} />
         <Route path="/merge" element={<MergePage />} />
         <Route path="/requests" element={<RequestsPage />} />
         <Route path="/events" element={<EventsPage />} />
