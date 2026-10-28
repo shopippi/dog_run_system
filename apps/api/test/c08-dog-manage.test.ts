@@ -22,7 +22,7 @@ describe('C-08 犬の管理', () => {
     expect(me.body.household.displayName).toBe('アル・ニコ・モモのおうち');
   });
 
-  it('名前・性別・生まれた年月・避妊去勢を変えられ、変更履歴が残る', async () => {
+  it('名前・性別・生まれた年月を変えられ、変更履歴が残る', async () => {
     const r = await registerUser(PAPA);
     const id = r.dogs[0]!.id;
     const res = await call(`/api/dogs/${id}`, {

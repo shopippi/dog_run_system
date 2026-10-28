@@ -4,15 +4,12 @@ import {
   DOG_SEX_LABELS,
   DOG_SIZES,
   DOG_SIZE_LABELS,
-  NEUTERED_LABELS,
-  NEUTERED_VALUES,
   dogInputSchema,
   type Breed,
   type DogInput,
   type DogSummary,
   type DogSex,
   type DogSize,
-  type Neutered,
 } from '@dr/shared';
 import { useId, useState } from 'react';
 import { resizePhoto, type ResizedPhoto } from '../lib/photo';
@@ -27,7 +24,6 @@ export type DogDraft = {
   sex: DogSex | null;
   birthYear: string;
   birthMonth: string;
-  neutered: Neutered | null;
   photo: ResizedPhoto | null;
 };
 
@@ -43,7 +39,6 @@ export function dogToDraft(d: DogSummary): DogDraft {
     sex: d.sex,
     birthYear: y,
     birthMonth: m ? String(Number(m)) : '',
-    neutered: d.neutered,
     photo: null,
   };
 }
@@ -58,7 +53,6 @@ export function emptyDogDraft(): DogDraft {
     sex: null,
     birthYear: '',
     birthMonth: '',
-    neutered: null,
     photo: null,
   };
 }
@@ -76,7 +70,6 @@ export function draftToInput(d: DogDraft): { input: DogInput } | { error: string
     size: d.size ?? undefined,
     sex: d.sex,
     birthYm,
-    neutered: d.neutered,
   });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? '入力を確かめてください。' };
   return { input: parsed.data };
@@ -271,24 +264,6 @@ export function DogForm({ draft, breeds, onChange, breedEditable = true, title, 
         </div>
       </div>
 
-      <div className="field">
-        <span className="label">
-          避妊・去勢<span className="opt">任意</span>
-        </span>
-        <div className="choices" role="radiogroup" aria-label="避妊・去勢">
-          {NEUTERED_VALUES.map((v) => (
-            <label key={v}>
-              <input
-                type="radio"
-                name={`${id}-neutered`}
-                checked={draft.neutered === v}
-                onChange={() => set({ neutered: v })}
-              />
-              {NEUTERED_LABELS[v]}
-            </label>
-          ))}
-        </div>
-      </div>
     </fieldset>
   );
 }

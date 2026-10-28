@@ -1,5 +1,5 @@
 import { normalizeForSearch, type HouseholdHit, type StaffRole } from '@dr/shared';
-import { ADMIN_MEDIA_BASE, canSeePersonal } from './admin-visits';
+import { ADMIN_MEDIA_BASE } from './admin-visits';
 
 const LIMIT = 60;
 
@@ -21,17 +21,14 @@ const SELECT = `
 
 /**
  * おうちを探す(S-06)。犬の名前・おうちの呼び名・会員ID で探す。
- * LINE の表示名でも探せるのは、表示名を見られる管理者と製作者だけ(15.2)。
- * ひらがなとカタカナ、全角と半角は区別しない(6.3)。
+ * 家族の LINE の表示名でも探せる。ひらがなとカタカナ、全角と半角は区別しない(6.3)。
  */
 export async function searchHouseholds(db: D1Database, query: string, role: StaffRole): Promise<HouseholdHit[]> {
   const q = normalizeForSearch(query);
   if (!q) return [];
   const like = `%${escapeLike(q)}%`;
-  const byLineName = canSeePersonal(role)
-    ? `UNION SELECT household_id FROM family_members
-        WHERE status = 'active' AND line_display_name_search LIKE ?1 ESCAPE '\\'`
-    : '';
+  const byLineName = `UNION SELECT household_id FROM family_members
+        WHERE status = 'active' AND line_display_name_search LIKE ?1 ESCAPE '\\'`;
   const { results } = await db
     .prepare(
       `${SELECT}
@@ -76,18 +73,14 @@ async function attach(db: D1Database, rows: Row[], role: StaffRole): Promise<Hou
     )
     .bind(...ids)
     .all<{ household_id: number; id: number; name: string; breed_name: string; thumb_key: string | null }>();
-  const personal = canSeePersonal(role);
-  const family = personal
-    ? (
-        await db
-          .prepare(
-            `SELECT household_id, line_display_name FROM family_members
-              WHERE household_id IN (${marks}) AND status = 'active' ORDER BY id`,
-          )
-          .bind(...ids)
-          .all<{ household_id: number; line_display_name: string | null }>()
-      ).results
-    : [];
+  void role;
+  const { results: family } = await db
+    .prepare(
+      `SELECT household_id, line_display_name FROM family_members
+        WHERE household_id IN (${marks}) AND status = 'active' ORDER BY id`,
+    )
+    .bind(...ids)
+    .all<{ household_id: number; line_display_name: string | null }>();
   return rows.map((r) => ({
     id: r.id,
     memberNo: r.member_no,
@@ -103,8 +96,6 @@ async function attach(db: D1Database, rows: Row[], role: StaffRole): Promise<Hou
         breedName: d.breed_name,
         thumbUrl: d.thumb_key ? `${ADMIN_MEDIA_BASE}/${d.thumb_key}` : null,
       })),
-    familyNames: personal
-      ? family.filter((f) => f.household_id === r.id).map((f) => f.line_display_name ?? '')
-      : null,
+    familyNames: family.filter((f) => f.household_id === r.id).map((f) => f.line_display_name ?? ''),
   }));
 }

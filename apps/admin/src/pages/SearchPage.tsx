@@ -3,7 +3,6 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { DogFace } from '../components/DogFace';
 import { ErrorNotice } from '../components/ErrorNotice';
 import { adminApi } from '../lib/api';
-import { useAuth } from '../lib/auth';
 
 type Mode = 'name' | 'photo';
 
@@ -18,7 +17,6 @@ function formatDate(ymd: string | null) {
  * 「写真で探す」では、最近来たおうちの犬の写真を並べる(6.3)。
  */
 export function SearchPage({ actions, howto }: { actions?: (h: HouseholdHit) => ReactNode; howto?: string }) {
-  const { staff } = useAuth();
   const [mode, setMode] = useState<Mode>('name');
   const [q, setQ] = useState('');
   const [hits, setHits] = useState<HouseholdHit[] | null>(null);
@@ -47,13 +45,12 @@ export function SearchPage({ actions, howto }: { actions?: (h: HouseholdHit) => 
     };
   }, [q, mode]);
 
-  const nameHint = staff?.role === 'staff' ? '犬の名前・おうちの呼び名・会員ID' : '犬の名前・おうちの呼び名・会員ID・LINEの名前';
 
   return (
     <main className="con-body">
       <p className="howto">
         {howto ??
-          `${nameHint}の一部を入れると、当てはまるおうちが出ます。ひらがなとカタカナはどちらでも探せます。名前が分からないときは「写真で探す」から選んでください。`}
+          `犬の名前・おうちの呼び名・会員ID・LINEの名前の一部を入れると、当てはまるおうちが出ます。ひらがなとカタカナはどちらでも探せます。名前が分からないときは「写真で探す」から選んでください。`}
       </p>
       <div className="seg" role="tablist" aria-label="探し方">
         <button type="button" role="tab" aria-selected={mode === 'name'} onClick={() => setMode('name')}>
@@ -175,7 +172,7 @@ function HouseholdCard({
       </div>
       <p className="small muted">
         {formatDate(h.lastVisit)}
-        {h.familyNames && h.familyNames.length > 0 ? `・家族: ${h.familyNames.join('、')}` : ''}
+        {h.familyNames.length > 0 ? `・家族: ${h.familyNames.join('、')}` : ''}
       </p>
       {h.status === 'active' && actions?.(h)}
     </section>

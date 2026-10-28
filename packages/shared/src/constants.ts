@@ -34,14 +34,6 @@ export const DOG_SEX_LABELS: Record<DogSex, string> = {
   female: 'メス',
 };
 
-export const NEUTERED_VALUES = ['yes', 'no', 'no_answer'] as const;
-export type Neutered = (typeof NEUTERED_VALUES)[number];
-export const NEUTERED_LABELS: Record<Neutered, string> = {
-  yes: 'している',
-  no: 'していない',
-  no_answer: '答えない',
-};
-
 export const VISIT_METHODS = ['self', 'proxy', 'walkin'] as const;
 export type VisitMethod = (typeof VISIT_METHODS)[number];
 export const VISIT_METHOD_LABELS: Record<VisitMethod, string> = {
