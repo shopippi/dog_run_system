@@ -483,7 +483,7 @@ function MigrationSection({ settings, onSaved }: { settings: Settings; onSaved: 
   return (
     <SettingsForm
       title="移行期間"
-      desc="旧カード(LINEのショップカード・紙のスタンプカード)からポイントを、受付で引き継げる期間と、一度に引き継げるポイントの上限です。期間が終わると、以前の引き継ぎの申請の写真は自動で削除されます。"
+      desc="旧カード(LINEのショップカード・紙のスタンプカード)からポイントを、受付で引き継げる期間と、一度に引き継げるポイントの上限です。期間が終わると、以前の引き継ぎの申請の写真は自動で消えます。"
       state={s}
     >
       <div className="cfg-row">
