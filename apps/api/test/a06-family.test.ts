@@ -46,8 +46,8 @@ describe('A-06 受付での家族の追加', () => {
     const detail = await adminCall(`/admin/api/households/${s.id}`, { cookie: s.admin });
     expect(detail.body.family.map((m: any) => [m.name, m.joinMethodLabel])).toEqual(
       expect.arrayContaining([
-        ['パパ', '最初に登録'],
-        ['ママ', '受付で追加'],
+        ['パパ', 'はじめに登録'],
+        ['ママ', '受付で参加'],
       ]),
     );
     const log = await adminCall('/admin/api/audit', { cookie: s.admin });

@@ -35,7 +35,7 @@ test('A-06 受付で招待QRを出して家族を追加し、確認してから�
   await dialog.getByRole('button', { name: '閉じる' }).click();
   const family = page.getByRole('list', { name: '家族' });
   await expect(family).toContainText('ママさん');
-  await expect(family).toContainText('受付で追加');
+  await expect(family).toContainText('受付で参加');
 
   // 外す(確認してから)
   await family.getByRole('button', { name: 'ママさんを外す' }).click();
