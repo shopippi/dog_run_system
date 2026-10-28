@@ -17,7 +17,7 @@ npx http-server apps/demo/dist -p 8796    # http://localhost:8796/ を開く
 
 - `apps/demo/dist/` の中身を、そのまま静的なファイルの配信先(Cloudflare Pages、GitHub Pages など)に置いても動く。パスはすべて相対パス。
 - https か localhost で開く(パスワードの処理にブラウザの暗号の機能を使うため、http の別のアドレスでは動かない)。
-- SQLite の本体(WASM、約650KB)は cdnjs(`sql.js` 1.14.1)から読む。読めないときは jsDelivr から読む。どちらにもつながらない環境では動かない。
+- SQLite の本体(WASM、約650KB)はビルドに同梱している(`dist/sql-wasm.wasm`)。読めないときだけ cdnjs、jsDelivr の順に読む。
 - 新しめの Chrome・Safari・Edge・Firefox で動く。
 
 ## 画面の構成
