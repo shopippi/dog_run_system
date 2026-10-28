@@ -1,7 +1,6 @@
 import { STAFF_ROLE_LABELS } from '@dr/shared';
 import type { ReactNode } from 'react';
 import { NavLink } from 'react-router-dom';
-import { usePendingCount } from '../hooks/usePendingCount';
 import { useAuth } from '../lib/auth';
 import { Icon, type IconName } from './Icon';
 
@@ -21,7 +20,7 @@ const GROUPS: Group[] = [
   {
     label: '運営',
     items: [
-      { to: '/requests', label: '確認待ち', icon: 'inbox', adminOnly: true, badge: true },
+      { to: '/migration', label: '旧カードの引き継ぎ', icon: 'inbox', adminOnly: true },
       { to: '/dashboard', label: 'ダッシュボード', icon: 'chart' },
       { to: '/events', label: 'イベント・休業日', icon: 'flag', adminOnly: true },
     ],
@@ -52,7 +51,6 @@ const GROUPS: Group[] = [
  */
 export function Layout({ children }: { children: ReactNode }) {
   const { staff, logout, readOnly } = useAuth();
-  const pending = usePendingCount();
   const role = staff?.role ?? 'staff';
   const canSee = (it: Item) => {
     if (it.adminOnly && role === 'staff') return false;
@@ -74,11 +72,6 @@ export function Layout({ children }: { children: ReactNode }) {
                   <NavLink key={it.to} to={it.to} end={it.end}>
                     <Icon name={it.icon} />
                     <span>{it.label}</span>
-                    {it.badge && pending > 0 && (
-                      <span className="nav-badge" aria-label={`${pending}件`}>
-                        {pending}
-                      </span>
-                    )}
                   </NavLink>
                 ))}
               </div>

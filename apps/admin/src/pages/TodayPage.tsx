@@ -40,7 +40,7 @@ export function TodayPage() {
           data?.pendingRequests ? (
             <p className="pending" role="status">
               <Link to="/requests">
-                確認待ちが <b>{data.pendingRequests}件</b> あります(旧カードの引き継ぎ・おうちをまとめる申請)
+                確認待ちが <b>{data.pendingRequests}件</b> あります(お客さんからの申請)
               </Link>
             </p>
           ) : null

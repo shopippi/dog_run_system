@@ -21,6 +21,11 @@ export const AUDIT_ACTION_LABELS: Record<string, string> = {
   'dog.photo_remove': 'ワンちゃんの写真の削除',
   'family.invite': '受付での家族の招待',
   'family.remove': '家族を外す',
+  'ticket.exchange': '無料券と交換',
+  'ticket.use': '無料券の使用',
+  'ticket.mark_used': '無料券を使用済みにする',
+  'household.migrate': '旧カードの引き継ぎ',
+  'household.migrate_undo': '旧カードの引き継ぎを元に戻す',
 };
 
 export function auditActionLabel(action: string): string {

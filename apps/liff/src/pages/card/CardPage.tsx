@@ -85,12 +85,10 @@ function Card({ me, reload }: { me: MeRegistered; reload: () => Promise<void> })
           <span>プロフィール</span>
           <Icon name="chevron-right" />
         </Link>
-        <Link to="/migration">
-          <span>旧カードの引き継ぎ</span>
-          <Icon name="chevron-right" />
-        </Link>
       </nav>
-      <p className="note">1日1ポイント。{card.pointsPerTicket}ポイントで無料券1枚(来場1回分)。</p>
+      <p className="note">
+        1日1ポイント。{card.pointsPerTicket}ポイントで無料券1枚(来場1回分)と交換できます。前のポイントカードは、受付で見せると引き継げます。
+      </p>
       <Link to="/help" className="cu-link">
         使い方・よくある質問
       </Link>

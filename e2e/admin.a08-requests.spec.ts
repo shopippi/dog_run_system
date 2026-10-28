@@ -50,7 +50,6 @@ test('A-08 違う家族の申請は、理由を選んで却下できる', async 
 
   const page = await browser.newPage({ viewport: { width: 1024, height: 768 }, hasTouch: true });
   await adminLogin(page, 'admin', '/requests');
-  await page.getByRole('link', { name: '確認待ち' }).click();
   const row = page.getByRole('listitem', { name: `おうちをまとめる申請 シカクのおうち ${bNo}` });
   await row.getByRole('button', { name: '却下する' }).click();
   const dialog = page.getByRole('dialog', { name: '申請を却下する' });

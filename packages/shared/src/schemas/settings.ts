@@ -21,6 +21,7 @@ export const SETTING_FIELDS: Record<SettingKey, { label: string; hint: string }>
   invite_ttl_hours: { label: '家族の招待の有効時間', hint: '1〜168時間で入れてください。' },
   reception_invite_ttl_minutes: { label: '受付で出す招待QRの有効時間', hint: '1〜120分で入れてください。' },
   migration_period: { label: '移行期間', hint: '開始日と終了日を選び直してください。終了日は開始日より後にしてください。' },
+  migration_max_points: { label: '旧カードから引き継げるポイントの上限', hint: '1〜200の数で入れてください。' },
   developer_contact: { label: '製作者の連絡先', hint: '500文字までで入れてください。' },
   terms_text: { label: '利用規約', hint: '20,000文字までで入れてください。' },
   privacy_text: { label: 'プライバシーポリシー', hint: '20,000文字までで入れてください。' },

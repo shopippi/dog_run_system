@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { cancelVisit, checkinOn, joinFamily } from './customer-helpers';
-import { makePhoto, newLineUser, openLiff, registerViaUi } from './helpers';
+import { newLineUser, openLiff, registerViaUi } from './helpers';
 
 // お客さん向けの残りの画面(担当E)の、文字と背景のコントラスト(WCAG の 4.5:1)。
 // lowContrast は e2e/contrast.spec.ts と同じもの。
@@ -132,18 +132,6 @@ for (const scheme of ['light', 'dark'] as const) {
       await page.getByText('無料券はどうやって使いますか?').click();
       await check(page, '使い方・よくある質問');
 
-      // L-13 旧カードの引き継ぎ(入力中・申請後の状態の一覧)
-      await openLiff(page, user, '/migration');
-      await page.getByRole('heading', { name: '旧カードの引き継ぎ' }).waitFor();
-      await page.getByRole('radio', { name: 'LINEのショップカード' }).check();
-      await page.getByRole('button', { name: '申請する' }).click();
-      await page.getByRole('alert').waitFor();
-      await check(page, 'L-13 旧カードの引き継ぎ(足りないとき)');
-      await page.locator('input[type=file]').setInputFiles({ name: 'card.jpg', mimeType: 'image/jpeg', buffer: await makePhoto(page, 1600, 1200) });
-      await page.getByRole('img', { name: '選んだカードの写真' }).waitFor();
-      await page.getByRole('button', { name: '申請する' }).click();
-      await page.getByRole('status').waitFor();
-      await check(page, 'L-13 旧カードの引き継ぎ(申請後)');
       await page.close();
     });
   });
