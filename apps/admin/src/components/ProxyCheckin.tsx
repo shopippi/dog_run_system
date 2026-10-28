@@ -6,11 +6,10 @@ import { ErrorNotice } from './ErrorNotice';
 
 const today = () => toJstIso(new Date()).slice(0, 10);
 
-/** 代理チェックイン(S-04)。来た犬・日付・無料券を選んで、受付が代わりにチェックインする */
+/** 代理チェックイン(S-04)。来た犬・日付を選んで、受付が代わりにチェックインする。無料券はおうちの詳細の「無料券を使用済みにする」から使う */
 export function ProxyCheckin({ h }: { h: HouseholdHit }) {
   const [date, setDate] = useState(today);
   const [selected, setSelected] = useState<Set<number>>(() => new Set(h.dogs.map((d) => d.id)));
-  const [useTicket, setUseTicket] = useState(false);
   const [status, setStatus] = useState<ProxyStatus | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
@@ -44,11 +43,9 @@ export function ProxyCheckin({ h }: { h: HouseholdHit }) {
         await adminPost<CheckinResult>('/checkins/proxy', {
           householdId: h.id,
           dogIds: [...selected],
-          useTicket: useTicket && (status?.unusedTickets ?? 0) > 0,
           date,
         }),
       );
-      setUseTicket(false);
     } catch (e) {
       setError(e);
     } finally {
@@ -89,18 +86,11 @@ export function ProxyCheckin({ h }: { h: HouseholdHit }) {
           ))}
         </div>
       </div>
-      {status && status.unusedTickets > 0 && !status.visitId && (
-        <label className="check">
-          <input type="checkbox" checked={useTicket} onChange={(e) => setUseTicket(e.target.checked)} />
-          無料券を使う(のこり{status.unusedTickets}枚)
-        </label>
-      )}
       {done ? (
         <div className="alert info" role="status">
           チェックインしました。
           {done.pointsAwarded > 0 ? `${done.pointsAwarded}ポイントを付けました。` : ''}
-          {done.usedTicket ? '無料券を使いました。料金を調整してください。' : ''}
-          {done.ticketsIssued > 0 ? `ポイントがたまり、無料券が${done.ticketsIssued}枚発行されました。` : ''}
+          {done.usedTicket ? 'この日に使った無料券があります。料金を調整してください。' : ''}
         </div>
       ) : status?.visitId ? (
         <div className="alert info">この日は、すでにチェックイン済みです(ポイントは1日1回)。</div>

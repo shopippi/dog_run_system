@@ -181,11 +181,12 @@ registerAuditDetail('points.manual', (_b, a) => {
   const parts: string[] = [];
   if (a.points) parts.push(`ポイント ${a.points > 0 ? '+' : '−'}${Math.abs(a.points)}`);
   if (a.ticketDelta) parts.push(`無料券 ${a.ticketDelta > 0 ? '+' : '−'}${Math.abs(a.ticketDelta)}枚`);
+  // 以前の記録(ポイントがたまって自動で発行していたころ)にだけある項目
   if (a.ticketsIssued) parts.push(`ポイントがたまって無料券を${a.ticketsIssued}枚発行`);
   return parts.join('、') || null;
 });
 
-registerUndo('points.manual', async (db, log, ctx) => undoManualPoints(db, log, ctx, await loadSettings(db)));
+registerUndo('points.manual', undoManualPoints);
 
 // ------------------------------------------------------------
 // A-04 犬の情報の変更(管理者。製作者は見るだけ)

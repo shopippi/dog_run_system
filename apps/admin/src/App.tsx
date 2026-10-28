@@ -20,6 +20,7 @@ import { StatusPage } from './pages/StatusPage';
 import { ExportPage } from './pages/ExportPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { DogEditPage } from './pages/DogEditPage';
+import { MigrationPage } from './pages/MigrationPage';
 
 export function App() {
   return (
@@ -72,6 +73,7 @@ function Gate() {
         <Route path="/status" element={<StatusPage />} />
         <Route path="/export" element={<ExportPage />} />
         <Route path="/dashboard" element={<DashboardPage />} />
+        <Route path="/migration" element={<MigrationPage />} />
         <Route path="*" element={<Placeholder />} />
       </Routes>
     </Layout>

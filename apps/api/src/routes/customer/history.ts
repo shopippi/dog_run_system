@@ -4,6 +4,7 @@ import type { AppEnv } from '../../env';
 import { errors } from '../../lib/errors';
 import { MERGED_HOUSEHOLDS_CTE } from '../../services/merged-households';
 import { requireMember } from '../../services/members';
+import { ticketUsedOnVisitSql } from '../../services/tickets';
 import { MEDIA_BASE } from './media';
 
 // C-07 来場履歴
@@ -39,7 +40,7 @@ historyRoutes.get('/me/visits', async (c) => {
     .prepare(
       `WITH RECURSIVE ${MERGED_HOUSEHOLDS_CTE}
        SELECT v.id, v.visit_date, v.checked_in_at, v.checked_in_member_id, m.line_display_name AS checked_in_by,
-              v.used_ticket, v.method, v.cancelled_at
+              ${ticketUsedOnVisitSql('v')} AS used_ticket, v.method, v.cancelled_at
          FROM visits v LEFT JOIN family_members m ON m.id = v.checked_in_member_id
         WHERE v.household_id IN (SELECT id FROM hh)
           ${cursor ? 'AND (v.visit_date < ?2 OR (v.visit_date = ?2 AND v.id < ?3))' : ''}

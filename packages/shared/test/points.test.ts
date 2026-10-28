@@ -1,42 +1,41 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_SETTINGS, expiryFor, planCheckin, pointsToNextTicket, sumLedger, ticketsFromBalance } from '../src';
+import { DEFAULT_SETTINGS, canExchange, expiryFor, planCheckin, pointsToNextTicket, sumLedger } from '../src';
 
 const S = DEFAULT_SETTINGS;
 
 describe('チェックインのポイント(8章)', () => {
   it('1ポイント付ける', () => {
-    const p = planCheckin({ balance: 3, useTicket: false, settings: S });
-    expect(p).toMatchObject({ pointsAwarded: 1, ticketsIssued: 0, balanceAfter: 4 });
+    const p = planCheckin({ balance: 3, usedTicketToday: false, settings: S });
+    expect(p).toMatchObject({ pointsAwarded: 1, balanceAfter: 4 });
     expect(p.ledger).toEqual([{ delta: 1, kind: 'visit' }]);
   });
 
-  it('9ポイントのおうちがチェックインすると、無料券が1枚発行され、残高は0ポイントになる(19.2)', () => {
-    const p = planCheckin({ balance: 9, useTicket: false, settings: S });
-    expect(p).toMatchObject({ pointsAwarded: 1, ticketsIssued: 1, balanceAfter: 0 });
-    expect(p.ledger).toEqual([
-      { delta: 1, kind: 'visit' },
-      { delta: -10, kind: 'ticket_issue' },
-    ]);
+  it('9ポイントのおうちがチェックインすると10ポイントになる。無料券は自動では発行しない', () => {
+    const p = planCheckin({ balance: 9, usedTicketToday: false, settings: S });
+    expect(p).toMatchObject({ pointsAwarded: 1, balanceAfter: 10 });
+    expect(p.ledger).toEqual([{ delta: 1, kind: 'visit' }]);
   });
 
-  it('8ポイントなら、まだ無料券は出ない', () => {
-    expect(planCheckin({ balance: 8, useTicket: false, settings: S })).toMatchObject({ ticketsIssued: 0, balanceAfter: 9 });
+  it('10ポイントを超えても、ポイントはたまり続ける', () => {
+    expect(planCheckin({ balance: 10, usedTicketToday: false, settings: S })).toMatchObject({ balanceAfter: 11 });
+    expect(planCheckin({ balance: 25, usedTicketToday: false, settings: S })).toMatchObject({ balanceAfter: 26 });
   });
 
   it('無料券を使った日も、初期設定ではポイントを付ける', () => {
-    expect(planCheckin({ balance: 9, useTicket: true, settings: S })).toMatchObject({ pointsAwarded: 1, ticketsIssued: 1 });
+    expect(planCheckin({ balance: 9, usedTicketToday: true, settings: S })).toMatchObject({ pointsAwarded: 1, balanceAfter: 10 });
   });
 
   it('設定で「無料券を使った日は付けない」にすると、ポイントは付かない', () => {
-    const p = planCheckin({ balance: 9, useTicket: true, settings: { ...S, grant_point_on_ticket_day: false } });
-    expect(p).toMatchObject({ pointsAwarded: 0, ticketsIssued: 0, balanceAfter: 9, ledger: [] });
+    const p = planCheckin({ balance: 9, usedTicketToday: true, settings: { ...S, grant_point_on_ticket_day: false } });
+    expect(p).toMatchObject({ pointsAwarded: 0, balanceAfter: 9, ledger: [] });
   });
 
-  it('無料券に必要なポイント数を変えられる', () => {
-    expect(planCheckin({ balance: 4, useTicket: false, settings: { ...S, points_per_ticket: 5 } })).toMatchObject({
-      ticketsIssued: 1,
-      balanceAfter: 0,
-    });
+  it('交換できるのは、無料券に必要なポイント数以上のとき(設定で変えられる)', () => {
+    expect(canExchange(9, 10)).toBe(false);
+    expect(canExchange(10, 10)).toBe(true);
+    expect(canExchange(15, 10)).toBe(true);
+    expect(canExchange(4, 5)).toBe(false);
+    expect(canExchange(5, 5)).toBe(true);
   });
 });
 
@@ -45,15 +44,19 @@ describe('残高と無料券', () => {
     expect(sumLedger([{ delta: 1 }, { delta: 1 }, { delta: -10 }, { delta: 12 }])).toBe(4);
   });
 
-  it('10以上たまった分だけ無料券にする(統合で12になる場合など)', () => {
-    expect(ticketsFromBalance(12, 10)).toEqual({ tickets: 1, balanceAfter: 2 });
-    expect(ticketsFromBalance(25, 10)).toEqual({ tickets: 2, balanceAfter: 5 });
-    expect(ticketsFromBalance(9, 10)).toEqual({ tickets: 0, balanceAfter: 9 });
+  it('残高は、ためたポイントの合計から、交換で引いた分を除いたもの', () => {
+    // 12ポイントためて1回交換すると、2ポイント残る
+    const ledger = [...Array.from({ length: 12 }, () => ({ delta: 1 })), { delta: -10 }];
+    expect(sumLedger(ledger)).toBe(2);
+    expect(sumLedger([...ledger, { delta: 5 }, { delta: 5 }, { delta: -10 }])).toBe(2);
   });
 
-  it('次の無料券まで', () => {
+  it('交換できるまで、あと何ポイントか(交換できるときは0)', () => {
     expect(pointsToNextTicket(0, 10)).toBe(10);
     expect(pointsToNextTicket(7, 10)).toBe(3);
+    expect(pointsToNextTicket(9, 10)).toBe(1);
+    expect(pointsToNextTicket(10, 10)).toBe(0);
+    expect(pointsToNextTicket(15, 10)).toBe(0);
   });
 });
 

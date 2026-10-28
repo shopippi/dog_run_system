@@ -5,12 +5,14 @@ import {
   DOG_STATUS_LABELS,
   type DogSummary,
   type HouseholdDetail,
+  type HouseholdTicket,
 } from '@dr/shared';
 import { useState, type ReactNode } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { DogFace } from '../components/DogFace';
 import { FamilyInviteDialog, RemoveFamilyDialog } from '../components/FamilyDialogs';
 import { ManualPointsDialog } from '../components/ManualPointsDialog';
+import { TicketUseDialog } from '../components/TicketUseDialog';
 import { ErrorNotice } from '../components/ErrorNotice';
 import { Icon } from '../components/Icon';
 import { PageHead } from '../components/PageHead';
@@ -73,6 +75,7 @@ function Detail({
   const activeDogs = d.dogs.filter((x) => x.status === 'active');
   const activeFamily = d.family.filter((m) => m.status === 'active').length;
   const [removing, setRemoving] = useState<HouseholdFamilyMember | null>(null);
+  const [usingTicket, setUsingTicket] = useState<HouseholdTicket | null>(null);
   return (
     <>
       <section className="panel hh-head" aria-label="おうちの概要">
@@ -87,7 +90,7 @@ function Detail({
         <div className="kpis hh-kpis">
           <Kpi label="ポイント" value={d.balance} unit="ポイント" />
           <Kpi label="使える無料券" value={d.usableTickets} unit="枚" />
-          <Kpi label="次の無料券まで" value={d.toNextTicket} unit="ポイント" />
+          <Kpi label="無料券と交換まで" value={d.toNextTicket} unit="ポイント" />
           <Kpi label="来場" value={d.visitCount} unit="回" />
         </div>
       </section>
@@ -152,6 +155,22 @@ function Detail({
               true,
               <p>
                 {removing.name ?? '家族'}さんを外しました。間違えたときは、<Link to="/audit">操作ログ</Link>から元に戻せます。
+              </p>,
+            );
+          }}
+        />
+      )}
+      {usingTicket && (
+        <TicketUseDialog
+          d={d}
+          ticket={usingTicket}
+          onClose={() => setUsingTicket(null)}
+          onDone={() => {
+            setUsingTicket(null);
+            onChanged(
+              true,
+              <p>
+                無料券を1枚、使用済みにしました。来場1回分の料金を無料にしてください。間違えたときは、<Link to="/audit">操作ログ</Link>から元に戻せます。
               </p>,
             );
           }}
@@ -244,6 +263,11 @@ function Detail({
                 </span>
                 <span className="hh-end">
                   <span className={`badge${t.status === 'unused' ? ' warning' : ''}`}>{t.statusLabel}</span>
+                  {canEdit && t.status === 'unused' && (
+                    <button type="button" className="btn sub tk-mark" onClick={() => setUsingTicket(t)}>
+                      使用済みにする
+                    </button>
+                  )}
                 </span>
               </li>
             ))}

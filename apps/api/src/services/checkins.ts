@@ -2,13 +2,15 @@ import { expiryFor, planCheckin, toJstDate, toJstIso, type CheckinResult, type S
 import { errors } from '../lib/errors';
 import { auditStatement } from './audit';
 import { refreshDailyStatsQuietly } from './daily-stats';
-import { nextUsableTicket, pointBalance } from './points';
+import { pointBalance } from './points';
+import { linkUsedTicketsStatement, ticketsUsedOn, ticketUsedOnVisitSql } from './tickets';
 
 /** そのおうちの、指定した日の来場(取り消し済みを除く) */
 export async function findVisitOn(db: D1Database, householdId: number, date: string) {
   return db
     .prepare(
-      `SELECT v.id, v.checked_in_member_id, v.used_ticket, COALESCE(m.line_display_name, '') AS checked_in_by
+      `SELECT v.id, v.checked_in_member_id, ${ticketUsedOnVisitSql('v')} AS used_ticket,
+              COALESCE(m.line_display_name, '') AS checked_in_by
          FROM visits v LEFT JOIN family_members m ON m.id = v.checked_in_member_id
         WHERE v.household_id = ? AND v.visit_date = ? AND v.cancelled_at IS NULL`,
     )
@@ -55,7 +57,8 @@ export const alreadyCheckedIn = (visit: { id: number; checked_in_by: string }) =
 
 /**
  * チェックインを記録する(C-04、S-04)。
- * 来場・来場した犬・ポイント・無料券の発行と利用を、1つのまとまり(D1 の batch)で書き込む。
+ * 来場・来場した犬・ポイントを、1つのまとまり(D1 の batch)で書き込む。
+ * 無料券はここでは発行も使用もしない(8章。交換と使用は会員証から)。その日にもう使ってあった券は、この来場に結びつける。
  * おうちごとに1日1回は、visits の一意の索引で守る(同時に2人が押しても、2回目は失敗する)。
  */
 export async function recordCheckin(
@@ -66,7 +69,6 @@ export async function recordCheckin(
     staffId: number | null;
     method: VisitMethod;
     dogIds: number[];
-    useTicket: boolean;
     visitDate: string;
     now: Date;
     settings: Settings;
@@ -80,14 +82,9 @@ export async function recordCheckin(
   const existing = await findVisitOn(db, householdId, visitDate);
   if (existing) throw alreadyCheckedIn(existing);
 
-  let ticketId: number | null = null;
-  if (args.useTicket) {
-    ticketId = await nextUsableTicket(db, householdId, now);
-    if (!ticketId) throw errors.badRequest('使える無料券がありません。「無料券を使う」を外して、もう一度お試しください。');
-  }
-
   const balance = await pointBalance(db, householdId);
-  const plan = planCheckin({ balance, useTicket: args.useTicket, settings });
+  const usedToday = await ticketsUsedOn(db, householdId, visitDate);
+  const plan = planCheckin({ balance, usedTicketToday: usedToday.length > 0, settings });
   const actorType = args.staffId ? 'staff' : 'member';
   const actorId = args.staffId ?? args.memberId;
   const visitIdSql = `(SELECT id FROM visits WHERE household_id = ?1 AND visit_date = ?2 AND cancelled_at IS NULL)`;
@@ -99,7 +96,7 @@ export async function recordCheckin(
                              method, created_by_staff_id)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
       )
-      .bind(householdId, args.memberId, visitDate, nowIso, args.dogIds.length, args.useTicket ? 1 : 0, args.method, args.staffId),
+      .bind(householdId, args.memberId, visitDate, nowIso, args.dogIds.length, 0, args.method, args.staffId),
     ...args.dogIds.map((dogId) =>
       db
         .prepare(
@@ -111,44 +108,17 @@ export async function recordCheckin(
   ];
 
   for (const entry of plan.ledger) {
-    if (entry.kind === 'visit') {
-      statements.push(
-        db
-          .prepare(
-            `INSERT INTO point_ledger (household_id, delta, kind, visit_id, actor_type, actor_id, created_at, expires_at)
-             VALUES (?1, ?3, 'visit', ${visitIdSql}, ?4, ?5, ?6, ?7)`,
-          )
-          .bind(householdId, visitDate, entry.delta, actorType, actorId, nowIso, expiryFor(settings.point_expiry, now)),
-      );
-    } else {
-      // ポイントがたまったので無料券を発行し、その分のポイントを差し引く
-      statements.push(
-        db
-          .prepare(
-            `INSERT INTO tickets (household_id, issued_at, expires_at, source, issued_visit_id, status)
-             VALUES (?1, ?3, ?4, 'points', ${visitIdSql}, 'unused')`,
-          )
-          .bind(householdId, visitDate, nowIso, expiryFor(settings.ticket_expiry, now)),
-        db
-          .prepare(
-            `INSERT INTO point_ledger (household_id, delta, kind, visit_id, ticket_id, actor_type, actor_id, created_at)
-             VALUES (?1, ?3, 'ticket_issue', ${visitIdSql}, (SELECT MAX(id) FROM tickets WHERE household_id = ?1), ?4, ?5, ?6)`,
-          )
-          .bind(householdId, visitDate, entry.delta, actorType, actorId, nowIso),
-      );
-    }
-  }
-
-  if (ticketId) {
     statements.push(
       db
         .prepare(
-          `UPDATE tickets SET status = 'used', used_visit_id = ${visitIdSql}, used_at = ?3
-            WHERE id = ?4 AND status = 'unused'`,
+          `INSERT INTO point_ledger (household_id, delta, kind, visit_id, actor_type, actor_id, created_at, expires_at)
+           VALUES (?1, ?3, 'visit', ${visitIdSql}, ?4, ?5, ?6, ?7)`,
         )
-        .bind(householdId, visitDate, nowIso, ticketId),
+        .bind(householdId, visitDate, entry.delta, actorType, actorId, nowIso, expiryFor(settings.point_expiry, now)),
     );
   }
+  // その日にもう使ってあった無料券(チェックインの前に「使用する」を押した場合)を、この来場に結びつける
+  if (usedToday.length > 0) statements.push(linkUsedTicketsStatement(db, householdId, visitDate));
 
   statements.push(...(args.extra ?? []));
   let results: D1Result[];
@@ -166,8 +136,7 @@ export async function recordCheckin(
   return {
     visitId,
     pointsAwarded: plan.pointsAwarded,
-    ticketsIssued: plan.ticketsIssued,
-    usedTicket: args.useTicket,
+    usedTicket: usedToday.length > 0,
     balanceAfter: plan.balanceAfter,
   };
 }
@@ -199,8 +168,8 @@ export async function addDogsToVisit(
 }
 
 /**
- * チェックインを取り消す(S-03)。付けたポイントと使った無料券を元に戻す(8章)。
- * - その来場でポイントがたまって発行された無料券は回収する(使われていれば取り消せない)
+ * チェックインを取り消す(S-03)。付けたポイントを戻し、その来場に結びついた無料券の使用は未使用に戻す(8章)。
+ * - 以前の記録で、その来場でポイントがたまって発行された無料券があれば回収する(使われていれば取り消せない)
  * - 来場の記録は消さず「取り消し済み」にする。取り消した日は、もう一度チェックインできる
  * - 同時に2回押されても、二重に戻さない(書き込みはすべて「まだ取り消されていなければ」の条件つき)
  */
@@ -210,13 +179,12 @@ export async function cancelCheckin(
 ): Promise<void> {
   const nowIso = toJstIso(args.now);
   const visit = await db
-    .prepare('SELECT id, household_id, visit_date, used_ticket, dog_count, method, cancelled_at FROM visits WHERE id = ?')
+    .prepare('SELECT id, household_id, visit_date, dog_count, method, cancelled_at FROM visits WHERE id = ?')
     .bind(args.visitId)
     .first<{
       id: number;
       household_id: number | null;
       visit_date: string;
-      used_ticket: number;
       dog_count: number;
       method: string;
       cancelled_at: string | null;
@@ -236,6 +204,11 @@ export async function cancelCheckin(
       'この来場でたまって発行された無料券が、もう使われているため取り消せません。ポイントの手動登録で調整してください。',
     );
   }
+  // この来場に結びついた無料券の使用(取り消しで未使用に戻す。元に戻すときのために、使った日時も残す)
+  const { results: usedTickets } = await db
+    .prepare("SELECT id, used_at FROM tickets WHERE used_visit_id = ? AND status = 'used' ORDER BY id")
+    .bind(visit.id)
+    .all<{ id: number; used_at: string | null }>();
   const ledgerSum = await db
     .prepare('SELECT COALESCE(SUM(delta), 0) AS n FROM point_ledger WHERE visit_id = ?')
     .bind(visit.id)
@@ -253,7 +226,7 @@ export async function cancelCheckin(
         .bind(visit.household_id, -(ledgerSum?.n ?? 0), visit.id, args.reason, args.staffId, nowIso, ...stillOpen.args),
     );
   }
-  // 発行した無料券を回収し、使った無料券を未使用に戻す
+  // (以前の記録で)発行した無料券を回収し、この来場に結びついた無料券の使用を未使用に戻す
   statements.push(
     db
       .prepare(`UPDATE tickets SET status = 'void', note = ? WHERE issued_visit_id = ? AND status = 'unused' AND ${stillOpen.sql}`)
@@ -269,7 +242,13 @@ export async function cancelCheckin(
       action: 'visit.cancel',
       targetType: 'visit',
       targetId: visit.id,
-      before: { cancelled: false, points: ledgerSum?.n ?? 0, usedTicket: visit.used_ticket === 1, issuedTickets: issued.map((t) => t.id) },
+      before: {
+        cancelled: false,
+        points: ledgerSum?.n ?? 0,
+        usedTicket: usedTickets.length > 0,
+        usedTickets: usedTickets.map((t) => ({ id: t.id, usedAt: t.used_at })),
+        issuedTickets: issued.map((t) => t.id),
+      },
       after: { cancelled: true },
       reason: args.reason,
       undo: { visitId: visit.id },
@@ -287,4 +266,8 @@ export async function cancelCheckin(
     throw errors.conflict('already_cancelled', 'このチェックインは、すでに取り消されています。画面を読み込み直してください。');
   }
   await refreshDailyStatsQuietly(db, visit.visit_date, args.now);
+  // 戻した無料券を使った日(代理で前の日の来場を入れた場合など、来場日と違うことがある)の集計も直す
+  for (const d of new Set(usedTickets.map((t) => t.used_at?.slice(0, 10)).filter((x): x is string => !!x && x !== visit.visit_date))) {
+    await refreshDailyStatsQuietly(db, d, args.now);
+  }
 }

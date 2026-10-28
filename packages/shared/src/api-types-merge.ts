@@ -144,6 +144,8 @@ export type MigrationStatus = {
   displayName: string;
   points: number;
   pointsPerTicket: number;
+  /** 一度に引き継げるポイントの上限(設定 migration_max_points) */
+  maxPoints: number;
   /** 移行元ごとの、引き継ぎ済みの記録(統合でまとめたおうちの分を含む)。まだなら null */
   migrated: Record<import('./constants').MigrationSource, { date: string; points: number } | null>;
   period: { start: string | null; end: string | null };
@@ -157,7 +159,6 @@ export type MigrationResult = {
   memberNo: string;
   source: import('./constants').MigrationSource;
   points: number;
-  ticketsIssued: number;
   /** 引き継ぎ後のポイント残高 */
   balance: number;
 };

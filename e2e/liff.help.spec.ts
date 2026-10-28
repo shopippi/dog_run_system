@@ -11,7 +11,7 @@ test('会員証から「使い方・よくある質問」を開き、知りた�
   for (const q of ['ポイントはどうやってたまりますか?', '無料券はどうやって使いますか?', '家族も同じ会員証を使えますか?', 'ワンちゃんの写真や名前を変えたい', '前のポイントカードのポイントを引き継げますか?', '困ったときは?']) {
     await expect(page.getByText(q, { exact: true })).toBeVisible();
   }
-  const answer = page.getByText(/10ポイントたまると、無料券が1枚もらえます/);
+  const answer = page.getByText(/10ポイントたまると、会員証の「無料券と交換する」で/);
   await expect(answer).toBeHidden();
   await page.getByText('無料券はどうやって使いますか?').click();
   await expect(answer).toBeVisible();

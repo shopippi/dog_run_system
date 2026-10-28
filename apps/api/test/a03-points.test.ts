@@ -1,6 +1,6 @@
 import { env } from 'cloudflare:test';
 import { describe, expect, it } from 'vitest';
-import { adminCall, call, checkin, createStaff, givePoints, login, registerUser } from './helpers';
+import { adminCall, call, checkin, createStaff, givePoints, login, registerUser, useTicketOf } from './helpers';
 
 const PAPA = 'U001:パパ';
 const DAY1 = '2026-10-28T01:00:00Z';
@@ -34,7 +34,7 @@ describe('A-03 ポイントの手動登録', () => {
     const s = await setup();
     const res = await points(s.admin, s.id, { points: 1, reason: 'イベントの特典' });
     expect(res.status).toBe(201);
-    expect(res.body).toEqual({ balanceBefore: 0, balanceAfter: 1, ticketsBefore: 0, ticketsAfter: 0, ticketsIssued: 0, pointsPerTicket: 10 });
+    expect(res.body).toEqual({ balanceBefore: 0, balanceAfter: 1, ticketsBefore: 0, ticketsAfter: 0, pointsPerTicket: 10 });
     expect((await card()).balance).toBe(1);
     const ledger = await env.DB.prepare("SELECT delta, kind, reason, actor_type, actor_id FROM point_ledger WHERE kind = 'manual'").first();
     expect(ledger).toEqual({ delta: 1, kind: 'manual', reason: 'イベントの特典', actor_type: 'staff', actor_id: 2 });
@@ -58,19 +58,17 @@ describe('A-03 ポイントの手動登録', () => {
     ]);
   });
 
-  it('9 ポイントに 1 足すと無料券を発行して 0 ポイント。元に戻すと券は取り消され 9 ポイントに戻る', async () => {
+  it('9 ポイントに 1 足すと 10 ポイント。無料券には自動で替えない(8章)。元に戻すと 9 ポイントに戻る', async () => {
     const s = await setup();
     await givePoints(s.r.memberNo, 9);
     const res = await points(s.admin, s.id, { points: 1, reason: 'お詫び', note: '待たせた' });
-    expect(res.body).toMatchObject({ balanceAfter: 0, ticketsAfter: 1, ticketsIssued: 1 });
-    expect(await card()).toMatchObject({ balance: 0 });
-    expect((await card()).tickets).toHaveLength(1);
-    const t = await env.DB.prepare('SELECT source, status FROM tickets').first();
-    expect(t).toEqual({ source: 'points', status: 'unused' });
+    expect(res.body).toEqual({ balanceBefore: 9, balanceAfter: 10, ticketsBefore: 0, ticketsAfter: 0, pointsPerTicket: 10 });
+    expect(await card()).toMatchObject({ balance: 10, toNextTicket: 0, tickets: [] });
+    expect(await env.DB.prepare('SELECT COUNT(*) AS n FROM tickets').first()).toEqual({ n: 0 });
+    expect(await env.DB.prepare("SELECT COUNT(*) AS n FROM point_ledger WHERE kind = 'ticket_issue'").first()).toEqual({ n: 0 });
 
     expect((await undo(s.admin, await lastLog())).status).toBe(200);
     expect(await card()).toMatchObject({ balance: 9, tickets: [] });
-    expect(await env.DB.prepare('SELECT status FROM tickets').first()).toEqual({ status: 'void' });
   });
 
   it('プレビューは書き込まずに、変更後の残高と無料券を返す', async () => {
@@ -78,7 +76,7 @@ describe('A-03 ポイントの手動登録', () => {
     await givePoints(s.r.memberNo, 8);
     const res = await preview(s.admin, s.id, { points: 15, tickets: 1, reason: 'その他', note: '紙のカードの分' });
     expect(res.status).toBe(200);
-    expect(res.body).toEqual({ balanceBefore: 8, balanceAfter: 3, ticketsBefore: 0, ticketsAfter: 3, ticketsIssued: 2, pointsPerTicket: 10 });
+    expect(res.body).toEqual({ balanceBefore: 8, balanceAfter: 23, ticketsBefore: 0, ticketsAfter: 1, pointsPerTicket: 10 });
     expect((await card()).balance).toBe(8);
     const n = await env.DB.prepare('SELECT COUNT(*) AS n FROM audit_log').first<{ n: number }>();
     expect(n?.n).toBe(0);
@@ -120,7 +118,7 @@ describe('A-03 ポイントの手動登録', () => {
   it('増やした無料券がもう使われていたら、元に戻せない(409)', async () => {
     const s = await setup();
     await points(s.admin, s.id, { tickets: 1, reason: 'お詫び' });
-    await checkin(PAPA, [s.r.dogs[0]!.id], { now: DAY2, useTicket: true });
+    await useTicketOf(PAPA, { now: DAY2 });
     const res = await undo(s.admin, await lastLog(), DAY2);
     expect(res.status).toBe(409);
     expect(res.body.error.message).toMatch(/もう使われているため戻せません/);
@@ -136,7 +134,7 @@ describe('A-03 ポイントの手動登録', () => {
     expect(res.body.error.message).toMatch(/ポイントが足りなくなります/);
   });
 
-  it('減らした分を戻して 10 以上になったら、無料券を発行する', async () => {
+  it('減らした分を戻して 10 以上になっても、無料券には自動で替えない', async () => {
     const s = await setup();
     await givePoints(s.r.memberNo, 9);
     await points(s.admin, s.id, { points: -5, reason: '入力ミスの修正' });
@@ -144,8 +142,7 @@ describe('A-03 ポイントの手動登録', () => {
     expect((await card(DAY2)).balance).toBe(5);
     const first = (await env.DB.prepare("SELECT id FROM audit_log WHERE action = 'points.manual'").first<{ id: number }>())!.id;
     expect((await undo(s.admin, first, DAY2)).status).toBe(200);
-    expect(await card(DAY2)).toMatchObject({ balance: 0 });
-    expect((await card(DAY2)).tickets).toHaveLength(1);
+    expect(await card(DAY2)).toMatchObject({ balance: 10, toNextTicket: 0, tickets: [] });
   });
 
   it('入力のまちがいは 400。受付スタッフと製作者は 403', async () => {

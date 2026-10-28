@@ -1,4 +1,5 @@
 import type { AdminVisit, StaffRole } from '@dr/shared';
+import { ticketUsedOnVisitSql } from './tickets';
 
 /** 管理画面向けの写真の URL の頭(ログインのセッションで認証) */
 export const ADMIN_MEDIA_BASE = '/admin/api/media';
@@ -26,7 +27,7 @@ export async function listVisitsOn(db: D1Database, date: string, role: StaffRole
   const { results } = await db
     .prepare(
       `SELECT v.id, v.visit_date, v.checked_in_at, v.household_id, h.member_no, h.display_name, v.dog_count,
-              v.used_ticket, v.method, v.cancelled_at, v.cancel_reason, m.line_display_name AS checked_in_by
+              ${ticketUsedOnVisitSql('v')} AS used_ticket, v.method, v.cancelled_at, v.cancel_reason, m.line_display_name AS checked_in_by
          FROM visits v
          LEFT JOIN households h ON h.id = v.household_id
          LEFT JOIN family_members m ON m.id = v.checked_in_member_id

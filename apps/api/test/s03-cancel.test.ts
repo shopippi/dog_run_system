@@ -1,6 +1,6 @@
 import { env } from 'cloudflare:test';
 import { describe, expect, it } from 'vitest';
-import { adminCall, call, checkin, createStaff, dog, givePoints, login, registerUser } from './helpers';
+import { adminCall, call, checkin, createStaff, dog, exchangeTicket, givePoints, login, registerUser, useTicketOf } from './helpers';
 
 const PAPA = 'U001:パパ';
 const DAY1 = '2026-10-28T01:00:00Z';
@@ -13,6 +13,21 @@ async function staffCookie(role: 'staff' | 'admin' | 'developer' = 'staff') {
 const cancel = (cookie: string, visitId: number, reason = '入力ミス', now = DAY1) =>
   adminCall(`/admin/api/checkins/${visitId}/cancel`, { cookie, body: { reason }, now });
 const card = async (now = DAY1) => (await call('/api/me', { user: PAPA, now })).body.card;
+/** 以前の動き(10ポイントでチェックインのときに自動発行)の記録を、その来場に作る */
+async function legacyIssue(visitId: number) {
+  await env.DB.prepare(
+    `INSERT INTO tickets (household_id, issued_at, source, issued_visit_id, status)
+     SELECT household_id, checked_in_at, 'points', id, 'unused' FROM visits WHERE id = ?`,
+  )
+    .bind(visitId)
+    .run();
+  await env.DB.prepare(
+    `INSERT INTO point_ledger (household_id, delta, kind, visit_id, ticket_id, actor_type, created_at)
+     SELECT household_id, -10, 'ticket_issue', id, (SELECT MAX(id) FROM tickets), 'member', checked_in_at FROM visits WHERE id = ?`,
+  )
+    .bind(visitId)
+    .run();
+}
 
 describe('S-03 チェックインの取り消し', () => {
   it('取り消すと付けたポイントを戻し、来場は「取り消し済み」として残る', async () => {
@@ -31,11 +46,12 @@ describe('S-03 チェックインの取り消し', () => {
     expect(last).toEqual({ delta: -1, kind: 'cancel' });
   });
 
-  it('9→10で発行された無料券は回収し、9ポイントに戻る', async () => {
+  it('以前の記録で、9→10で発行された無料券は回収し、9ポイントに戻る', async () => {
     const cookie = await staffCookie();
     const r = await registerUser(PAPA);
     await givePoints(r.memberNo, 9);
     const v = await checkin(PAPA, [r.dogs[0]!.id], { now: DAY1 });
+    await legacyIssue(v.body.visitId);
     expect(await card()).toMatchObject({ balance: 0 });
     expect((await card()).tickets).toHaveLength(1);
 
@@ -47,25 +63,46 @@ describe('S-03 チェックインの取り消し', () => {
     expect(t).toEqual({ status: 'void' });
   });
 
-  it('使った無料券は未使用に戻る', async () => {
+  it('その来場に結びついた無料券の使用は未使用に戻る。付けたポイントも戻る', async () => {
     const cookie = await staffCookie();
     const r = await registerUser(PAPA);
-    await givePoints(r.memberNo, 9);
-    await checkin(PAPA, [r.dogs[0]!.id], { now: DAY1 });
-    const v = await checkin(PAPA, [r.dogs[0]!.id], { now: DAY2, useTicket: true });
-    expect((await card(DAY2)).tickets).toHaveLength(0);
+    await givePoints(r.memberNo, 10);
+    await exchangeTicket(PAPA, { now: DAY1 });
+    await useTicketOf(PAPA, { now: DAY2 });
+    const v = await checkin(PAPA, [r.dogs[0]!.id], { now: DAY2 });
+    expect(await card(DAY2)).toMatchObject({ balance: 1, tickets: [] });
     await cancel(cookie, v.body.visitId, '入力ミス', DAY2);
     const after = await card(DAY2);
     expect(after.tickets).toHaveLength(1);
     expect(after.balance).toBe(0);
+    expect(await env.DB.prepare('SELECT status, used_visit_id, used_at FROM tickets').first()).toEqual({
+      status: 'unused',
+      used_visit_id: null,
+      used_at: null,
+    });
+    // 今日の来場の「無料券を使用」の印も消える
+    const today = await adminCall('/admin/api/today', { cookie, now: DAY2 });
+    expect(today.body.totals).toMatchObject({ groups: 0, ticketsUsed: 0 });
   });
 
-  it('発行された無料券がもう使われていたら、取り消せない', async () => {
+  it('ほかの日に使った無料券は、取り消しても戻らない', async () => {
+    const cookie = await staffCookie();
+    const r = await registerUser(PAPA);
+    await givePoints(r.memberNo, 10);
+    await exchangeTicket(PAPA, { now: DAY1 });
+    await useTicketOf(PAPA, { now: DAY1 });
+    const v = await checkin(PAPA, [r.dogs[0]!.id], { now: DAY2 });
+    await cancel(cookie, v.body.visitId, '入力ミス', DAY2);
+    expect(await env.DB.prepare('SELECT status FROM tickets').first()).toEqual({ status: 'used' });
+  });
+
+  it('以前の記録で、発行された無料券がもう使われていたら、取り消せない', async () => {
     const cookie = await staffCookie();
     const r = await registerUser(PAPA);
     await givePoints(r.memberNo, 9);
     const first = await checkin(PAPA, [r.dogs[0]!.id], { now: DAY1 });
-    await checkin(PAPA, [r.dogs[0]!.id], { now: DAY2, useTicket: true });
+    await legacyIssue(first.body.visitId);
+    await useTicketOf(PAPA, { now: DAY2 });
     const res = await cancel(cookie, first.body.visitId, '入力ミス', DAY2);
     expect(res.status).toBe(409);
     expect(res.body.error.message).toMatch(/もう使われているため取り消せません/);

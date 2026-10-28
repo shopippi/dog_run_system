@@ -2,7 +2,7 @@ import { env } from 'cloudflare:test';
 import { describe, expect, it } from 'vitest';
 import { runScheduled } from '../src/cron';
 import { blockNetwork } from './analytics-helpers';
-import { call, checkin, dog, survey } from './helpers';
+import { call, checkin, dog, exchangeTicket, survey } from './helpers';
 
 const PAPA = 'U001:パパ';
 const MAMA = 'U002:ママ';
@@ -100,7 +100,8 @@ describe('B-05 有効期限の処理', () => {
     await setRule('ticket_expiry', { mode: 'months_from_grant', months: 3 });
     const a = await register(PAPA, '2026-01-10T01:00:00Z');
     await ledger(a.householdId, 9, 'migration', null);
-    await checkin(PAPA, [a.dogId], { now: '2026-01-15T01:00:00Z' }); // 10ポイントで無料券(期限 2026-04-15)
+    await checkin(PAPA, [a.dogId], { now: '2026-01-15T01:00:00Z' }); // 10ポイントになる
+    await exchangeTicket(PAPA, { now: '2026-01-15T01:00:00Z' }); // 無料券と交換(期限 2026-04-15)
     expect(await ticketStatuses(a.householdId)).toEqual(['unused']);
     await nightly('2026-04-15');
     expect(await ticketStatuses(a.householdId)).toEqual(['unused']);
@@ -115,7 +116,8 @@ describe('B-05 有効期限の処理', () => {
     await setRule('ticket_expiry', { mode: 'months_from_last_visit', months: 1 });
     const a = await register(PAPA, '2026-01-10T01:00:00Z');
     await ledger(a.householdId, 9, 'migration', null);
-    await checkin(PAPA, [a.dogId], { now: '2026-01-30T01:00:00Z' }); // 無料券1枚、残高0
+    await checkin(PAPA, [a.dogId], { now: '2026-01-30T01:00:00Z' }); // 10ポイント
+    await exchangeTicket(PAPA, { now: '2026-01-30T01:00:00Z' }); // 無料券1枚、残高0
     await ledger(a.householdId, 4, 'manual', null);
     await checkin(PAPA, [a.dogId], { now: '2026-01-31T01:00:00Z' }); // 最後の来場 1/31、残高5
     const b = await register(MAMA, '2026-01-10T01:00:00Z');

@@ -1,6 +1,6 @@
 import { expect, test, type Browser, type Page } from '@playwright/test';
-import { adminLogin, makePhoto, newLineUser, registerViaUi } from './helpers';
-import { insertMigrationRequest, putMedia, requestMerge, visitYesterday } from './merge-helpers';
+import { adminLogin, newLineUser, registerViaUi } from './helpers';
+import { requestMerge, visitYesterday } from './merge-helpers';
 
 // 担当B(おうちの統合・確認待ち)の画面の、文字と背景のコントラスト(WCAG の 4.5:1)。
 // 確かめ方は e2e/contrast.spec.ts の lowContrast と同じ(コピーして使う)。
@@ -110,12 +110,9 @@ for (const scheme of ['light', 'dark'] as const) {
       const customer = await browser.newPage();
       const papa = newLineUser('パパ');
       const mama = newLineUser('ママ');
-      const papaNo = await registerViaUi(customer, papa, ['ルル']);
+      await registerViaUi(customer, papa, ['ルル']);
       const mamaNo = await registerViaUi(customer, mama, ['るるちゃん']);
       await requestMerge(customer, papa, mama);
-      const key = `requests/${papaNo}/card-${Date.now()}.jpg`;
-      putMedia(key, await makePhoto(customer, 800, 600));
-      insertMigrationRequest(papaNo, { source: 'line_card', claimedPoints: 4 }, key);
       await customer.close();
 
       const page = await browser.newPage({ ...TABLET, colorScheme: scheme });
@@ -126,12 +123,6 @@ for (const scheme of ['light', 'dark'] as const) {
       const merge = page.getByRole('listitem', { name: `おうちをまとめる申請 るるちゃんのおうち ${mamaNo}` });
       await merge.waitFor();
       await check(page, 'M-09 確認待ち');
-      await page.getByRole('listitem', { name: `旧カードの引き継ぎ ルルのおうち ${papaNo}` }).getByRole('button', { name: '確かめて承認する' }).click();
-      const approve = page.getByRole('dialog', { name: '旧カードの引き継ぎを承認する' });
-      await approve.getByText(/引き継ぎ後/).waitFor();
-      await check(page, 'M-09 旧カードの承認');
-      await approve.getByRole('button', { name: '承認する' }).click();
-      await expect(approve).toHaveCount(0);
 
       await merge.getByRole('button', { name: '却下する' }).click();
       const dialog = page.getByRole('dialog', { name: '申請を却下する' });
@@ -143,16 +134,6 @@ for (const scheme of ['light', 'dark'] as const) {
       await page.getByRole('listitem', { name: `おうちをまとめる申請 るるちゃんのおうち ${mamaNo}` }).waitFor();
       await check(page, 'M-09 処理済み');
 
-      // 受付で直接入力(引き継ぎ済みの種類は選べない見た目)
-      await page.getByRole('tab', { name: '受付で直接入力' }).click();
-      const picker = page.getByRole('group', { name: '引き継ぐおうちを探す' });
-      await picker.getByRole('searchbox', { name: '探す言葉' }).fill(papaNo);
-      await picker.getByRole('list', { name: '引き継ぐおうちを探すの候補' }).getByRole('button', { name: new RegExp(papaNo) }).click();
-      const direct = page.getByRole('region', { name: '受付で直接入力' });
-      await expect(direct.getByRole('radio', { name: /LINEのショップカード\(引き継ぎ済み\)/ })).toBeDisabled();
-      await direct.getByLabel('旧カードのポイント数').fill('3');
-      await direct.getByText(/引き継ぎ後/).waitFor();
-      await check(page, 'M-09 受付で直接入力');
       await page.close();
     });
 

@@ -77,9 +77,10 @@ export function CheckinDonePage() {
         </section>
       )}
 
-      {live && detail.ticketsIssued > 0 && (
-        <div className="alert warning" role="status">
-          <p>ポイントがたまり、無料券が{detail.ticketsIssued}枚発行されました</p>
+
+      {live && detail.balance >= detail.pointsPerTicket && (
+        <div className="alert info" role="status">
+          <p>ポイントが{detail.pointsPerTicket}以上たまっています。会員証の「無料券と交換する」から、無料券と交換できます。</p>
         </div>
       )}
 
@@ -88,7 +89,7 @@ export function CheckinDonePage() {
           <span className="stat-label">いまのポイント</span>
           <span className="stat-value">
             {detail.balance}
-            <small> / {detail.pointsPerTicket}</small>
+            <small>ポイント</small>
           </span>
         </div>
         <div className="stat">

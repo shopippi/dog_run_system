@@ -1,26 +1,24 @@
-import { ticketsFromBalance } from './points';
-
 // 旧カードからの移行の計算(要件定義書 16章、A-05)。
 
-/** 一度に引き継げるポイントの上限(旧カードの残高は 0〜99) */
-export const MIGRATION_POINTS_LIMIT = 99;
+/** 入力チェックで受け付けるポイント数の上限。実際に引き継げる上限は設定 migration_max_points(初期値 30)で決める */
+export const MIGRATION_POINTS_LIMIT = 200;
 
 export type MigrationPlan = {
-  /** 無料券の発行 */
-  ticketsIssued: number;
   balanceAfter: number;
-  /** 台帳に書く行。移行の +N と、無料券の発行の -10 */
-  ledger: { delta: number; kind: 'migration' | 'ticket_issue' }[];
+  /** 台帳に書く行(移行の +N だけ。無料券には自動で替えない。8章) */
+  ledger: { delta: number; kind: 'migration' }[];
 };
 
 /**
- * 移行したポイントを台帳に足し、無料券1枚分以上になれば、その時点で無料券を発行する(16.1)。
+ * 移行したポイントを台帳に足す(16.1)。無料券1枚分以上になっても自動では交換しない(8章)。
  */
-export function planMigration(balance: number, points: number, pointsPerTicket: number): MigrationPlan {
-  const ledger: MigrationPlan['ledger'] = [{ delta: points, kind: 'migration' }];
-  const { tickets, balanceAfter } = ticketsFromBalance(balance + points, pointsPerTicket);
-  for (let i = 0; i < tickets; i++) ledger.push({ delta: -pointsPerTicket, kind: 'ticket_issue' });
-  return { ticketsIssued: tickets, balanceAfter, ledger };
+export function planMigration(balance: number, points: number): MigrationPlan {
+  return { balanceAfter: balance + points, ledger: [{ delta: points, kind: 'migration' }] };
+}
+
+/** 引き継ぐポイント数が上限(設定 migration_max_points)を超えていないか。超えていれば画面に出す文を返す */
+export function migrationPointsError(points: number, maxPoints: number): string | null {
+  return points > maxPoints ? `引き継げるポイントは最大${maxPoints}ポイントです。` : null;
 }
 
 /**
