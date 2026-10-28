@@ -295,3 +295,12 @@ export function dogChangeStatement(
     )
     .bind(dogId, field, before == null ? null : String(before), after == null ? null : String(after), reason, actor.type, actor.id, nowIso);
 }
+
+/** 来場した犬(来場の記録の順) */
+export async function listVisitDogs(db: D1Database, visitId: number, mediaBase: string): Promise<DogSummary[]> {
+  const { results } = await db
+    .prepare(`${DOG_SELECT} JOIN visit_dogs vd ON vd.dog_id = d.id WHERE vd.visit_id = ? ORDER BY vd.id`)
+    .bind(visitId)
+    .all<DogRow>();
+  return results.map((r) => toDogSummary(r, mediaBase));
+}
