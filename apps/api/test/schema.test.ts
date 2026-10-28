@@ -1,6 +1,7 @@
 import { SELF, env } from 'cloudflare:test';
 import { describe, expect, it } from 'vitest';
 import { loadSettings } from '../src/lib/settings';
+import { call } from './helpers';
 
 const T = '2026-10-28T10:00:00+09:00';
 
@@ -119,9 +120,8 @@ describe('API の土台', () => {
   });
 
   it('ない API には日本語のメッセージ付きで 404 を返す', async () => {
-    const res = await SELF.fetch('https://example.com/api/nothing');
+    const res = await call('/api/nothing', { user: 'U001:パパ' });
     expect(res.status).toBe(404);
-    const body = (await res.json()) as { error: { message: string } };
-    expect(body.error.message).toMatch(/見つかりません/);
+    expect(res.body.error.message).toMatch(/見つかりません/);
   });
 });

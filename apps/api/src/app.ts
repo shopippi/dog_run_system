@@ -1,7 +1,8 @@
 import { Hono } from 'hono';
 import type { AppEnv } from './env';
 import { AppError, type ErrorBody } from './lib/errors';
-import { nowMiddleware } from './lib/middleware';
+import { nowMiddleware, requireLineUser } from './lib/middleware';
+import { meRoutes } from './routes/customer/me';
 
 export function createApp() {
   const app = new Hono<AppEnv>();
@@ -25,7 +26,11 @@ export function createApp() {
 
   app.get('/api/health', (c) => c.json({ ok: true }));
 
-  // ここに機能ごとのルートを足していく
+  // お客さん向け API(LINE の IDトークンで認証)
+  const customer = new Hono<AppEnv>();
+  customer.use('*', requireLineUser);
+  customer.route('/', meRoutes);
+  app.route('/api', customer);
 
   app.all('/api/*', (c) =>
     c.json<ErrorBody>({ error: { code: 'not_found', message: 'その操作は見つかりませんでした。画面を読み込み直してください。' } }, 404),
