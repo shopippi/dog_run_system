@@ -7,7 +7,8 @@ export function auditStatement(
     staffId: number;
     action: string;
     targetType: string;
-    targetId: string | number;
+    /** 対象のID。直前に追加した行を指すときは { sql: 'last_insert_rowid()' } */
+    targetId: string | number | { sql: string };
     before?: unknown;
     after?: unknown;
     reason?: string | null;
@@ -17,12 +18,13 @@ export function auditStatement(
     onlyIf?: { sql: string; args: unknown[] };
   },
 ): D1PreparedStatement {
+  const targetSql = typeof args.targetId === 'object' ? `CAST((${args.targetId.sql}) AS TEXT)` : '?';
   const values = [
     'staff',
     args.staffId,
     args.action,
     args.targetType,
-    String(args.targetId),
+    ...(typeof args.targetId === 'object' ? [] : [String(args.targetId)]),
     args.before === undefined ? null : JSON.stringify(args.before),
     args.after === undefined ? null : JSON.stringify(args.after),
     args.reason ?? null,
@@ -32,8 +34,8 @@ export function auditStatement(
   const cols = `(actor_type, actor_id, action, target_type, target_id, before_value, after_value, reason, undo_info, created_at)`;
   if (args.onlyIf) {
     return db
-      .prepare(`INSERT INTO audit_log ${cols} SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ? WHERE ${args.onlyIf.sql}`)
+      .prepare(`INSERT INTO audit_log ${cols} SELECT ?, ?, ?, ?, ${targetSql}, ?, ?, ?, ?, ? WHERE ${args.onlyIf.sql}`)
       .bind(...values, ...args.onlyIf.args);
   }
-  return db.prepare(`INSERT INTO audit_log ${cols} VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).bind(...values);
+  return db.prepare(`INSERT INTO audit_log ${cols} VALUES (?, ?, ?, ?, ${targetSql}, ?, ?, ?, ?, ?)`).bind(...values);
 }
