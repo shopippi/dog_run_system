@@ -357,3 +357,21 @@ input::placeholder { color: var(--text-tertiary); }
 .mg-list dd { margin: 0; overflow-wrap: anywhere; }
 .mg-actions { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
 .mg-done { font-size: var(--fs-15); font-weight: var(--fw-strong); }
+
+/* ---- M-09 確認待ち(担当B。接頭辞 rq-) ---- */
+.pending a { display: inline-flex; align-items: center; gap: var(--sp-1); min-height: var(--control-h); color: var(--text-secondary); }
+.pending a b { color: var(--text); }
+.rq-tabs { align-self: flex-start; }
+.rq-list { list-style: none; margin: 0; padding: 0; }
+.rq-list > li + li { border-top: 1px solid var(--border); }
+.rq-row { display: flex; flex-direction: column; gap: var(--sp-3); padding: var(--sp-4) var(--sp-5); }
+.rq-meta { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2) var(--sp-3); }
+.rq-body { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: var(--sp-3) var(--sp-6); }
+.rq-house { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.rq-house-label { font-size: var(--fs-12); color: var(--text-secondary); }
+.rq-house-main { display: flex; align-items: center; gap: var(--sp-3); min-width: 0; }
+.rq-house-main .result-body b { overflow-wrap: anywhere; }
+.rq-photo { display: block; flex: none; border-radius: var(--radius); overflow: hidden; border: 1px solid var(--border); }
+.rq-photo img { display: block; width: 72px; height: 72px; object-fit: cover; background: var(--surface-sunk); }
+.rq-photo:focus-visible { outline: 2px solid var(--focus-color); outline-offset: 2px; }
+.rq-actions { display: flex; flex-wrap: wrap; gap: var(--sp-2); }

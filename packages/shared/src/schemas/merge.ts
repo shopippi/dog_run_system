@@ -26,3 +26,18 @@ export const mergeInputSchema = z
     error: '同じおうちどうしはまとめられません。まとめる相手のおうちを選び直してください。',
   });
 export type MergeInput = z.infer<typeof mergeInputSchema>;
+
+/** 却下の理由(確認待ち、A-05・A-08)。選択式 */
+export const REJECT_REASONS = {
+  merge: ['同じ家族ではない', 'すでにまとめてある', 'お客さんから取り消しの連絡', 'その他'],
+  migration: ['写真でポイントが確認できない', 'すでに引き継ぎ済み', 'お客さんから取り消しの連絡', 'その他'],
+} as const;
+
+/** 申請の却下(POST /admin/api/requests/:id/reject) */
+export const rejectRequestSchema = z.object({
+  reason: z
+    .string()
+    .trim()
+    .min(1, { error: '却下する理由を選んでください。' })
+    .max(200, { error: '理由は200文字までで入力してください。' }),
+});

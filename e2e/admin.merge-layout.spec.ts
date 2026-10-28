@@ -1,5 +1,6 @@
 import { expect, test, type Browser, type CDPSession, type Page } from '@playwright/test';
 import { adminLogin, answerSurvey, makePhoto, newLineUser, openCheckin, openLiff, registerViaUi } from './helpers';
+import { insertMigrationRequest, putMedia, requestMerge } from './merge-helpers';
 
 // 担当B(おうちの統合・確認待ち)の画面の見え方。e2e/admin.layout.spec.ts の checkScreen と同じ確かめ方。
 // PC(1280)とタブレット縦(768)の2つの幅で確かめる。
@@ -98,8 +99,52 @@ async function seed(browser: Browser) {
   return { papaNo, mamaNo };
 }
 
+/** 確認待ち: まとめる申請と、旧カードの引き継ぎ申請(写真つき) */
+async function seedRequests(browser: Browser) {
+  const customer = await browser.newPage();
+  const papa = newLineUser('パパ');
+  const mama = newLineUser('ママ');
+  const papaNo = await registerViaUi(customer, papa, ['リク']);
+  const mamaNo = await registerViaUi(customer, mama, ['りくちゃん', 'ミント']);
+  await requestMerge(customer, papa, mama);
+  const key = `requests/${papaNo}/card-${Date.now()}.jpg`;
+  putMedia(key, await makePhoto(customer, 800, 600));
+  insertMigrationRequest(papaNo, { source: 'paper_card', claimedPoints: 7, note: '角が少し破れています' }, key);
+  await customer.close();
+  return { papaNo, mamaNo };
+}
+
 test.describe('おうちの統合・確認待ちの見え方', () => {
   for (const v of VIEWPORTS) {
+    test(`${v.name}: M-09 確認待ちが横にはみ出さず、押しやすい大きさになっている`, async ({ browser }) => {
+      test.setTimeout(120_000);
+      const { papaNo, mamaNo } = await seedRequests(browser);
+      const page = await browser.newPage({ viewport: v.viewport, hasTouch: v.touch });
+      await adminLogin(page, 'admin');
+      await expect(page.getByRole('link', { name: /確認待ちが \d+件 あります/ })).toBeVisible();
+      await checkScreen(page, v.name, 'M-02 今日の来場(管理者・確認待ちあり)', v.touch);
+      await page.getByRole('link', { name: /確認待ちが \d+件 あります/ }).click();
+
+      const merge = page.getByRole('listitem', { name: `おうちをまとめる申請 りくちゃん・ミントのおうち ${mamaNo}` });
+      const migration = page.getByRole('listitem', { name: `旧カードの引き継ぎ リクのおうち ${papaNo}` });
+      await expect(merge).toBeVisible();
+      await expect(migration.getByRole('img', { name: '旧カードの写真' })).toBeVisible();
+      await expect.poll(() => migration.getByRole('img', { name: '旧カードの写真' }).evaluate((img: HTMLImageElement) => img.naturalWidth)).toBeGreaterThan(0);
+      await checkScreen(page, v.name, 'M-09 確認待ち', v.touch);
+
+      await merge.getByRole('button', { name: '却下する' }).click();
+      const dialog = page.getByRole('dialog', { name: '申請を却下する' });
+      await expect(dialog.getByRole('button', { name: 'やめる' })).toBeFocused();
+      await checkScreen(page, v.name, 'M-09 却下の確認', v.touch);
+      await dialog.getByRole('button', { name: '却下する' }).click();
+      await expect(merge).toHaveCount(0);
+
+      await page.getByRole('tab', { name: '処理済み' }).click();
+      await expect(page.getByRole('listitem', { name: `おうちをまとめる申請 りくちゃん・ミントのおうち ${mamaNo}` })).toBeVisible();
+      await checkScreen(page, v.name, 'M-09 確認待ち(処理済み)', v.touch);
+      await page.close();
+    });
+
     test(`${v.name}: M-08 おうちの統合が横にはみ出さず、押しやすい大きさになっている`, async ({ browser }) => {
       test.setTimeout(120_000);
       const { papaNo, mamaNo } = await seed(browser);

@@ -92,7 +92,7 @@ export function MergePage() {
     reset();
   };
 
-  if (done) return <MergeDone result={done.result} absorbedNo={done.absorbedNo} />;
+  if (done) return <MergeDone result={done.result} absorbedNo={done.absorbedNo} fromRequest={requestId !== undefined} />;
 
   const nextSlot: 0 | 1 | null = a === null ? 0 : b === null ? 1 : null;
   const ready = preview !== null && preview.kept.id === keep;
@@ -469,7 +469,7 @@ function MergeConfirm({
 }
 
 /** まとめた後。30日以内なら、ここからも元に戻せる */
-function MergeDone({ result, absorbedNo }: { result: MergeResult; absorbedNo: string }) {
+function MergeDone({ result, absorbedNo, fromRequest }: { result: MergeResult; absorbedNo: string; fromRequest: boolean }) {
   const [undoing, setUndoing] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
@@ -509,9 +509,15 @@ function MergeDone({ result, absorbedNo }: { result: MergeResult; absorbedNo: st
               <dd>{formatYmd(result.undoDeadline)}まで(この間に来場やポイントの変更があると、戻せません)</dd>
             </dl>
             <div className="mg-actions">
-              <Link className="btn sub" to="/search">
-                おうちを探す
-              </Link>
+              {fromRequest ? (
+                <Link className="btn sub" to="/requests">
+                  確認待ちにもどる
+                </Link>
+              ) : (
+                <Link className="btn sub" to="/search">
+                  おうちを探す
+                </Link>
+              )}
               <button type="button" className="btn ghost" onClick={() => setUndoing(true)}>
                 元に戻す
               </button>

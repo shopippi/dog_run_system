@@ -1,5 +1,6 @@
 import { expect, test, type Browser, type Page } from '@playwright/test';
-import { adminLogin, newLineUser, openCheckin, registerViaUi } from './helpers';
+import { adminLogin, makePhoto, newLineUser, openCheckin, registerViaUi } from './helpers';
+import { insertMigrationRequest, putMedia, requestMerge } from './merge-helpers';
 
 // 担当B(おうちの統合・確認待ち)の画面の、文字と背景のコントラスト(WCAG の 4.5:1)。
 // 確かめ方は e2e/contrast.spec.ts の lowContrast と同じ(コピーして使う)。
@@ -105,6 +106,39 @@ async function seed(browser: Browser) {
 for (const scheme of ['light', 'dark'] as const) {
   test.describe(scheme === 'light' ? 'ライト' : 'ダーク', () => {
     test.use({ colorScheme: scheme });
+
+    test('M-09 確認待ちの文字が背景に対して読める', async ({ browser }) => {
+      test.setTimeout(90_000);
+      const customer = await browser.newPage();
+      const papa = newLineUser('パパ');
+      const mama = newLineUser('ママ');
+      const papaNo = await registerViaUi(customer, papa, ['ルル']);
+      const mamaNo = await registerViaUi(customer, mama, ['るるちゃん']);
+      await requestMerge(customer, papa, mama);
+      const key = `requests/${papaNo}/card-${Date.now()}.jpg`;
+      putMedia(key, await makePhoto(customer, 800, 600));
+      insertMigrationRequest(papaNo, { source: 'line_card', claimedPoints: 4 }, key);
+      await customer.close();
+
+      const page = await browser.newPage({ ...TABLET, colorScheme: scheme });
+      await adminLogin(page, 'admin');
+      await page.getByRole('link', { name: /確認待ちが \d+件 あります/ }).waitFor();
+      await check(page, 'M-02 今日の来場(確認待ちあり)');
+      await page.getByRole('link', { name: /確認待ちが \d+件 あります/ }).click();
+      const merge = page.getByRole('listitem', { name: `おうちをまとめる申請 るるちゃんのおうち ${mamaNo}` });
+      await merge.waitFor();
+      await check(page, 'M-09 確認待ち');
+      await merge.getByRole('button', { name: '却下する' }).click();
+      const dialog = page.getByRole('dialog', { name: '申請を却下する' });
+      await dialog.waitFor();
+      await check(page, 'M-09 却下の確認');
+      await dialog.getByRole('button', { name: '却下する' }).click();
+      await expect(merge).toHaveCount(0);
+      await page.getByRole('tab', { name: '処理済み' }).click();
+      await page.getByRole('listitem', { name: `おうちをまとめる申請 るるちゃんのおうち ${mamaNo}` }).waitFor();
+      await check(page, 'M-09 処理済み');
+      await page.close();
+    });
 
     test('M-08 おうちの統合の文字が背景に対して読める', async ({ browser }) => {
       test.setTimeout(90_000);
