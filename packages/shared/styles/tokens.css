@@ -1,0 +1,41 @@
+/* お客さん向け画面と管理画面で共通の色・文字(docs/demo.html と同じ配色) */
+:root {
+  --bg: #eef2ea; --surface: #ffffff; --sunk: #f6f8f3; --ink: #1c2a21; --muted: #5b6a60; --line: #d9e1d4;
+  --deep: #2e7a4e; --accent: #2e7a4e; --accent-soft: #e1efe5; --on-accent: #ffffff;
+  --gold: #b9741b; --gold-soft: #fbefdc; --bad: #bf3f35; --bad-soft: #f8e3e1; --info: #3d6a9e; --info-soft: #e4edf7;
+  --f-display: "Hiragino Maru Gothic ProN", "Zen Maru Gothic", "Yu Gothic", sans-serif;
+  --f-body: "Hiragino Sans", "Zen Kaku Gothic New", "Yu Gothic", system-ui, sans-serif;
+  --f-mono: ui-monospace, Menlo, monospace;
+  --r: 12px;
+  --shadow: 0 1px 2px rgba(20, 40, 25, .06), 0 8px 24px rgba(20, 40, 25, .07);
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #111713; --surface: #1a221d; --sunk: #151c18; --ink: #e5ede7; --muted: #9caaa0; --line: #2b3730;
+    --deep: #2a6b46; --accent: #5db381; --accent-soft: #1f3328; --on-accent: #0d1a12;
+    --gold: #e3a250; --gold-soft: #33281a; --bad: #e2685d; --bad-soft: #3a2120; --info: #86aee0; --info-soft: #1d2a38;
+    --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 8px 24px rgba(0, 0, 0, .25);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #111713; --surface: #1a221d; --sunk: #151c18; --ink: #e5ede7; --muted: #9caaa0; --line: #2b3730;
+  --deep: #2a6b46; --accent: #5db381; --accent-soft: #1f3328; --on-accent: #0d1a12;
+  --gold: #e3a250; --gold-soft: #33281a; --bad: #e2685d; --bad-soft: #3a2120; --info: #86aee0; --info-soft: #1d2a38;
+  --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 8px 24px rgba(0, 0, 0, .25);
+  color-scheme: dark;
+}
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 15px; line-height: 1.6; }
+h1, h2, h3, h4 { font-family: var(--f-display); font-weight: 700; margin: 0; }
+p { margin: 0; }
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+button:disabled { cursor: not-allowed; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+img { max-width: 100%; }
+.mono { font-family: var(--f-mono); letter-spacing: .02em; }
+.muted { color: var(--muted); }
+.small { font-size: .82rem; }

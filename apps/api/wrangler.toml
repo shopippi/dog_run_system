@@ -1,0 +1,58 @@
+# Cloudflare Workers の設定。API と、お客さん向け画面(/liff/)・管理画面(/admin/)を同じドメインから配信する。
+# 同じドメインにすることで、管理画面のログイン(クッキー)が iPad の Safari でも保たれる。
+name = "dog-run"
+main = "src/index.ts"
+compatibility_date = "2026-10-01"
+compatibility_flags = ["nodejs_compat"]
+
+[assets]
+directory = "./public"
+binding = "ASSETS"
+# API はつねに Worker で処理する。画面のファイルが見つからないときも Worker に回し、各アプリの index.html を返す。
+run_worker_first = ["/api/*", "/admin/api/*"]
+not_found_handling = "none"
+
+[vars]
+# local: 開発用(LINEのログインをモックにできる) / test: テスト環境 / production: 本番
+ENVIRONMENT = "local"
+# LINE ログインチャネルのチャネルID(公開してよい値)。IDトークンの検証に使う。
+LINE_CHANNEL_ID = "0000000000"
+# local のときだけ、LINE の代わりにモックのIDトークンを受け付ける
+LINE_LOGIN_MOCK = "1"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "dog-run"
+# 本番・テスト環境では `wrangler d1 create dog-run` で作ったIDに置き換える
+database_id = "00000000-0000-0000-0000-000000000000"
+migrations_dir = "migrations"
+
+[[r2_buckets]]
+binding = "MEDIA"
+bucket_name = "dog-run-media"
+
+[triggers]
+# 日本時間 3:10(日別集計・期限切れ・バックアップ)と 5:10(天気)。cron は UTC で書く。
+crons = ["10 18 * * *", "10 20 * * *"]
+
+# 本番の設定例。`wrangler deploy --env production` で使う。
+[env.production]
+name = "dog-run-production"
+
+[env.production.vars]
+ENVIRONMENT = "production"
+LINE_CHANNEL_ID = "（本番のチャネルID）"
+LINE_LOGIN_MOCK = "0"
+
+[[env.production.d1_databases]]
+binding = "DB"
+database_name = "dog-run-production"
+database_id = "（wrangler d1 create で作ったID）"
+migrations_dir = "migrations"
+
+[[env.production.r2_buckets]]
+binding = "MEDIA"
+bucket_name = "dog-run-production-media"
+
+[env.production.triggers]
+crons = ["10 18 * * *", "10 20 * * *"]

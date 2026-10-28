@@ -1,0 +1,43 @@
+/* 受付・管理画面。タブレットで指で押しやすい大きさ(ボタンの高さ 44px 以上。要件定義書 15.1) */
+body { font-size: 16px; }
+.console { min-height: 100dvh; display: flex; flex-direction: column; }
+.con-head {
+  display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between;
+  padding: 12px 20px; background: var(--surface); border-bottom: 1px solid var(--line);
+}
+.con-head h1 { font-size: 1.15rem; }
+.con-head .who { font-size: .85rem; color: var(--muted); display: flex; align-items: center; gap: 10px; }
+.tabs { display: flex; gap: 4px; padding: 0 12px; background: var(--surface); border-bottom: 1px solid var(--line); overflow-x: auto; }
+.tabs a {
+  display: inline-flex; align-items: center; min-height: 48px; padding: 0 14px; color: var(--muted);
+  text-decoration: none; font-weight: 700; border-bottom: 3px solid transparent; white-space: nowrap;
+}
+.tabs a.active { color: var(--ink); border-bottom-color: var(--accent); }
+.tabs .badge { display: inline-block; min-width: 20px; padding: 0 6px; margin-left: 6px; border-radius: 999px; background: var(--gold); color: #fff; font-size: .75rem; text-align: center; }
+.ro-bar { background: var(--info-soft); color: var(--info); font-weight: 700; font-size: .9rem; padding: 10px 20px; }
+.con-body { width: 100%; max-width: 1100px; margin: 0 auto; padding: 20px; display: flex; flex-direction: column; gap: 16px; }
+.howto { font-size: .88rem; color: var(--muted); border-left: 3px solid var(--line); padding-left: 12px; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  min-height: 48px; padding: 0 20px; border-radius: 12px; border: 0; font-weight: 700;
+  background: var(--accent); color: var(--on-accent);
+}
+.btn:disabled { opacity: .45; }
+.btn.sub { background: var(--surface); color: var(--ink); border: 1px solid var(--line); }
+.btn.danger { background: var(--surface); color: var(--bad); border: 1px solid var(--bad); }
+.btn.small { min-height: 44px; padding: 0 14px; font-size: .9rem; }
+.field { display: flex; flex-direction: column; gap: 4px; }
+.field label { font-size: .85rem; font-weight: 700; }
+.field input, .field select, .field textarea {
+  min-height: 48px; padding: 8px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); font-size: 16px;
+}
+.notice { border-radius: 12px; padding: 12px 14px; background: var(--info-soft); }
+.notice.bad { background: var(--bad-soft); }
+.notice.good { background: var(--accent-soft); }
+.pill { display: inline-block; font-size: .78rem; font-weight: 700; border-radius: 999px; padding: 2px 10px; background: var(--sunk); color: var(--muted); white-space: nowrap; }
+.pill.g { background: var(--accent-soft); color: var(--accent); }
+.pill.o { background: var(--gold-soft); color: var(--gold); }
+.pill.r { background: var(--bad-soft); color: var(--bad); }
+.av { border-radius: 50%; object-fit: cover; flex: none; background: var(--sunk); border: 2px solid var(--surface); box-shadow: 0 0 0 1px var(--line); }
+.loading { padding: 40px 0; text-align: center; color: var(--muted); }
