@@ -1,5 +1,3 @@
-import { ticketsFromBalance } from './points';
-
 // ポイント・無料券の手動登録(A-03)の計算。残高は台帳から計算したものを受け取る(8章)。
 
 export type ManualAdjustInput = {
@@ -21,14 +19,12 @@ export type ManualAdjustPlan =
       balanceAfter: number;
       ticketsBefore: number;
       ticketsAfter: number;
-      /** ポイントがたまって発行する無料券の枚数 */
-      ticketsIssued: number;
     }
   | { ok: false; code: 'negative_points' | 'not_enough_tickets'; message: string };
 
 /**
  * 手動の登録の結果を計算する。
- * - ポイントを増やして無料券1枚分以上たまったら、その分の無料券を発行して差し引く
+ * - ポイントが無料券1枚分以上になっても、自動では交換しない(8章。無料券を足すときは「無料券」の枚数で増やす)
  * - ポイントがマイナスになる減らし方と、持っている枚数より多く無料券を減らすことはできない
  */
 export function planManualAdjust(input: ManualAdjustInput): ManualAdjustPlan {
@@ -47,13 +43,11 @@ export function planManualAdjust(input: ManualAdjustInput): ManualAdjustPlan {
       message: `使える無料券は${input.usableTickets}枚しかないため、${-input.tickets}枚減らせません。減らす枚数を${input.usableTickets}枚以下にしてください。`,
     };
   }
-  const issue = input.points > 0 ? ticketsFromBalance(raw, input.pointsPerTicket) : { tickets: 0, balanceAfter: raw };
   return {
     ok: true,
     balanceBefore: input.balance,
-    balanceAfter: issue.balanceAfter,
+    balanceAfter: raw,
     ticketsBefore: input.usableTickets,
-    ticketsAfter: input.usableTickets + input.tickets + issue.tickets,
-    ticketsIssued: issue.tickets,
+    ticketsAfter: input.usableTickets + input.tickets,
   };
 }

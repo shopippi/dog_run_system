@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { call, checkin, dog, givePoints, registerUser } from './helpers';
+import { call, checkin, dog, exchangeTicket, givePoints, registerUser, useTicketOf } from './helpers';
 
 const PAPA = 'U001:パパ';
 const DAY1 = '2026-10-28T01:00:00Z';
@@ -20,23 +20,25 @@ describe('C-05 完了画面', () => {
       isToday: true,
       cancelled: false,
       pointsAwarded: 1,
-      ticketsIssued: 1,
       usedTicket: false,
-      balance: 0,
-      unusedTickets: 1,
+      balance: 10,
+      unusedTickets: 0,
       pointsPerTicket: 10,
     });
+    expect(res.body).not.toHaveProperty('ticketsIssued');
     expect(res.body.dogs.map((d: { name: string }) => d.name)).toEqual(['ニコ']);
   });
 
-  it('無料券を使ったことを返す', async () => {
+  it('その日に無料券を使ったことを返す(チェックインのあとに「使用する」を押した場合も)', async () => {
     const r = await registerUser(PAPA);
     await givePoints(r.memberNo, 10);
-    // 10ポイントあっても、無料券はチェックインのときに発行される
-    await checkin(PAPA, [r.dogs[0]!.id], { now: DAY1 });
-    const done = await checkin(PAPA, [r.dogs[0]!.id], { now: '2026-10-29T01:00:00Z', useTicket: true });
-    const res = await call(`/api/checkins/${done.body.visitId}`, { user: PAPA, now: '2026-10-29T01:00:00Z' });
-    expect(res.body).toMatchObject({ usedTicket: true });
+    await exchangeTicket(PAPA, { now: DAY1 });
+    const done = await checkin(PAPA, [r.dogs[0]!.id], { now: '2026-10-29T01:00:00Z' });
+    const before = await call(`/api/checkins/${done.body.visitId}`, { user: PAPA, now: '2026-10-29T01:00:00Z' });
+    expect(before.body).toMatchObject({ usedTicket: false, unusedTickets: 1 });
+    await useTicketOf(PAPA, { now: '2026-10-29T01:05:00Z' });
+    const res = await call(`/api/checkins/${done.body.visitId}`, { user: PAPA, now: '2026-10-29T01:05:00Z' });
+    expect(res.body).toMatchObject({ usedTicket: true, unusedTickets: 0 });
   });
 
   it('前の日のチェックインは「今日ではない」と返す', async () => {

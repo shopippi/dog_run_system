@@ -1,6 +1,6 @@
 import { env } from 'cloudflare:test';
 import { describe, expect, it } from 'vitest';
-import { adminCall, call, checkin, createStaff, givePoints, login, registerUser } from './helpers';
+import { adminCall, call, checkin, createStaff, exchangeTicket, givePoints, login, registerUser, useTicketOf } from './helpers';
 
 const PAPA = 'U001:パパ';
 const DAY1 = '2026-10-28T01:00:00Z';
@@ -133,11 +133,24 @@ describe('A-15 元に戻す(S-03 の取り消し)', () => {
     expect(again.body.error.message).toMatch(/すでに元に戻されています/);
   });
 
-  it('9→10 で発行して回収した無料券は未使用に戻り、残高は 0 に戻る', async () => {
+  it('以前の記録(チェックインで発行していた無料券)も、回収した券は未使用に戻り、残高は 0 に戻る', async () => {
     const c = await cookies();
     const r = await registerUser(PAPA);
     await givePoints(r.memberNo, 9);
     const v = await checkin(PAPA, [r.dogs[0]!.id], { now: DAY1 });
+    // 以前の動き(10ポイントで自動発行)の記録を作る
+    await env.DB.prepare(
+      `INSERT INTO tickets (household_id, issued_at, source, issued_visit_id, status)
+       SELECT household_id, checked_in_at, 'points', id, 'unused' FROM visits WHERE id = ?`,
+    )
+      .bind(v.body.visitId)
+      .run();
+    await env.DB.prepare(
+      `INSERT INTO point_ledger (household_id, delta, kind, visit_id, ticket_id, actor_type, created_at)
+       SELECT household_id, -10, 'ticket_issue', id, (SELECT MAX(id) FROM tickets), 'member', checked_in_at FROM visits WHERE id = ?`,
+    )
+      .bind(v.body.visitId)
+      .run();
     await cancel(c.staff, v.body.visitId);
     expect(await card()).toMatchObject({ balance: 9, tickets: [] });
 
@@ -149,19 +162,39 @@ describe('A-15 元に戻す(S-03 の取り消し)', () => {
     expect(t).toEqual({ status: 'unused', issued_visit_id: v.body.visitId });
   });
 
-  it('使った無料券は、もう一度「使用済み」になる', async () => {
+  it('取り消しで未使用に戻した無料券は、同じ券がもう一度「使用済み」になる(使った日時もそのまま)', async () => {
     const c = await cookies();
     const r = await registerUser(PAPA);
-    await givePoints(r.memberNo, 9);
-    await checkin(PAPA, [r.dogs[0]!.id], { now: DAY1 });
-    const v = await checkin(PAPA, [r.dogs[0]!.id], { now: DAY2, useTicket: true });
+    await givePoints(r.memberNo, 10);
+    await exchangeTicket(PAPA, { now: DAY1 });
+    const used = await useTicketOf(PAPA, { now: DAY2 });
+    const v = await checkin(PAPA, [r.dogs[0]!.id], { now: DAY2 });
     await cancel(c.staff, v.body.visitId, DAY2);
     expect((await card(DAY2)).tickets).toHaveLength(1);
+    expect(await env.DB.prepare('SELECT status, used_visit_id, used_at FROM tickets').first()).toEqual({
+      status: 'unused',
+      used_visit_id: null,
+      used_at: null,
+    });
 
     expect((await undo(c.admin, await logId('visit.cancel'), DAY2)).status).toBe(200);
     expect((await card(DAY2)).tickets).toHaveLength(0);
-    const t = await env.DB.prepare('SELECT status, used_visit_id FROM tickets').first();
-    expect(t).toEqual({ status: 'used', used_visit_id: v.body.visitId });
+    const t = await env.DB.prepare('SELECT id, status, used_visit_id, used_at FROM tickets').first();
+    expect(t).toEqual({ id: used.body.ticketId, status: 'used', used_visit_id: v.body.visitId, used_at: used.body.usedAt });
+  });
+
+  it('取り消しのあとに同じ無料券をまた使っていたら、取り消しは元に戻せない(409)', async () => {
+    const c = await cookies();
+    const r = await registerUser(PAPA);
+    await givePoints(r.memberNo, 10);
+    await exchangeTicket(PAPA, { now: DAY1 });
+    await useTicketOf(PAPA, { now: DAY2 });
+    const v = await checkin(PAPA, [r.dogs[0]!.id], { now: DAY2 });
+    await cancel(c.staff, v.body.visitId, DAY2);
+    await useTicketOf(PAPA, { now: '2026-10-29T03:00:00Z' });
+    const res = await undo(c.admin, await logId('visit.cancel'), '2026-10-29T03:30:00Z');
+    expect(res.status).toBe(409);
+    expect(res.body.error.message).toMatch(/そのあとにまた使われたため戻せません/);
   });
 
   it('同じ日にすでに別の来場があれば戻せない(409)。操作ログは戻していない状態のまま', async () => {
@@ -188,9 +221,24 @@ describe('A-15 元に戻す(S-03 の取り消し)', () => {
     const r = await registerUser(PAPA);
     await givePoints(r.memberNo, 9);
     const v = await checkin(PAPA, [r.dogs[0]!.id], { now: DAY1 });
+    // 以前の動き(10ポイントでチェックインのときに自動発行)の記録。取り消すと +9 が戻る
+    await env.DB.prepare(
+      `INSERT INTO tickets (household_id, issued_at, source, issued_visit_id, status)
+       SELECT household_id, checked_in_at, 'points', id, 'unused' FROM visits WHERE id = ?`,
+    )
+      .bind(v.body.visitId)
+      .run();
+    await env.DB.prepare(
+      `INSERT INTO point_ledger (household_id, delta, kind, visit_id, ticket_id, actor_type, created_at)
+       SELECT household_id, -10, 'ticket_issue', id, (SELECT MAX(id) FROM tickets), 'member', checked_in_at FROM visits WHERE id = ?`,
+    )
+      .bind(v.body.visitId)
+      .run();
     await cancel(c.staff, v.body.visitId);
-    // 取り消し後の 9 ポイントから、次の日の来場で無料券が発行され 0 ポイントになる
+    expect((await card()).balance).toBe(9);
+    // 取り消し後の 9 ポイントに次の日の来場で 1 たまり、無料券と交換して 0 ポイントになる
     await checkin(PAPA, [r.dogs[0]!.id], { now: DAY2 });
+    await exchangeTicket(PAPA, { now: DAY2 });
     expect((await card(DAY2)).balance).toBe(0);
     const res = await undo(c.admin, await logId('visit.cancel'), DAY2);
     expect(res.status).toBe(409);

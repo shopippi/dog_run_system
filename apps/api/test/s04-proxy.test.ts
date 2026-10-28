@@ -1,6 +1,6 @@
 import { env } from 'cloudflare:test';
 import { describe, expect, it } from 'vitest';
-import { adminCall, call, checkin, createStaff, dog, givePoints, login, registerUser } from './helpers';
+import { adminCall, call, checkin, createStaff, dog, exchangeTicket, givePoints, login, registerUser } from './helpers';
 
 const PAPA = 'U001:パパ';
 const DAY1 = '2026-10-28T01:00:00Z';
@@ -14,7 +14,7 @@ async function householdIdOf(memberNo: string) {
   return r!.id;
 }
 const proxy = (cookie: string, body: Record<string, unknown>, now = DAY1) =>
-  adminCall('/admin/api/checkins/proxy', { cookie, body: { useTicket: false, ...body }, now });
+  adminCall('/admin/api/checkins/proxy', { cookie, body, now });
 
 describe('S-04 代理チェックイン', () => {
   it('受付が代わりにチェックインすると、おうちに1ポイント付き、今日の来場に「受付で代理」と出る', async () => {
@@ -70,16 +70,24 @@ describe('S-04 代理チェックイン', () => {
     expect(old.body.error.message).toMatch(/90日前まで/);
   });
 
-  it('無料券を使える。使える枚数を事前に確かめられる', async () => {
+  it('代理チェックインでは無料券を使わない。その日の来場の有無を事前に確かめられる。その日に使った券は結びつく', async () => {
     const staff = await cookieOf();
     const r = await registerUser(PAPA);
     await givePoints(r.memberNo, 9);
     await checkin(PAPA, [r.dogs[0]!.id], { now: '2026-10-27T01:00:00Z' });
+    await exchangeTicket(PAPA, { now: '2026-10-27T01:00:00Z' });
     const householdId = await householdIdOf(r.memberNo);
     const status = await adminCall(`/admin/api/checkins/proxy/status?householdId=${householdId}`, { cookie: staff, now: DAY1 });
-    expect(status.body).toEqual({ date: '2026-10-28', unusedTickets: 1, visitId: null });
+    expect(status.body).toEqual({ date: '2026-10-28', visitId: null });
     const res = await proxy(staff, { householdId, dogIds: [r.dogs[0]!.id], useTicket: true });
-    expect(res.body).toMatchObject({ usedTicket: true });
+    expect(res.status).toBe(201);
+    expect(res.body).toMatchObject({ usedTicket: false });
+    expect(await env.DB.prepare('SELECT status FROM tickets').first()).toEqual({ status: 'unused' });
+    // 受付が「無料券を使用済みにする」で使うと、その日の代理の来場に結びつく
+    const t = await env.DB.prepare('SELECT id FROM tickets').first<{ id: number }>();
+    const used = await adminCall(`/admin/api/households/${householdId}/tickets/${t!.id}/use`, { cookie: staff, body: {}, now: DAY1 });
+    expect(used.status).toBe(200);
+    expect(used.body).toMatchObject({ ticketId: t!.id, visitId: res.body.visitId });
   });
 
   it('よそのおうちの犬は選べない。統合済みのおうちにはチェックインできない', async () => {

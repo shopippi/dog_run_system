@@ -24,6 +24,7 @@ import { errors } from '../lib/errors';
 import { ADMIN_MEDIA_BASE, canSeePersonal } from './admin-visits';
 import { listHouseholdDogs } from './dogs';
 import { pointBalance, unusedTicketCount } from './points';
+import { ticketUsedOnVisitSql } from './tickets';
 
 
 export const householdNotFound = () => errors.notFound('おうちが見つかりませんでした。おうちを探す画面から、もう一度探してください。');
@@ -92,7 +93,7 @@ export async function loadHouseholdDetail(
 
   const { results: visitRows } = await db
     .prepare(
-      `SELECT v.id, v.visit_date, v.checked_in_at, v.method, v.used_ticket, v.cancelled_at, v.cancel_reason,
+      `SELECT v.id, v.visit_date, v.checked_in_at, v.method, ${ticketUsedOnVisitSql('v')} AS used_ticket, v.cancelled_at, v.cancel_reason,
               m.line_display_name AS checked_in_by,
               (SELECT COALESCE(SUM(l.delta), 0) FROM point_ledger l WHERE l.visit_id = v.id AND l.kind = 'visit') AS points
          FROM visits v LEFT JOIN family_members m ON m.id = v.checked_in_member_id

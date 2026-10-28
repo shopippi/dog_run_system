@@ -24,8 +24,8 @@ export const AUDIT_ACTION_LABELS: Record<string, string> = {
   'family.leave': '家族が自分でおうちから抜けた',
   'household.merge': 'おうちをまとめる',
   'household.merge_undo': 'おうちをまとめたのを元に戻す',
-  'household.migrate': '旧カードからの引き継ぎ',
-  'household.migrate_undo': '旧カードからの引き継ぎを元に戻す',
+  'household.migrate': '旧カードの引き継ぎ',
+  'household.migrate_undo': '旧カードの引き継ぎを元に戻す',
   'request.reject': '引き継ぎの申請を見送り',
   'settings.update': 'ルールの設定の変更',
   'staff.create': 'スタッフの追加',
@@ -50,6 +50,9 @@ export const AUDIT_ACTION_LABELS: Record<string, string> = {
   'system.run.holidays': '祝日の取り込みの実行',
   'system.run.backup': 'バックアップの実行',
   'system.run.daily_stats': '日ごとの集計の実行',
+  'ticket.exchange': '無料券と交換',
+  'ticket.use': '無料券の使用',
+  'ticket.mark_used': '無料券を使用済みにする',
 };
 
 export function auditActionLabel(action: string): string {
@@ -113,7 +116,7 @@ export const DOG_STATUS_LABELS: Record<import('./constants').DogStatus, string> 
 };
 
 export const TICKET_SOURCE_LABELS: Record<'points' | 'manual' | 'merge' | 'migration', string> = {
-  points: 'ポイントがたまって発行',
+  points: 'ポイントと交換',
   manual: '手動で追加',
   merge: 'おうちの統合',
   migration: '旧カードから移行',
@@ -217,8 +220,6 @@ export type ManualPointsPreview = {
   balanceAfter: number;
   ticketsBefore: number;
   ticketsAfter: number;
-  /** ポイントがたまって発行する無料券 */
-  ticketsIssued: number;
   pointsPerTicket: number;
 };
 

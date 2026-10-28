@@ -96,7 +96,7 @@ async function seed(browser: Browser) {
   return { papaNo, mamaNo };
 }
 
-/** 確認待ち: 旧カードの引き継ぎ申請(写真つき)。おうちをまとめる申請は、もう作らない(C-12) */
+/** 確認待ち: 以前に届いた旧カードの引き継ぎ申請(写真つき。却下だけできる)。おうちをまとめる申請は、もう作らない(C-12)。M-09 旧カードの引き継ぎは e2e/admin.tickets-layout.spec.ts */
 async function seedRequests(browser: Browser) {
   const customer = await browser.newPage();
   const papa = newLineUser('パパ');
@@ -122,14 +122,8 @@ test.describe('おうちの統合・確認待ちの見え方', () => {
       const migration = page.getByRole('listitem', { name: `旧カードの引き継ぎ リクのおうち ${papaNo}` });
       await expect(migration.getByRole('img', { name: '旧カードの写真' })).toBeVisible();
       await expect.poll(() => migration.getByRole('img', { name: '旧カードの写真' }).evaluate((img: HTMLImageElement) => img.naturalWidth)).toBeGreaterThan(0);
+      await expect(migration.getByRole('button', { name: '確かめて承認する' })).toHaveCount(0);
       await checkScreen(page, v.name, 'M-09 確認待ち', v.touch);
-
-      await migration.getByRole('button', { name: '確かめて承認する' }).click();
-      const approve = page.getByRole('dialog', { name: '旧カードの引き継ぎを承認する' });
-      await expect(approve.getByRole('button', { name: 'やめる' })).toBeFocused();
-      await expect(approve.getByText(/引き継ぎ後/)).toBeVisible();
-      await checkScreen(page, v.name, 'M-09 旧カードの承認', v.touch);
-      await approve.getByRole('button', { name: 'やめる' }).click();
 
       await migration.getByRole('button', { name: '却下する' }).click();
       const dialog = page.getByRole('dialog', { name: '申請を却下する' });
@@ -142,17 +136,6 @@ test.describe('おうちの統合・確認待ちの見え方', () => {
       await expect(page.getByRole('listitem', { name: `旧カードの引き継ぎ リクのおうち ${papaNo}` })).toBeVisible();
       await checkScreen(page, v.name, 'M-09 確認待ち(処理済み)', v.touch);
 
-      await page.getByRole('tab', { name: '受付で直接入力' }).click();
-      const picker = page.getByRole('group', { name: '引き継ぐおうちを探す' });
-      await picker.getByRole('searchbox', { name: '探す言葉' }).fill(papaNo);
-      await picker.getByRole('list', { name: '引き継ぐおうちを探すの候補' }).getByRole('button', { name: new RegExp(papaNo) }).click();
-      const direct = page.getByRole('region', { name: '受付で直接入力' });
-      await direct.getByLabel('旧カードのポイント数').fill('9');
-      await expect(direct.getByText(/引き継ぎ後 9ポイント/)).toBeVisible();
-      await checkScreen(page, v.name, 'M-09 受付で直接入力', v.touch);
-      await direct.getByRole('button', { name: '引き継ぐ' }).click();
-      await expect(page.getByRole('dialog', { name: '旧カードのポイントを引き継ぐ' })).toBeVisible();
-      await checkScreen(page, v.name, 'M-09 受付で直接入力(確認)', v.touch);
       await page.close();
     });
 

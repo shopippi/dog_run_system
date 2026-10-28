@@ -1,4 +1,4 @@
-import type { HistoryVisit, VisitHistoryResponse } from '@dr/shared';
+import type { HistoryVisit, TicketHistoryResponse, VisitHistoryResponse } from '@dr/shared';
 import { useCallback, useEffect, useState } from 'react';
 import { DogAvatar } from '../../components/DogAvatar';
 import { ErrorNotice } from '../../components/ErrorNotice';
@@ -29,6 +29,7 @@ export function HistoryPage() {
   const [error, setError] = useState<unknown>(null);
   const [moreError, setMoreError] = useState<unknown>(null);
   const [busy, setBusy] = useState(false);
+  const [tickets, setTickets] = useState<TicketHistoryResponse['events']>([]);
 
   const load = useCallback(() => {
     setError(null);
@@ -38,6 +39,10 @@ export function HistoryPage() {
         setNext(r.next);
       })
       .catch(setError);
+    // 無料券の交換と使用(8章)。読めなくても来場の記録は出す
+    api<TicketHistoryResponse>('/api/tickets/history')
+      .then((r) => setTickets(r.events))
+      .catch(() => setTickets([]));
   }, []);
   useEffect(load, [load]);
 
@@ -71,8 +76,10 @@ export function HistoryPage() {
     <main className="screen">
       <div className="page-head">
         <h2>来場履歴</h2>
-        <p className="lead">おうちの来場の記録です。家族の誰がチェックインしても、ここにまとまります。</p>
+        <p className="lead">おうちの来場と無料券の記録です。家族の誰がチェックインしても、ここにまとまります。</p>
       </div>
+
+      {tickets.length > 0 && <TicketEvents events={tickets} />}
 
       {visits.length === 0 && <p className="cu-empty">まだ来場の記録がありません。</p>}
 
@@ -131,5 +138,39 @@ export function HistoryPage() {
         </button>
       )}
     </main>
+  );
+}
+
+/** 無料券の記録(交換と使用。新しい順) */
+function TicketEvents({ events }: { events: TicketHistoryResponse['events'] }) {
+  return (
+    <section className="section" aria-labelledby="hist-tickets">
+      <h3 className="section-label" id="hist-tickets">
+        無料券の記録
+      </h3>
+      <ul className="rows hist-list">
+        {events.map((e) => {
+          const date = e.at.slice(0, 10);
+          const { day, weekday } = dayOf(date);
+          const [, m] = date.split('-').map(Number);
+          return (
+            <li key={`${e.kind}-${e.ticketId}`} className="tk-hist-row">
+              <span className="hist-date" aria-label={`${m}月${day}日(${weekday})`}>
+                <b>{day}</b>
+                <span>{m}月</span>
+              </span>
+              <span className="hist-body">
+                <b>{e.kind === 'exchange' ? '無料券と交換' : '無料券を使用'}</b>
+                <span className="sub-text">
+                  <span className="cu-nowrap">{e.at.slice(11, 16)}</span>
+                  {e.kind === 'exchange' && <span className="cu-nowrap hist-points">・−{e.points}ポイント</span>}
+                </span>
+              </span>
+              {e.kind === 'use' && <span className="badge warning">使用しました</span>}
+            </li>
+          );
+        })}
+      </ul>
+    </section>
   );
 }

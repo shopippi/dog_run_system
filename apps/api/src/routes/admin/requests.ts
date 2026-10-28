@@ -1,9 +1,7 @@
 import {
   MIGRATION_SOURCES,
-  approveMigrationSchema,
   migrationInputSchema,
   rejectRequestSchema,
-  toJstDate,
   toJstIso,
   type RequestMigrationView,
   type RequestHousehold,
@@ -18,12 +16,12 @@ import { requireRole } from '../../lib/staff-auth';
 import { parseJson } from '../../lib/validate';
 import { ADMIN_MEDIA_BASE } from '../../services/admin-visits';
 import { auditStatement } from '../../services/audit';
-import { migrationStatus, recordMigration, resolveActiveHousehold, undoMigration } from '../../services/migration';
+import { migrationStatus, recordMigration, undoMigration } from '../../services/migration';
 import { registerUndo } from '../../services/undo';
 
-// A-05 旧カードの移行の承認・却下
-// (おうちをまとめるのは、お客さんが招待から自分でまとめる形になった(C-12)。以前の「まとめる申請」(kind 'merge')の行は
-//  消さずに残すが、確認待ちには出さず、承認・却下もしない)
+// A-05 以前に届いた旧カードの移行の申請の確認(却下だけ)
+// (旧カードの引き継ぎは受付で直接入力する形になった(16.1)。おうちをまとめるのは、お客さんが招待から自分でまとめる形になった(C-12)。
+//  以前の申請の行は消さずに残す。「まとめる申請」(kind 'merge')は確認待ちに出さず、承認・却下もしない)
 export const requestsRoutes = new Hono<AppEnv>();
 
 /** 確認待ちに出す申請(以前の「まとめる申請」を除く) */
@@ -53,7 +51,7 @@ type RequestRow = {
 
 /**
  * 旧カードの引き継ぎ申請(C-10)の payload を読む。形は { source: 'line_card' | 'paper_card', claimedPoints, note? }
- * (型は C-10 の担当の MigrationRequestPayload)。形が崩れていても一覧は出す
+ * (以前のお客さんの申請 C-10 の形。申請はもう作られない)。形が崩れていても一覧は出す
  */
 export function parseMigrationPayload(raw: string): RequestMigrationView | null {
   try {
@@ -227,32 +225,15 @@ requestsRoutes.post('/requests/:id/reject', requireRole('admin'), async (c) => {
   return c.json({ ok: true });
 });
 
-// 申請の承認。旧カードの引き継ぎ申請は、管理者が写真を見てポイント数を確認・修正して承認する(A-05)
+// 申請の承認。旧カードの引き継ぎは対面だけになった(16.1)。以前に届いた引き継ぎの申請は承認せず、却下してから受付で入力してもらう
 requestsRoutes.post('/requests/:id/approve', requireRole('admin'), async (c) => {
   const db = c.env.DB;
   const r = await findRequest(db, Number(c.req.param('id')) || 0);
   if (r.status !== 'pending') throw requestHandled();
-  const input = await parseJson(c, approveMigrationSchema);
-  const payload = parseMigrationPayload(r.payload);
-  const source = input.source ?? payload?.source;
-  if (!source) throw errors.badRequest('旧カードの種類(LINEのショップカード・紙のスタンプカード)を選んでください。');
-  // 申請のあとにおうちが統合されていれば、統合先に付ける
-  const h = await resolveActiveHousehold(db, r.household_id);
-  if (!h || h.status !== 'active') {
-    throw errors.conflict('not_active', '申請したおうちは退会しているため、引き継げません。「却下する」で処理してください。');
-  }
-  const result = await recordMigration(db, {
-    householdId: h.id,
-    source,
-    points: input.points,
-    staffId: c.get('staff').id,
-    now: c.get('now'),
-    settings: await loadSettings(db),
-    // 移行期間は、申請した日で判定する(期間の終わりの前に申請された分は、あとから承認できる)
-    periodDate: toJstDate(new Date(r.created_at)),
-    request: { id: r.id, claimedPoints: payload?.claimedPoints ?? null },
-  });
-  return c.json(result);
+  throw errors.conflict(
+    'migration_in_person',
+    '旧カードの引き継ぎは、受付で旧カードを確かめて入力する方法だけになりました。この申請は「却下する」で処理し、お客さんに受付で旧カードを見せてもらってください。',
+  );
 });
 
 // 旧カードの移行の状態(引き継ぎ済みの移行元、いまのポイント、移行期間)
@@ -261,7 +242,8 @@ requestsRoutes.get('/households/:id/migration', requireRole('admin'), async (c) 
   return c.json(await migrationStatus(db, Number(c.req.param('id')) || 0, c.get('now'), await loadSettings(db)));
 });
 
-// 旧カードの移行の直接入力(受付で旧カードを見せてもらったとき。16.1)
+// 旧カードの移行の直接入力(受付で旧カードを見せてもらったときだけ。お客さんの申請はない。16.1)。
+// 「旧カードを目で確かめた」「紙のカードは回収した(または使用済みの印を付けた)」の2つの印を必須にする(入力チェック)
 requestsRoutes.post('/households/:id/migrate', requireRole('admin'), async (c) => {
   const input = await parseJson(c, migrationInputSchema);
   const db = c.env.DB;
@@ -273,7 +255,6 @@ requestsRoutes.post('/households/:id/migrate', requireRole('admin'), async (c) =
     staffId: c.get('staff').id,
     now,
     settings: await loadSettings(db),
-    periodDate: toJstDate(now),
   });
   return c.json(result, 201);
 });

@@ -29,11 +29,18 @@ export async function refreshDailyStatsRange(db: D1Database, from: string, to: s
            SELECT visit_date AS date,
                   COUNT(*) AS groups,
                   SUM(CASE WHEN household_id IS NOT NULL THEN dog_count ELSE 0 END) AS dogs_member,
-                  SUM(CASE WHEN household_id IS NULL THEN dog_count ELSE 0 END) AS dogs_walkin,
-                  SUM(used_ticket) AS tickets_used
+                  SUM(CASE WHEN household_id IS NULL THEN dog_count ELSE 0 END) AS dogs_walkin
              FROM visits
             WHERE visit_date BETWEEN ?1 AND ?2 AND cancelled_at IS NULL
             GROUP BY visit_date
+         ),
+         -- 使われた無料券: 会員証の「使用する」で使った日(来場に結びついた券は、その来場の日)で数える(8章)
+         t AS (
+           SELECT COALESCE(uv.visit_date, substr(tk.used_at, 1, 10)) AS date, COUNT(*) AS n
+             FROM tickets tk LEFT JOIN visits uv ON uv.id = tk.used_visit_id
+            WHERE tk.status = 'used' AND tk.used_at IS NOT NULL
+              AND COALESCE(uv.visit_date, substr(tk.used_at, 1, 10)) BETWEEN ?1 AND ?2
+            GROUP BY COALESCE(uv.visit_date, substr(tk.used_at, 1, 10))
          ),
          f AS (
            SELECT v.visit_date AS date, COUNT(*) AS n
@@ -59,11 +66,12 @@ export async function refreshDailyStatsRange(db: D1Database, from: string, to: s
                 CASE WHEN c.is_closed = 1 THEN 0 ELSE COALESCE(v.dogs_walkin, 0) END,
                 CASE WHEN c.is_closed = 1 THEN 0 ELSE COALESCE(n.n, 0) END,
                 CASE WHEN c.is_closed = 1 THEN 0 ELSE COALESCE(f.n, 0) END,
-                CASE WHEN c.is_closed = 1 THEN 0 ELSE COALESCE(v.tickets_used, 0) END,
+                CASE WHEN c.is_closed = 1 THEN 0 ELSE COALESCE(t.n, 0) END,
                 ?3
            FROM d
            LEFT JOIN v ON v.date = d.date
            LEFT JOIN f ON f.date = d.date
+           LEFT JOIN t ON t.date = d.date
            LEFT JOIN n ON n.date = d.date
            LEFT JOIN calendar c ON c.date = d.date
           WHERE true

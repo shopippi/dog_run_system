@@ -2,7 +2,6 @@ import {
   expiryFor,
   manualReasonText,
   planManualAdjust,
-  ticketsFromBalance,
   toJstIso,
   type ManualPointsInput,
   type ManualPointsPreview,
@@ -37,7 +36,7 @@ export async function previewManualPoints(
 
 /**
  * ポイント・無料券の手動登録(A-03、8章)。
- * - ポイントは台帳に「手動」で記録する。たまって無料券1枚分以上になれば、その分の無料券を発行して差し引く
+ * - ポイントは台帳に「手動」で記録する。無料券1枚分以上になっても、自動では交換しない(8章)
  * - 無料券を増やすときは「手動で追加」の券を作り、減らすときは使える券を「取り消し」にする
  * - 書いた台帳の行と券には同じ印(op_id)を付け、操作ログから元に戻せるようにする
  */
@@ -60,22 +59,6 @@ export async function applyManualPoints(
            VALUES (?, ?, 'manual', ?, 'staff', ?, ?, ?, ?)`,
         )
         .bind(householdId, input.points, reason, args.staffId, nowIso, input.points > 0 ? expiryFor(settings.point_expiry, now) : null, opId),
-    );
-  }
-  for (let i = 0; i < preview.ticketsIssued; i++) {
-    statements.push(
-      db
-        .prepare(
-          `INSERT INTO tickets (household_id, issued_at, expires_at, source, status, op_id)
-           VALUES (?, ?, ?, 'points', 'unused', ?)`,
-        )
-        .bind(householdId, nowIso, expiryFor(settings.ticket_expiry, now), opId),
-      db
-        .prepare(
-          `INSERT INTO point_ledger (household_id, delta, kind, ticket_id, reason, actor_type, actor_id, created_at, op_id)
-           VALUES (?, ?, 'ticket_issue', last_insert_rowid(), ?, 'staff', ?, ?, ?)`,
-        )
-        .bind(householdId, -settings.points_per_ticket, reason, args.staffId, nowIso, opId),
     );
   }
   for (let i = 0; i < input.tickets; i++) {
@@ -114,7 +97,6 @@ export async function applyManualPoints(
         tickets: preview.ticketsAfter,
         points: input.points,
         ticketDelta: input.tickets,
-        ticketsIssued: preview.ticketsIssued,
       },
       reason,
       undo: { householdId, opId, voidedTicketIds: voided },
@@ -126,7 +108,7 @@ export async function applyManualPoints(
 }
 
 /** 手動の登録を元に戻す。増えた無料券が使われていたり、戻すとポイントがマイナスになるときは戻せない */
-export async function undoManualPoints(db: D1Database, log: AuditRow, ctx: UndoContext, settings: Settings): Promise<void> {
+export async function undoManualPoints(db: D1Database, log: AuditRow, ctx: UndoContext): Promise<void> {
   const undo = JSON.parse(log.undo_info ?? '{}') as { householdId: number; opId: string; voidedTicketIds?: number[] };
   const householdId = undo.householdId;
   const h = await db.prepare('SELECT status FROM households WHERE id = ?').bind(householdId).first<{ status: string }>();
@@ -180,23 +162,6 @@ export async function undoManualPoints(db: D1Database, log: AuditRow, ctx: UndoC
         .prepare(`UPDATE tickets SET status = 'unused', note = NULL WHERE status = 'void' AND id IN (${voided.map(() => '?').join(',')})`)
         .bind(...voided),
     );
-  }
-  // 戻したことでポイントが無料券1枚分以上になったら、その分を発行する(8章)
-  if (change > 0) {
-    const issue = ticketsFromBalance(next, settings.points_per_ticket);
-    for (let i = 0; i < issue.tickets; i++) {
-      statements.push(
-        db
-          .prepare(`INSERT INTO tickets (household_id, issued_at, expires_at, source, status) VALUES (?, ?, ?, 'points', 'unused')`)
-          .bind(householdId, nowIso, expiryFor(settings.ticket_expiry, ctx.now)),
-        db
-          .prepare(
-            `INSERT INTO point_ledger (household_id, delta, kind, ticket_id, reason, actor_type, actor_id, created_at)
-             VALUES (?, ?, 'ticket_issue', last_insert_rowid(), '操作ログから元に戻した', 'staff', ?, ?)`,
-          )
-          .bind(householdId, -settings.points_per_ticket, ctx.staffId, nowIso),
-      );
-    }
   }
   if (statements.length) await db.batch(statements);
 }

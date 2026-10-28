@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { cancelVisit, checkinOn, joinFamily } from './customer-helpers';
-import { makePhoto, newLineUser, openLiff, registerViaUi } from './helpers';
+import { newLineUser, openLiff, registerViaUi } from './helpers';
 
 // お客さん向けの残りの画面(担当E)の見え方。確かめ方は e2e/liff.layout.spec.ts と同じ。
 const IOS_UA =
@@ -92,18 +92,6 @@ for (const d of DEVICES) {
       await page.getByRole('link', { name: '使い方・よくある質問' }).click();
       await page.getByText('無料券はどうやって使いますか?').click();
       await checkScreen(page, d.name, '使い方・よくある質問');
-
-      // L-13 旧カードの引き継ぎ(入力中と、申請したあと)
-      await openLiff(page, user, '/migration');
-      await page.getByRole('heading', { name: '旧カードの引き継ぎ' }).waitFor();
-      await page.getByRole('radio', { name: 'LINEのショップカード' }).check();
-      await page.locator('input[type=file]').setInputFiles({ name: 'card.jpg', mimeType: 'image/jpeg', buffer: await makePhoto(page, 1600, 1200) });
-      await page.getByRole('img', { name: '選んだカードの写真' }).waitFor();
-      await page.getByLabel('だいたいのポイント数').fill('7');
-      await checkScreen(page, d.name, 'L-13 旧カードの引き継ぎ');
-      await page.getByRole('button', { name: '申請する' }).click();
-      await page.getByRole('status').waitFor();
-      await checkScreen(page, d.name, 'L-13 旧カードの引き継ぎ(申請後)');
     });
   });
 }

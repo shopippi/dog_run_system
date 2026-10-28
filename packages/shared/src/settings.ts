@@ -43,6 +43,8 @@ export const settingsSchema = z.object({
     start: z.string().nullable(),
     end: z.string().nullable(),
   }),
+  /** 旧カードから一度に引き継げるポイントの上限(16.1。不正を防ぐため。未決事項) */
+  migration_max_points: z.number().int().min(1).max(200),
   /**
    * おうちの統合で、統合前に同じ日に両方のおうちが来場していた分のポイントを、そのまま残すか(5.3、20章の未決事項。初期案は残す)。
    * false にすると、その日のまとめる側の来場で付いたポイントを、統合のときに差し引く
@@ -76,6 +78,7 @@ export const DEFAULT_SETTINGS: Omit<Settings, 'checkin_passphrase'> = {
   invite_ttl_hours: 24,
   reception_invite_ttl_minutes: 10,
   migration_period: { start: null, end: null },
+  migration_max_points: 30,
   merge_keep_same_day_points: true,
   developer_contact: '',
   terms_text: '(利用規約の本文は準備中です。管理画面の設定から差し替えてください)',

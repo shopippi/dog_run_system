@@ -39,7 +39,7 @@ export type EngineOptions = {
   /** 保存しない(テスト用) */
   memoryOnly?: boolean;
   /** 初期データの写真を作る(ブラウザだけ) */
-  photos?: Pick<SeedOptions, 'makeDogPhoto' | 'makeCardPhoto'>;
+  photos?: Pick<SeedOptions, 'makeDogPhoto'>;
   /** テスト用: 実際の時刻の代わり */
   clock?: () => number;
 };

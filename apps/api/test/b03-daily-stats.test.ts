@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { runScheduled } from '../src/cron';
 import { blockNetwork } from './analytics-helpers';
 import { refreshDailyStats } from '../src/services/daily-stats';
-import { addFamily, adminCall, call, checkin, createStaff, dog, givePoints, login, survey } from './helpers';
+import { addFamily, adminCall, call, checkin, createStaff, dog, exchangeTicket, givePoints, login, survey, useTicketOf } from './helpers';
 
 const PAPA = 'U001:パパ';
 const MAMA = 'U002:ママ';
@@ -81,12 +81,19 @@ describe('B-03 日別集計', () => {
     expect(await stats('2026-10-28')).toMatchObject({ visit_groups: 1, dogs_member: 2 });
   });
 
-  it('無料券を使った来場を数える', async () => {
+  it('使われた無料券を、使った日で数える(チェックインの前でも後でも)', async () => {
     const a = await register(PAPA);
-    await givePoints(a.memberNo, 9);
-    await checkin(PAPA, [a.dogs[0]!.id], { now: DAY1 }); // 10ポイントで無料券
-    await checkin(PAPA, [a.dogs[0]!.id], { now: DAY2, useTicket: true });
+    await givePoints(a.memberNo, 19);
+    await checkin(PAPA, [a.dogs[0]!.id], { now: DAY1 }); // 20ポイント
+    await exchangeTicket(PAPA, { now: DAY1 });
+    await exchangeTicket(PAPA, { now: DAY1 });
     expect(await stats('2026-10-28')).toMatchObject({ tickets_used: 0 });
+    await useTicketOf(PAPA, { now: DAY2 }); // チェックインの前に使う
+    expect(await stats('2026-10-29')).toMatchObject({ tickets_used: 1 });
+    await checkin(PAPA, [a.dogs[0]!.id], { now: DAY2 });
+    expect(await stats('2026-10-29')).toMatchObject({ tickets_used: 1, visit_groups: 1 });
+    await useTicketOf(PAPA, { now: '2026-10-30T01:00:00Z' }); // 来場のない日でも数える
+    expect(await stats('2026-10-30')).toMatchObject({ tickets_used: 1 });
     expect(await stats('2026-10-29')).toMatchObject({ tickets_used: 1 });
   });
 
@@ -97,7 +104,7 @@ describe('B-03 日別集計', () => {
     const res = await adminCall('/admin/api/checkins/proxy', {
       cookie: staff,
       now: DAY1,
-      body: { householdId: h!.id, dogIds: [a.dogs[0]!.id], useTicket: false, date: '2026-10-25' },
+      body: { householdId: h!.id, dogIds: [a.dogs[0]!.id], date: '2026-10-25' },
     });
     expect(res.status).toBe(201);
     expect(await stats('2026-10-25')).toMatchObject({ visit_groups: 1, dogs_member: 1, first_visit_households: 1 });

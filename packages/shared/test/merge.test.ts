@@ -12,46 +12,45 @@ import {
 } from '../src';
 
 describe('おうちの統合: ポイントの合算(5.3)', () => {
-  it('7ポイントと5ポイントを統合すると、残高は2ポイント、無料券は1枚増える(19.2)', () => {
+  it('7ポイントと5ポイントを統合すると、残高は12ポイント。無料券には自動で替えない(8章)', () => {
     const p = planMergePoints(7, 5, 10);
-    expect(p).toMatchObject({ total: 12, ticketsIssued: 1, balanceAfter: 2 });
+    expect(p).toMatchObject({ total: 12, ticketsIssued: 0, balanceAfter: 12 });
     expect(p.ledger).toEqual([
       { household: 'absorbed', delta: -5, kind: 'merge' },
       { household: 'kept', delta: 5, kind: 'merge' },
-      { household: 'kept', delta: -10, kind: 'ticket_issue' },
     ]);
   });
 
-  it('合計が9なら無料券は出ない(境界の1つ手前)', () => {
+  it('合計が9なら9ポイント(境界の1つ手前)', () => {
     expect(planMergePoints(4, 5, 10)).toMatchObject({ total: 9, ticketsIssued: 0, balanceAfter: 9 });
   });
 
-  it('合計がちょうど10なら無料券が1枚出て、残高は0になる', () => {
-    expect(planMergePoints(5, 5, 10)).toMatchObject({ total: 10, ticketsIssued: 1, balanceAfter: 0 });
+  it('合計がちょうど10でも、無料券は出ずに10ポイントのまま', () => {
+    expect(planMergePoints(5, 5, 10)).toMatchObject({ total: 10, ticketsIssued: 0, balanceAfter: 10 });
   });
 
-  it('合計が20以上なら、その分の枚数を発行する', () => {
+  it('合計が20以上でも、無料券の行は書かない', () => {
     const p = planMergePoints(9, 9, 6);
-    expect(p).toMatchObject({ total: 18, ticketsIssued: 3, balanceAfter: 0 });
-    expect(p.ledger.filter((l) => l.kind === 'ticket_issue')).toHaveLength(3);
+    expect(p).toMatchObject({ total: 18, ticketsIssued: 0, balanceAfter: 18 });
+    expect(p.ledger.filter((l) => l.kind === 'ticket_issue')).toHaveLength(0);
   });
 
   it('まとめる側が0ポイントなら、統合の行は書かない', () => {
     expect(planMergePoints(3, 0, 10)).toEqual({ total: 3, ticketsIssued: 0, balanceAfter: 3, ledger: [] });
   });
 
-  it('設定で「同じ日の分を残さない」にしたときは、その点数を差し引いてから無料券を数える', () => {
+  it('設定で「同じ日の分を残さない」にしたときは、その点数を差し引く', () => {
     const p = planMergePoints(7, 4, 10, 1);
-    expect(p).toMatchObject({ total: 10, ticketsIssued: 1, balanceAfter: 0 });
+    expect(p).toMatchObject({ total: 10, ticketsIssued: 0, balanceAfter: 10 });
     expect(p.ledger).toContainEqual({ household: 'kept', delta: -1, kind: 'merge' });
     expect(planMergePoints(7, 4, 10, 0).ledger).not.toContainEqual({ household: 'kept', delta: -1, kind: 'merge' });
   });
 
-  it('台帳の行を合計すると、両方の残高の合計から発行した分を引いた値になる', () => {
+  it('台帳の行を合計すると、両方の残高の合計になる', () => {
     const p = planMergePoints(7, 5, 10);
     const kept = 7 + p.ledger.filter((l) => l.household === 'kept').reduce((s, l) => s + l.delta, 0);
     const absorbed = 5 + p.ledger.filter((l) => l.household === 'absorbed').reduce((s, l) => s + l.delta, 0);
-    expect({ kept, absorbed }).toEqual({ kept: 2, absorbed: 0 });
+    expect({ kept, absorbed }).toEqual({ kept: 12, absorbed: 0 });
   });
 });
 

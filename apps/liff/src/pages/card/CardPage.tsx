@@ -5,20 +5,23 @@ import { ErrorNotice } from '../../components/ErrorNotice';
 import { Icon } from '../../components/Icon';
 import { useMe } from '../../hooks/useMe';
 import { canScan, scanCheckinCode } from '../../lib/liff';
+import { TicketPanel } from './TicketPanel';
 
 /** L-07 会員証(C-06)。リッチメニューから開くとこの画面になる(10.3) */
 export function CardPage() {
   const { me, error, reload } = useMe();
   if (error) return <main className="screen"><ErrorNotice error={error} onRetry={reload} /></main>;
   if (!me || !me.registered) return <main className="screen"><p className="loading">読み込んでいます…</p></main>;
-  return <Card me={me} />;
+  return <Card me={me} reload={reload} />;
 }
 
-function Card({ me }: { me: MeRegistered }) {
+function Card({ me, reload }: { me: MeRegistered; reload: () => Promise<void> }) {
   const { card, household } = me;
   const navigate = useNavigate();
   const stamps = Math.min(card.pointsPerTicket, 20);
-  const filled = card.balance % card.pointsPerTicket;
+  // ポイントは無料券1枚分を超えてもたまる(8章)。スタンプは1枚分までを塗る
+  const filled = Math.min(Math.max(card.balance, 0), card.pointsPerTicket);
+  const canExchange = card.balance >= card.pointsPerTicket;
 
   const startCheckin = async () => {
     if (card.todayVisitId) {
@@ -54,23 +57,14 @@ function Card({ me }: { me: MeRegistered }) {
           <p>
             ポイント <b>{card.balance}</b>
           </p>
-          <p>あと{card.toNextTicket}ポイントで無料券</p>
+          <p>{canExchange ? '無料券と交換できます' : `あと${card.toNextTicket}ポイントで無料券と交換できます`}</p>
         </div>
       </section>
 
-      {card.tickets.length > 0 && (
-        <div className="alert warning ticket-note">
-          <p>
-            <b>無料券 {card.tickets.length}枚</b>
-            {card.tickets[0]?.expiresAt && (
-              <span className="ticket-exp">期限 {card.tickets[0].expiresAt.slice(0, 10).replace(/-/g, '/')}</span>
-            )}
-          </p>
-          <p className="note">チェックインのときに「無料券を使う」を選んでください</p>
-        </div>
-      )}
+      <TicketPanel card={card} onChanged={reload} />
 
-      <button type="button" className="btn" onClick={startCheckin}>
+      {/* 交換のボタンが出ているときは、そちらを主ボタンにする(主ボタンは1画面に1つ) */}
+      <button type="button" className={canExchange ? 'btn sub' : 'btn'} onClick={startCheckin}>
         {card.todayVisitId ? '今日のチェックインを見る' : 'チェックイン(受付のQRを読む)'}
       </button>
 
@@ -91,12 +85,10 @@ function Card({ me }: { me: MeRegistered }) {
           <span>プロフィール</span>
           <Icon name="chevron-right" />
         </Link>
-        <Link to="/migration">
-          <span>旧カードの引き継ぎ</span>
-          <Icon name="chevron-right" />
-        </Link>
       </nav>
-      <p className="note">1日1ポイント。{card.pointsPerTicket}ポイントで無料券1枚(来場1回分)。</p>
+      <p className="note">
+        1日1ポイント。{card.pointsPerTicket}ポイントで無料券1枚(来場1回分)と交換できます。前のポイントカードは、受付で見せると引き継げます。
+      </p>
       <Link to="/help" className="cu-link">
         使い方・よくある質問
       </Link>

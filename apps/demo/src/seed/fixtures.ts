@@ -16,7 +16,7 @@ export const ACCOUNTS: DemoAccount[] = [
   { userId: 'U-demo-baaba', name: 'こむぎのばあば', note: 'こむぎ・だいずのおうちの家族' },
   { userId: 'U-demo-taka', name: 'taka_papa', note: 'アルのおうち(7ポイント)' },
   { userId: 'U-demo-nico', name: 'nico.mama', note: 'アル・ニコのおうち(5ポイント)' },
-  { userId: 'U-demo-momo', name: 'ももママ', note: 'もものおうち(旧カードの引き継ぎを申請中)' },
+  { userId: 'U-demo-momo', name: 'ももママ', note: 'もものおうち(紙のスタンプカードを持っている)' },
   { userId: 'U-demo-new-1', name: 'はじめての人', note: 'まだ会員ではない' },
 ];
 
@@ -25,7 +25,7 @@ export const FIXED = {
   komugi: 1, // 9ポイント。ママとばあばの2人
   taka: 2, // アル。7ポイント
   nico: 3, // アル・ニコ。5ポイント。taka_papa からの招待が届いている(開くとその場でまとめられる)
-  momo: 4, // 旧カードの引き継ぎ申請が確認待ち
+  momo: 4, // 紙のスタンプカードを受付で見せる(旧カードの引き継ぎ)
 } as const;
 
 export const STAFF = [

@@ -21,12 +21,14 @@ export type MemberCard = {
   /** ポイント残高(台帳から計算) */
   balance: number;
   pointsPerTicket: number;
-  /** 次の無料券まであと何ポイント */
+  /** 無料券と交換できるまで、あと何ポイント(交換できるときは 0) */
   toNextTicket: number;
-  /** 使える無料券 */
+  /** 使える(未使用の)無料券 */
   tickets: { id: number; issuedAt: string; expiresAt: string | null }[];
   /** 今日のチェックイン(済んでいれば) */
   todayVisitId: number | null;
+  /** 今日使った無料券(使っていれば、いちばん新しいもの)。「使用しました」の画面をもう一度開くため */
+  todayUsedTicketId: number | null;
 };
 
 export type MeResponse = MeUnregistered | MeRegistered;
@@ -68,6 +70,7 @@ export type TodayVisit = {
   /** 自分がチェックインしたか */
   isMe: boolean;
   dogIds: number[];
+  /** その日に、おうちで無料券を使ったか */
   usedTicket: boolean;
 };
 
@@ -85,7 +88,7 @@ export type CheckinStatus = {
 export type CheckinResult = {
   visitId: number;
   pointsAwarded: number;
-  ticketsIssued: number;
+  /** その日に使った無料券があり、この来場に結びつけたか */
   usedTicket: boolean;
   balanceAfter: number;
 };
@@ -103,7 +106,7 @@ export type CheckinDetail = {
   cancelled: boolean;
   dogs: DogSummary[];
   pointsAwarded: number;
-  ticketsIssued: number;
+  /** その日に、おうちで無料券を使ったか(会員証の「使用する」で使った券) */
   usedTicket: boolean;
   balance: number;
   unusedTickets: number;
@@ -196,7 +199,6 @@ export type HouseholdSearchResponse = {
 /** 代理チェックインの前に見せる内容(S-04) */
 export type ProxyStatus = {
   date: string;
-  unusedTickets: number;
   /** その日にすでにチェックインしていれば、その来場 */
   visitId: number | null;
 };

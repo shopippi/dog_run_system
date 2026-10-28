@@ -428,3 +428,27 @@ a { color: var(--accent-text); }
 .mg-disabled { cursor: default; }
 .mg-disabled b { color: var(--text-tertiary); }
 .mg-confirm-text .mono { font-size: var(--fs-15); color: var(--text); }
+
+/* ================================================================
+ * 担当G: 無料券の交換と使用(C-06。会員証の無料券の欄・「無料券を使用しました」の画面・来場履歴の無料券の記録)
+ * ================================================================ */
+.tk-section { gap: var(--sp-3); }
+.tk-head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--sp-3); }
+.tk-count { font-size: var(--fs-14); color: var(--text-secondary); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.tk-done { font-size: var(--fs-14); color: var(--text); }
+.tk-row {
+  display: flex; align-items: center; gap: var(--sp-3);
+  min-height: 64px; padding: var(--sp-3) var(--sp-3) var(--sp-3) var(--sp-4);
+}
+.tk-body { display: flex; flex-direction: column; flex: 1; min-width: 0; gap: 2px; }
+.tk-body b { font-size: var(--fs-15); font-weight: var(--fw-strong); }
+.tk-row .btn.tk-use { width: auto; flex: none; min-height: 44px; padding: 0 var(--sp-4); }
+.tk-row .tk-confirm { flex: 1; min-width: 0; }
+.tk-confirm p { font-size: var(--fs-14); }
+.tk-today { margin: 0; }
+.tk-stats { grid-template-columns: 1fr; }
+.tk-hist-row {
+  display: flex; align-items: center; gap: var(--sp-3);
+  min-height: 56px; padding: var(--sp-3) var(--sp-3) var(--sp-3) var(--sp-4);
+}
+.tk-hist-row .badge { flex: none; }

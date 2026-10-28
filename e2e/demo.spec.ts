@@ -50,13 +50,13 @@ test('手順1〜4: はじめての登録、9ポイントのおうちのチェッ
   await expect(p.getByText('DR-000031')).toBeVisible();
   await expect(page.getByTestId('who-note')).toContainText('ポチのおうち(DR-000031)');
 
-  // 2 9ポイントのおうちがチェックイン: こむぎだけ選ぶと10ポイントになり、無料券が出る
+  // 2 9ポイントのおうちがチェックイン: こむぎだけ選ぶと10ポイントになる(無料券への交換は会員証で押す)
   await scene(page, 2);
   await expect(page.getByTestId('who-note')).toContainText('9ポイント');
   await p.getByRole('checkbox', { name: /だいず/ }).uncheck();
   await p.getByRole('button', { name: 'チェックインする' }).click();
   await expect(p.getByRole('region', { name: 'チェックイン完了' })).toBeVisible();
-  await expect(p.getByText('無料券が1枚発行されました')).toBeVisible();
+  await expect(p.getByText(/会員証の「無料券と交換する」から、無料券と交換できます/)).toBeVisible();
   await expect(adminFrame(page).getByRole('listitem', { name: /こむぎ/ })).toBeVisible();
 
   // 3 ママがパパを招待: LINE のトークに届いた招待を、パパの LINE で開いて参加する
@@ -77,7 +77,7 @@ test('手順1〜4: はじめての登録、9ポイントのおうちのチェッ
   await expect(p.getByText('今日はこむぎママさんがチェックイン済みです。')).toBeVisible();
   await p.getByRole('button', { name: 'ワンちゃんを追加する' }).click();
   await expect(p.getByRole('region', { name: 'チェックイン完了' })).toBeVisible();
-  await expect(page.getByTestId('who-note')).toContainText('こむぎ・だいずのおうち(DR-000001)・0ポイント');
+  await expect(page.getByTestId('who-note')).toContainText('こむぎ・だいずのおうち(DR-000001)・10ポイント');
 });
 
 test('管理画面: ログイン・今日の来場・取り消し・製作者は見るだけ', async ({ page }) => {
@@ -127,7 +127,7 @@ test('再読み込みしても続きから使え、「翌日にする」と「�
 
   await page.reload();
   await page.getByRole('heading', { name: '打ち合わせ用の手順' }).waitFor();
-  await expect(page.getByTestId('who-note')).toContainText('0ポイント');
+  await expect(page.getByTestId('who-note')).toContainText('10ポイント');
 
   const today = await page.getByTestId('demo-today').textContent();
   await page.getByRole('button', { name: '翌日にする' }).click();

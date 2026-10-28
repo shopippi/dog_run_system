@@ -130,29 +130,12 @@ for (const scheme of ['light', 'dark'] as const) {
       const dialog = page.getByRole('dialog', { name: '申請を却下する' });
       await dialog.waitFor();
       await check(page, 'M-09 却下の確認');
-      await dialog.getByRole('button', { name: 'やめる' }).click();
-      await expect(dialog).toHaveCount(0);
-
-      await migration.getByRole('button', { name: '確かめて承認する' }).click();
-      const approve = page.getByRole('dialog', { name: '旧カードの引き継ぎを承認する' });
-      await approve.getByText(/引き継ぎ後/).waitFor();
-      await check(page, 'M-09 旧カードの承認');
-      await approve.getByRole('button', { name: '承認する' }).click();
-      await expect(approve).toHaveCount(0);
+      await dialog.getByRole('button', { name: '却下する' }).click();
+      await expect(migration).toHaveCount(0);
       await page.getByRole('tab', { name: '処理済み' }).click();
       await page.getByRole('listitem', { name: `旧カードの引き継ぎ ルルのおうち ${papaNo}` }).waitFor();
       await check(page, 'M-09 処理済み');
 
-      // 受付で直接入力(引き継ぎ済みの種類は選べない見た目)
-      await page.getByRole('tab', { name: '受付で直接入力' }).click();
-      const picker = page.getByRole('group', { name: '引き継ぐおうちを探す' });
-      await picker.getByRole('searchbox', { name: '探す言葉' }).fill(papaNo);
-      await picker.getByRole('list', { name: '引き継ぐおうちを探すの候補' }).getByRole('button', { name: new RegExp(papaNo) }).click();
-      const direct = page.getByRole('region', { name: '受付で直接入力' });
-      await expect(direct.getByRole('radio', { name: /LINEのショップカード\(引き継ぎ済み\)/ })).toBeDisabled();
-      await direct.getByLabel('旧カードのポイント数').fill('3');
-      await direct.getByText(/引き継ぎ後/).waitFor();
-      await check(page, 'M-09 受付で直接入力');
       await page.close();
     });
 

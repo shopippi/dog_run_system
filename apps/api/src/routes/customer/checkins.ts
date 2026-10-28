@@ -8,6 +8,7 @@ import { addDogsToVisit, recordCheckin, requireActiveDogs, todayVisit } from '..
 import { listHouseholdDogs, listVisitDogs } from '../../services/dogs';
 import { requireMember } from '../../services/members';
 import { pointBalance, unusedTicketCount } from '../../services/points';
+import { ticketUsedOnVisitSql } from '../../services/tickets';
 import { MEDIA_BASE } from './media';
 
 export const checkinRoutes = new Hono<AppEnv>();
@@ -26,7 +27,7 @@ checkinRoutes.get('/checkins/today', async (c) => {
   return c.json(body);
 });
 
-// チェックイン(C-04)。受付QRの合言葉・犬・無料券を使うかを受け取る
+// チェックイン(C-04)。受付QRの合言葉と犬を受け取る。無料券はここでは使わない(会員証の「使用する」から使う)
 checkinRoutes.post('/checkins', async (c) => {
   const member = await requireMember(c.env.DB, c.get('lineUser').userId);
   const input = await parseJson(c, checkinSchema);
@@ -44,7 +45,6 @@ checkinRoutes.post('/checkins', async (c) => {
     staffId: null,
     method: 'self',
     dogIds,
-    useTicket: input.useTicket,
     visitDate: toJstDate(now),
     now,
     settings,
@@ -81,7 +81,7 @@ checkinRoutes.get('/checkins/:id', async (c) => {
   const db = c.env.DB;
   const v = await db
     .prepare(
-      `SELECT v.id, v.household_id, v.visit_date, v.checked_in_at, v.used_ticket, v.cancelled_at,
+      `SELECT v.id, v.household_id, v.visit_date, v.checked_in_at, ${ticketUsedOnVisitSql('v')} AS used_ticket, v.cancelled_at,
               COALESCE(m.line_display_name, '') AS checked_in_by
          FROM visits v LEFT JOIN family_members m ON m.id = v.checked_in_member_id
         WHERE v.id = ?`,
@@ -103,10 +103,6 @@ checkinRoutes.get('/checkins/:id', async (c) => {
     .prepare("SELECT COALESCE(SUM(delta), 0) AS n FROM point_ledger WHERE visit_id = ? AND kind = 'visit'")
     .bind(v.id)
     .first<{ n: number }>();
-  const issued = await db
-    .prepare("SELECT COUNT(*) AS n FROM tickets WHERE issued_visit_id = ? AND status <> 'void'")
-    .bind(v.id)
-    .first<{ n: number }>();
   const now = c.get('now');
   const settings = await loadSettings(db);
   const body: CheckinDetail = {
@@ -120,7 +116,6 @@ checkinRoutes.get('/checkins/:id', async (c) => {
     cancelled: v.cancelled_at !== null,
     dogs: await listVisitDogs(db, v.id, MEDIA_BASE),
     pointsAwarded: awarded?.n ?? 0,
-    ticketsIssued: issued?.n ?? 0,
     usedTicket: v.used_ticket === 1,
     balance: await pointBalance(db, member.householdId),
     unusedTickets: await unusedTicketCount(db, member.householdId, now),

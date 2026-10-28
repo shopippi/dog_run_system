@@ -66,19 +66,20 @@ const migrationSourceSchema = z.enum(MIGRATION_SOURCES, { error: '旧カード�
 const migrationPointsSchema = z
   .number({ error: 'ポイント数を数字で入れてください。' })
   .int({ error: 'ポイント数は整数で入れてください。' })
-  .min(0, { error: 'ポイント数は0〜99で入れてください。' })
-  .max(MIGRATION_POINTS_LIMIT, { error: 'ポイント数は0〜99で入れてください。' });
+  .min(0, { error: 'ポイント数は0以上の数で入れてください。' })
+  .max(MIGRATION_POINTS_LIMIT, { error: `ポイント数は${MIGRATION_POINTS_LIMIT}以下の数で入れてください。` });
 
-/** 旧カードの移行の直接入力(POST /admin/api/households/:id/migrate、A-05) */
+const CARD_CHECK_MESSAGE = '旧カードの確認に印を付けてください。';
+
+/**
+ * 旧カードの移行の直接入力(POST /admin/api/households/:id/migrate、A-05)。
+ * 受付で旧カードを目で確かめたこと(confirmed_card)と、紙のカードを回収したか使用済みの印を付けたこと(collected_card)を必須にする(16.1)
+ */
 export const migrationInputSchema = z.object({
   source: migrationSourceSchema,
   points: migrationPointsSchema,
+  confirmed_card: z.literal(true, { error: CARD_CHECK_MESSAGE }),
+  collected_card: z.literal(true, { error: CARD_CHECK_MESSAGE }),
 });
 export type MigrationInput = z.infer<typeof migrationInputSchema>;
 
-/** 旧カードの引き継ぎ申請の承認(POST /admin/api/requests/:id/approve)。ポイント数は写真を見て確認・修正する */
-export const approveMigrationSchema = z.object({
-  points: migrationPointsSchema,
-  /** 申請と違う種類だったときだけ直す */
-  source: migrationSourceSchema.optional(),
-});

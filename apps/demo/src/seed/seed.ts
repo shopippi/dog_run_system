@@ -19,8 +19,6 @@ export type SeedOptions = {
   hashPassword: (password: string) => Promise<string>;
   /** 犬の写真(JPEG)を作る。variant で色や形を変える。なければ写真なしで作る */
   makeDogPhoto?: (variant: number, kind: 'photo' | 'thumb') => Promise<Uint8Array>;
-  /** 旧カード(紙のスタンプカード)の写真 */
-  makeCardPhoto?: () => Promise<Uint8Array>;
   putMedia?: (key: string, bytes: Uint8Array) => Promise<void>;
   /** 写真をつけるおうちの数(先頭から) */
   photoHouseholds?: number;
@@ -450,11 +448,6 @@ export async function seedDemo(sql: Database, opts: SeedOptions): Promise<SeedSu
   // ---- 書き込み(待ち時間のある処理は、まとめて書き込む前に済ませる)
   const hashes: string[] = [];
   for (const _ of STAFF) hashes.push(await opts.hashPassword(DEMO_PASSWORD));
-  let cardKey: string | null = null;
-  if (opts.makeCardPhoto && opts.putMedia) {
-    cardKey = `requests/${formatMemberNo(hMomo.id)}/demo-paper-card.jpg`;
-    await opts.putMedia(cardKey, await opts.makeCardPhoto());
-  }
   const run = (q: string, params: SqlValue[] = []) => sql.run(q, params);
   sql.run('BEGIN');
   try {
@@ -500,7 +493,9 @@ export async function seedDemo(sql: Database, opts: SeedOptions): Promise<SeedSu
       }
     }
 
-    // 来場・ポイント・無料券(来場の順に、台帳と同じ計算をする)
+    // 来場・ポイント・無料券(来場の順に、台帳と同じ計算をする)。
+    // 無料券は自動では出ない(8章)。デモでは、10ポイントたまったらその来場のあとに会員証で「無料券と交換する」を押したことにする。
+    // 使うときは、その来場の受付で会員証の「使用する」を押したことにする(券はその来場に結びつく)
     const balance = new Map<number, number>(households.map((h) => [h.id, h.migration?.points ?? 0]));
     const unused = new Map<number, number[]>();
     let ticketSeq = 0;
@@ -522,7 +517,7 @@ export async function seedDemo(sql: Database, opts: SeedOptions): Promise<SeedSu
       run(
         `INSERT INTO visits (id, household_id, checked_in_member_id, visit_date, checked_in_at, dog_count, used_ticket, method, created_by_staff_id)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [v.id, hid, v.memberId, v.date, v.at, v.count, v.useTicket ? 1 : 0, v.method, v.staffId],
+        [v.id, hid, v.memberId, v.date, v.at, v.count, 0, v.method, v.staffId],
       );
       for (const dogId of v.dogIds) {
         run(
@@ -532,6 +527,8 @@ export async function seedDemo(sql: Database, opts: SeedOptions): Promise<SeedSu
       }
       const actorType = v.staffId ? 'staff' : 'member';
       const actorId = v.staffId ?? v.memberId;
+      // 交換はお客さんの操作。代理の来場の日は、おうちの最初の家族が会員証で押したことにする
+      const exchangerId = v.memberId ?? households.find((h) => h.id === hid)!.members[0]!.id;
       if (v.useTicket) {
         const t = tickets.shift()!;
         run(`UPDATE tickets SET status = 'used', used_visit_id = ?, used_at = ? WHERE id = ?`, [v.id, v.at, t]);
@@ -545,13 +542,13 @@ export async function seedDemo(sql: Database, opts: SeedOptions): Promise<SeedSu
       while (b >= 10) {
         const tid = ++ticketSeq;
         run(
-          `INSERT INTO tickets (id, household_id, issued_at, source, issued_visit_id, status) VALUES (?, ?, ?, 'points', ?, 'unused')`,
-          [tid, hid, v.at, v.id],
+          `INSERT INTO tickets (id, household_id, issued_at, source, status, note, op_id) VALUES (?, ?, ?, 'points', 'unused', 'ポイントと交換', ?)`,
+          [tid, hid, v.at, `exchange:demo-${tid}`],
         );
         run(
-          `INSERT INTO point_ledger (household_id, delta, kind, visit_id, ticket_id, actor_type, actor_id, created_at)
-           VALUES (?, -10, 'ticket_issue', ?, ?, ?, ?, ?)`,
-          [hid, v.id, tid, actorType, actorId, v.at],
+          `INSERT INTO point_ledger (household_id, delta, kind, ticket_id, reason, actor_type, actor_id, created_at, op_id)
+           VALUES (?, -10, 'ticket_issue', ?, '無料券と交換', 'member', ?, ?, ?)`,
+          [hid, tid, exchangerId, v.at, `exchange:demo-${tid}`],
         );
         tickets.push(tid);
         b -= 10;
@@ -616,19 +613,6 @@ export async function seedDemo(sql: Database, opts: SeedOptions): Promise<SeedSu
       `INSERT INTO invites (code, household_id, kind, created_by_member_id, created_at, expires_at)
        VALUES ('demo-merge-invite', ?, 'family', ?, ?, ?)`,
       [hTaka.id, takaMember.id, toJstIso(new Date(now.getTime() - 3 * 3600e3)), toJstIso(new Date(now.getTime() + 60 * 24 * 3600e3))],
-    );
-
-    // 確認待ち: 旧カードの引き継ぎ申請(紙のスタンプカード)
-    run(
-      `INSERT INTO requests (id, kind, household_id, requester_member_id, payload, attachment_key, status, created_at)
-       VALUES (2, 'migration', ?, ?, ?, ?, 'pending', ?)`,
-      [
-        hMomo.id,
-        hMomo.members[0]!.id,
-        JSON.stringify({ source: 'paper_card', claimedPoints: 7, note: '紙のスタンプカードに7個押してあります' }),
-        cardKey,
-        toJstIso(new Date(now.getTime() - 5 * 3600e3)),
-      ],
     );
 
     // ルール: 旧カードの移行期間(前後1か月)と、困ったときの連絡先

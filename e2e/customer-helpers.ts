@@ -8,16 +8,20 @@ export function authHeaders(user: string) {
   return { authorization: `Bearer mock:${id}:${encodeURIComponent(name)}` };
 }
 
-/** API で過去の日にチェックインする(x-debug-now で日時を指定できるのはテストの環境だけ)。来場の番号を返す */
+/**
+ * API で過去の日にチェックインする(x-debug-now で日時を指定できるのはテストの環境だけ)。来場の番号を返す。
+ * useTicket のときは、チェックインの前にその日に無料券を使う(券がなければ、ポイントで交換してから使う。8章)
+ */
 export async function checkinOn(request: APIRequestContext, user: string, date: string, useTicket = false): Promise<number> {
   const headers = authHeaders(user);
+  if (useTicket) await useTicketOn(request, user, date);
   const dogs = await request.get('/api/dogs', { headers });
   const dogIds = ((await dogs.json()) as { dogs: { id: number; status: string }[] }).dogs
     .filter((d) => d.status === 'active')
     .map((d) => d.id);
   const res = await request.post('/api/checkins', {
     headers: { ...headers, 'x-debug-now': `${date}T10:00:00+09:00` },
-    data: { passphrase: checkinPassphrase(), dogIds, useTicket },
+    data: { passphrase: checkinPassphrase(), dogIds },
   });
   expect(res.status(), await res.text()).toBe(201);
   return ((await res.json()) as { visitId: number }).visitId;
@@ -45,4 +49,24 @@ export async function joinFamily(request: APIRequestContext, inviter: string, jo
     data: { consent: true, survey: [{ questionId: 1, value: '40代' }, { questionId: 2, value: '男性' }] },
   });
   expect(res.status(), await res.text()).toBe(201);
+}
+
+/** API でその日に無料券と交換する(会員証の「無料券と交換する」)。券の番号を返す */
+export async function exchangeOn(request: APIRequestContext, user: string, date: string): Promise<number> {
+  const res = await request.post('/api/tickets/exchange', {
+    headers: { ...authHeaders(user), 'x-debug-now': `${date}T09:30:00+09:00` },
+    data: {},
+  });
+  expect(res.status(), await res.text()).toBe(201);
+  return ((await res.json()) as { ticketId: number }).ticketId;
+}
+
+/** API でその日に無料券を使う(会員証の「使用する」)。券がなければ交換してから使う。券の番号を返す */
+export async function useTicketOn(request: APIRequestContext, user: string, date: string): Promise<number> {
+  const headers = { ...authHeaders(user), 'x-debug-now': `${date}T09:40:00+09:00` };
+  const me = (await (await request.get('/api/me', { headers })).json()) as { card: { tickets: { id: number }[] } };
+  const id = me.card.tickets[0]?.id ?? (await exchangeOn(request, user, date));
+  const res = await request.post(`/api/tickets/${id}/use`, { headers, data: {} });
+  expect(res.status(), await res.text()).toBe(200);
+  return id;
 }

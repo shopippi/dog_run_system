@@ -29,7 +29,9 @@ import { systemRoutes } from './routes/admin/system';
 import { historyRoutes } from './routes/customer/history';
 import { profileRoutes } from './routes/customer/profile';
 import { familyRoutes } from './routes/customer/family';
-import { customerRequestRoutes } from './routes/customer/requests';
+import { ticketRoutes } from './routes/customer/tickets';
+import { adminTicketRoutes } from './routes/admin/tickets';
+import { migrationRoutes } from './routes/admin/migrations';
 
 export function createApp() {
   const app = new Hono<AppEnv>();
@@ -66,7 +68,7 @@ export function createApp() {
   customer.route('/', historyRoutes);
   customer.route('/', profileRoutes);
   customer.route('/', familyRoutes);
-  customer.route('/', customerRequestRoutes);
+  customer.route('/', ticketRoutes);
   app.route('/api', customer);
 
   // 管理画面向け API(ログインのセッションで認証)。ログインだけは認証の前に置く
@@ -88,6 +90,8 @@ export function createApp() {
   admin.route('/', exportRoutes);
   admin.route('/', dashboardRoutes);
   admin.route('/', systemRoutes);
+  admin.route('/', adminTicketRoutes);
+  admin.route('/', migrationRoutes);
   app.route('/admin/api', admin);
 
   app.all('/api/*', (c) =>

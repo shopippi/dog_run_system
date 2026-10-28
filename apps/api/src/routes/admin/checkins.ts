@@ -16,7 +16,6 @@ import { requireRole } from '../../lib/staff-auth';
 import { parseJson } from '../../lib/validate';
 import { auditStatement } from '../../services/audit';
 import { cancelCheckin, findVisitOn, recordCheckin, requireActiveDogs } from '../../services/checkins';
-import { unusedTicketCount } from '../../services/points';
 import { refreshDailyStatsQuietly } from '../../services/daily-stats';
 
 export const adminCheckinRoutes = new Hono<AppEnv>();
@@ -78,18 +77,14 @@ async function requireActiveHousehold(db: D1Database, householdId: number) {
   }
 }
 
-// 代理チェックインの前に、その日のチェックインと使える無料券を確かめる(S-04)
+// 代理チェックインの前に、その日のチェックインを確かめる(S-04)。無料券はここでは使わない(おうちの詳細の「無料券を使用済みにする」から)
 adminCheckinRoutes.get('/checkins/proxy/status', requireRole('staff', 'admin'), async (c) => {
   const householdId = Number(c.req.query('householdId')) || 0;
   const now = c.get('now');
   const date = proxyDate(c.req.query('date') || undefined, now);
   await requireActiveHousehold(c.env.DB, householdId);
   const visit = await findVisitOn(c.env.DB, householdId, date);
-  const body: ProxyStatus = {
-    date,
-    unusedTickets: await unusedTicketCount(c.env.DB, householdId, now),
-    visitId: visit?.id ?? null,
-  };
+  const body: ProxyStatus = { date, visitId: visit?.id ?? null };
   return c.json(body);
 });
 
@@ -113,7 +108,6 @@ adminCheckinRoutes.post('/checkins/proxy', requireRole('staff', 'admin'), async 
     staffId: staff.id,
     method: 'proxy',
     dogIds,
-    useTicket: input.useTicket,
     visitDate: date,
     now,
     settings: await loadSettings(db),
@@ -123,7 +117,7 @@ adminCheckinRoutes.post('/checkins/proxy', requireRole('staff', 'admin'), async 
         action: 'visit.proxy',
         targetType: 'visit',
         targetId: visitIdSql,
-        after: { householdId: input.householdId, date, dogIds, useTicket: input.useTicket },
+        after: { householdId: input.householdId, date, dogIds },
         now,
       }),
     ],
