@@ -322,3 +322,38 @@ input::placeholder { color: var(--text-tertiary); }
   .nav-group { flex-direction: column; gap: 2px; padding-bottom: var(--sp-3); }
   .nav-label { display: block; margin: 0; padding: var(--sp-2) var(--sp-3) var(--sp-1); font-size: var(--fs-12); color: var(--text-tertiary); font-weight: var(--fw-strong); letter-spacing: .04em; }
 }
+
+/* ==== 設定まわり(担当C: ルール・犬種・アンケート・スタッフ・イベント・CSV出力・使い方)。接頭辞 cfg- ==== */
+.cfg-page { max-width: 880px; }
+.cfg-section { display: flex; flex-direction: column; }
+.cfg-section-head { display: flex; flex-direction: column; gap: var(--sp-1); padding: var(--sp-5) var(--sp-5) 0; }
+.cfg-section-head h2 { font-size: var(--fs-17); }
+.cfg-section-body { display: flex; flex-direction: column; gap: var(--sp-4); padding: var(--sp-4) var(--sp-5) var(--sp-5); min-width: 0; }
+.cfg-section-foot {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: var(--sp-2) var(--sp-3);
+  padding: var(--sp-3) var(--sp-5); border-top: 1px solid var(--border);
+}
+.cfg-foot-msg { flex: 1; min-width: 200px; }
+.cfg-fieldset { display: flex; flex-direction: column; gap: var(--sp-4); min-width: 0; margin: 0; padding: 0; border: 0; }
+.cfg-row { display: flex; flex-wrap: wrap; gap: var(--sp-4) var(--sp-8); }
+.cfg-num { display: flex; align-items: center; gap: var(--sp-2); }
+.cfg-num input { width: 112px; }
+.cfg-expiry { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2) var(--sp-4); }
+.cfg-seg button[aria-checked="true"] { color: var(--text); font-weight: var(--fw-strong); }
+.cfg-seg button[aria-checked="true"]::before { background: var(--surface); box-shadow: var(--shadow-seg); }
+.cfg-seg button:disabled { cursor: not-allowed; }
+.field .cfg-textarea { width: 100%; min-height: 120px; padding: 10px var(--sp-3); line-height: var(--lh); resize: vertical; }
+.cfg-wide { width: 100%; max-width: 420px; }
+.cfg-date { width: 200px; max-width: 100%; }
+.cfg-break { overflow-wrap: anywhere; word-break: break-all; }
+.cfg-acts { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
+.cfg-fieldset:disabled input, .cfg-fieldset:disabled textarea, .cfg-fieldset:disabled select { background: var(--surface-sunk); color: var(--text); }
+
+/* 受付のQRコード */
+.cfg-qr-row { display: flex; flex-wrap: wrap; align-items: flex-start; gap: var(--sp-5); }
+.cfg-qr-frame { flex: none; padding: var(--sp-4); border: 1px solid var(--border); border-radius: var(--radius); background: var(--paper); }
+.cfg-qr { display: block; image-rendering: pixelated; }
+.cfg-qr-side { display: flex; flex-direction: column; gap: var(--sp-4); flex: 1; min-width: 240px; }
+.cfg-qr-meta { display: flex; flex-direction: column; gap: var(--sp-3); margin: 0; }
+.cfg-qr-meta dt { font-size: var(--fs-12); color: var(--text-secondary); }
+.cfg-qr-meta dd { margin: 0; font-size: var(--fs-13); }
