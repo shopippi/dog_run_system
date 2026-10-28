@@ -1,9 +1,10 @@
 import { SURVEY_TEXT_MAX, type SurveyQuestion } from '@dr/shared';
 import { useId } from 'react';
+import { ChoiceGroup } from './ChoiceGroup';
 
 export type SurveyValues = Record<number, string>;
 
-/** アンケートの入力(7章)。選択式はボタン、自由記述は入力欄。 */
+/** アンケートの入力(7章)。選択式はセグメントかチップ、自由記述は入力欄。 */
 export function SurveyForm({
   questions,
   values,
@@ -17,9 +18,9 @@ export function SurveyForm({
 }) {
   const id = useId();
   return (
-    <div className="panel">
+    <div className="fields">
       {questions.map((q) => {
-        const mark = showRequired && q.required ? <span className="req">必須</span> : <span className="opt">任意</span>;
+        const mark = showRequired && q.required ? <span className="req">必須</span> : null;
         if (q.kind === 'choice') {
           return (
             <div className="field" key={q.id}>
@@ -27,19 +28,12 @@ export function SurveyForm({
                 {q.label}
                 {mark}
               </span>
-              <div className="choices" role="radiogroup" aria-labelledby={`${id}-${q.id}`}>
-                {q.options.map((o) => (
-                  <label key={o}>
-                    <input
-                      type="radio"
-                      name={`${id}-${q.id}`}
-                      checked={values[q.id] === o}
-                      onChange={() => onChange({ ...values, [q.id]: o })}
-                    />
-                    {o}
-                  </label>
-                ))}
-              </div>
+              <ChoiceGroup
+                labelledBy={`${id}-${q.id}`}
+                options={q.options.map((o) => ({ value: o, label: o }))}
+                value={values[q.id]}
+                onChange={(o) => onChange({ ...values, [q.id]: o })}
+              />
             </div>
           );
         }
@@ -57,6 +51,7 @@ export function SurveyForm({
               inputMode={postal ? 'numeric' : undefined}
               autoComplete={postal ? 'postal-code' : 'off'}
               placeholder={postal ? '例: 1234567' : undefined}
+              className={postal ? 'w-postal' : undefined}
               onChange={(e) => onChange({ ...values, [q.id]: e.target.value })}
             />
             {postal && <span className="hint">チラシを配る地域を決めるために使います。入力しなくても登録できます。</span>}

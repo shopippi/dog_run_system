@@ -8,7 +8,7 @@ test('C-08 犬の追加・名前と写真の変更・登録解除ができる', 
   await expect(page.getByRole('heading', { name: 'ワンちゃん' })).toBeVisible();
 
   // 追加
-  await page.getByRole('link', { name: '＋ ワンちゃんを追加する' }).click();
+  await page.getByRole('link', { name: 'ワンちゃんを追加する' }).click();
   const form = page.locator('fieldset.dog-form');
   await form.getByLabel('名前').fill('ニコ');
   await form.getByRole('combobox', { name: /犬種/ }).selectOption({ label: 'ポメラニアン' });

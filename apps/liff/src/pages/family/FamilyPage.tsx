@@ -5,7 +5,6 @@ import { QrImage } from '../../components/QrImage';
 import { useMe } from '../../hooks/useMe';
 import { postJson } from '../../lib/api';
 import { inviteUrl, isInLineApp, shareToLine } from '../../lib/liff';
-import { BackLink } from '../dogs/DogsPage';
 
 function formatExpiry(iso: string) {
   const [date, time] = [iso.slice(5, 10).replace('-', '/'), iso.slice(11, 16)];
@@ -54,41 +53,46 @@ export function FamilyPage() {
 
   return (
     <main className="screen">
-      <BackLink />
-      <h2>家族を招待</h2>
-      <p className="small">
-        ご家族のLINEを、このおうちにつなげます。つながると、誰がチェックインしても同じ会員証にポイントがたまります。
-      </p>
-      <div className="notice">
-        <p className="small">招待は1回だけ使えます。ご家族1人につき1つ送ってください。</p>
+      <div className="page-head">
+        <h2>家族を招待</h2>
+        <p className="lead">
+          ご家族のLINEを、このおうちにつなげます。つながると、誰がチェックインしても同じ会員証にポイントがたまります。
+        </p>
+        <p className="note">招待は1回だけ使えます。ご家族1人につき1つ送ってください。</p>
       </div>
 
       {mode === 'sent' && invite && (
-        <div className="notice good" role="status">
+        <div className="alert info" role="status">
           <p>
             <b>招待を送りました。</b>
           </p>
-          <p className="small">ご家族がLINEでリンクを開き、「参加する」を押すと完了です。</p>
+          <p>ご家族がLINEでリンクを開き、「参加する」を押すと完了です。</p>
         </div>
       )}
 
       {mode === 'qr' && invite && (
-        <div className="invite-card">
-          <QrImage value={inviteUrl(invite.code)} label="家族の招待のQRコード" />
-          <p className="small">ご家族のスマホのLINEのカメラで、このQRコードを読み取ってもらってください。</p>
-          <p className="small muted">{formatExpiry(invite.expiresAt)}まで有効</p>
+        <div className="qr-block">
+          <div className="qr-frame">
+            <QrImage value={inviteUrl(invite.code)} label="家族の招待のQRコード" size={200} />
+          </div>
+          <div className="qr-text">
+            <p>ご家族のスマホのLINEのカメラで、このQRコードを読み取ってもらってください。</p>
+            <p className="note">{formatExpiry(invite.expiresAt)}まで有効</p>
+          </div>
         </div>
       )}
 
       {error ? <ErrorNotice error={error} /> : null}
-      {isInLineApp() && (
-        <button type="button" className="btn" disabled={busy} onClick={sendByLine}>
-          LINEで招待を送る
+      <div className="actions">
+        {isInLineApp() && (
+          <button type="button" className="btn" disabled={busy} onClick={sendByLine}>
+            LINEで招待を送る
+          </button>
+        )}
+        <button type="button" className={isInLineApp() ? 'btn sub' : 'btn'} disabled={busy} onClick={showQr}>
+          招待のQRコードを表示する
         </button>
-      )}
-      <button type="button" className="btn sub" disabled={busy} onClick={showQr}>
-        招待のQRコードを表示する
-      </button>
+      </div>
     </main>
   );
 }

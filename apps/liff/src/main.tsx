@@ -21,7 +21,7 @@ initLiff()
   .catch(() => {
     root.render(
       <main className="screen">
-        <div className="notice bad">
+        <div className="alert danger" role="alert">
           <p>LINEとの接続がうまくいきませんでした。</p>
           <p>画面を閉じて、もう一度開いてください。</p>
         </div>

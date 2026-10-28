@@ -24,7 +24,7 @@ test('C-02 2頭を写真つきで登録すると、写真は長い辺 800px 以�
   });
   await expect(first.locator('img.av')).toBeVisible();
 
-  await page.getByRole('button', { name: '＋ もう1頭追加する' }).click();
+  await page.getByRole('button', { name: 'もう1頭追加する' }).click();
   const second = page.locator('fieldset.dog-form').nth(1);
   await second.getByLabel('名前').fill('ニコ');
   await second.getByRole('combobox', { name: /犬種/ }).selectOption({ label: 'その他' });

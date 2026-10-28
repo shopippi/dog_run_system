@@ -20,7 +20,7 @@ const DEVICES = [
 /**
  * 1つの画面を確かめる。
  * - 横にはみ出していない(横スクロールが出ない)
- * - 押すボタンの高さが 44px 以上(指で押しやすい)
+ * - 押すボタンと選択肢(セグメント・チップ)の高さが 44px 以上(指で押しやすい)
  * - 入力欄の文字が 16px 以上(iPhone で入力するときに画面が勝手に拡大されない)
  * SHOT_DIR を指定すると、画面の写真を保存する。
  */
@@ -30,7 +30,7 @@ async function checkScreen(page: Page, device: string, screen: string) {
     const out: string[] = [];
     const doc = document.documentElement;
     if (doc.scrollWidth > doc.clientWidth + 1) out.push(`横にはみ出し: ${doc.scrollWidth}px > ${doc.clientWidth}px`);
-    for (const el of document.querySelectorAll<HTMLElement>('button, a.btn, .menu a, label.up')) {
+    for (const el of document.querySelectorAll<HTMLElement>('button, a.btn, .menu a, label.up, .segment label, .chips label')) {
       const r = el.getBoundingClientRect();
       if (r.width === 0 || el.closest('[hidden]')) continue;
       if (r.height < 43.5) out.push(`ボタンが低い(${Math.round(r.height)}px): ${el.textContent?.trim().slice(0, 20)}`);
@@ -72,7 +72,7 @@ for (const d of DEVICES) {
       await first.getByRole('combobox', { name: /犬種/ }).selectOption({ label: 'ミニチュアダックスフンド' });
       await first.locator('input[type=file]').setInputFiles({ name: 'a.jpg', mimeType: 'image/jpeg', buffer: await makePhoto(page) });
       await first.locator('img.av').waitFor();
-      await page.getByRole('button', { name: '＋ もう1頭追加する' }).click();
+      await page.getByRole('button', { name: 'もう1頭追加する' }).click();
       const second = page.locator('fieldset.dog-form').nth(1);
       await second.getByLabel('名前').fill('ニコ');
       await second.getByRole('combobox', { name: /犬種/ }).selectOption({ label: 'その他' });

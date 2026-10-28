@@ -2,11 +2,10 @@ import type { DogSummary } from '@dr/shared';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { DogForm, draftToInput, emptyDogDraft } from '../../components/DogForm';
-import { ErrorNotice } from '../../components/ErrorNotice';
+import { ErrorNotice, MessageNotice } from '../../components/ErrorNotice';
 import { useBreeds } from '../../hooks/useBreeds';
 import { postJson } from '../../lib/api';
 import { uploadDogPhoto } from '../../lib/photo';
-import { BackLink } from './DogsPage';
 
 /** ワンちゃんの追加(C-08) */
 export function DogNewPage() {
@@ -46,14 +45,11 @@ export function DogNewPage() {
   if (!breeds) return <main className="screen"><p className="loading">読み込んでいます…</p></main>;
   return (
     <main className="screen">
-      <BackLink to="/dogs" label="ワンちゃんの一覧にもどる" />
-      <h2>ワンちゃんを追加</h2>
+      <div className="page-head">
+        <h2>ワンちゃんを追加</h2>
+      </div>
       <DogForm draft={draft} breeds={breeds} onChange={setDraft} title="新しいワンちゃん" />
-      {message && (
-        <div className="notice bad" role="alert">
-          <p>{message}</p>
-        </div>
-      )}
+      {message && <MessageNotice message={message} />}
       {error ? <ErrorNotice error={error} /> : null}
       <button type="button" className="btn" disabled={busy} onClick={save}>
         {busy ? '追加しています…' : '追加する'}
