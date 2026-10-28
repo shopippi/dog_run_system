@@ -59,3 +59,30 @@ export function checkinUrlFor(liffId: string, passphrase: string): string {
   const k = encodeURIComponent(passphrase);
   return liffId ? `https://liff.line.me/${liffId}/checkin?k=${k}` : `/liff/checkin?k=${k}`;
 }
+
+// ============================================================
+// A-11 犬種の選択肢
+// ============================================================
+
+export const BREED_NAME_MAX = 30;
+
+const breedNameSchema = z
+  .string({ error: '犬種の名前を入力してください。' })
+  .trim()
+  .min(1, { error: '犬種の名前を入力してください。' })
+  .max(BREED_NAME_MAX, { error: `犬種の名前は${BREED_NAME_MAX}文字までで入力してください。` });
+const breedSizeSchema = z.enum(['small', 'medium', 'large'], { error: '標準のサイズ(小型・中型・大型)を選んでください。' });
+
+/** 犬種を追加する */
+export const breedCreateSchema = z.object({ name: breedNameSchema, defaultSize: breedSizeSchema });
+
+/** 犬種の名前・標準のサイズ・表示するかを変える */
+export const breedPatchSchema = z
+  .object({ name: breedNameSchema, defaultSize: breedSizeSchema, visible: z.boolean() })
+  .partial()
+  .refine((v) => Object.keys(v).length > 0, { error: '変える内容がありません。画面を読み込み直してください。' });
+
+/** 並べ替え。並べたい順の番号の配列(「その他」は含めない。常に最後) */
+export const orderSchema = z.object({
+  ids: z.array(z.number().int().positive()).max(500),
+});

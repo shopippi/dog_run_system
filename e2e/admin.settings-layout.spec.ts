@@ -75,6 +75,15 @@ test.describe('設定まわりの画面の見え方', () => {
       await checkScreen(page, v.name, 'M-13 合言葉を作り直す', v.touch);
       await page.getByRole('button', { name: 'やめる' }).click();
 
+      // M-12 犬種の選択肢
+      await page.getByRole('link', { name: '犬種' }).click();
+      await page.getByRole('list', { name: '犬種' }).getByRole('listitem', { name: 'その他' }).waitFor();
+      await checkScreen(page, v.name, 'M-12 犬種の選択肢', v.touch);
+      await page.getByRole('button', { name: 'チワワを変える' }).click();
+      await page.getByRole('dialog', { name: '犬種を変える' }).waitFor();
+      await checkScreen(page, v.name, 'M-12 犬種を変える', v.touch);
+      await page.getByRole('button', { name: 'やめる' }).click();
+
       await page.close();
     });
   }

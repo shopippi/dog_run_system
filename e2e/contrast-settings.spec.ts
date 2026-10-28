@@ -97,12 +97,23 @@ for (const scheme of ['light', 'dark'] as const) {
       // 保存していない変更があるときの表示も見る
       await page.getByLabel('リピート率の日数').fill('61');
       await check(page, 'M-13 ルールの設定');
+
+      await page.getByRole('link', { name: '犬種' }).click();
+      await page.getByRole('list', { name: '犬種' }).getByRole('listitem', { name: 'その他' }).waitFor();
+      await check(page, 'M-12 犬種の選択肢');
+      await page.getByRole('button', { name: 'チワワを変える' }).click();
+      await page.getByRole('dialog', { name: '犬種を変える' }).waitFor();
+      await check(page, 'M-12 犬種を変える');
+      await page.getByRole('button', { name: 'やめる' }).click();
       await page.close();
 
       const dev = await browser.newPage({ ...TABLET, colorScheme: scheme });
       await adminLogin(dev, 'developer', '/settings');
       await dev.getByRole('region', { name: '受付のQRコード' }).waitFor();
       await check(dev, 'M-13 ルールの設定(製作者)');
+      await dev.getByRole('link', { name: '犬種' }).click();
+      await dev.getByRole('list', { name: '犬種' }).getByRole('listitem', { name: 'その他' }).waitFor();
+      await check(dev, 'M-12 犬種の選択肢(製作者)');
       await dev.close();
     });
   });

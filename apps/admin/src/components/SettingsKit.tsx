@@ -126,3 +126,34 @@ export function QrCode({ value, size = 168, label, onImage }: { value: string; s
     <div className="cfg-qr" style={{ width: size, height: size }} />
   );
 }
+
+/** 2〜4択(セグメント)。中身はラジオとして読み上げる */
+export function RadioSegment<T extends string>({
+  label,
+  options,
+  value,
+  onChange,
+  disabled,
+}: {
+  label: string;
+  options: readonly { value: T; label: string }[];
+  value: T;
+  onChange: (v: T) => void;
+  disabled?: boolean;
+}) {
+  const id = useId();
+  return (
+    <div className="field">
+      <span className="label" id={id}>
+        {label}
+      </span>
+      <div className="segment cfg-seg" role="radiogroup" aria-labelledby={id}>
+        {options.map((o) => (
+          <button key={o.value} type="button" role="radio" aria-checked={value === o.value} disabled={disabled} onClick={() => onChange(o.value)}>
+            {o.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}

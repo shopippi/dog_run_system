@@ -357,3 +357,24 @@ input::placeholder { color: var(--text-tertiary); }
 .cfg-qr-meta { display: flex; flex-direction: column; gap: var(--sp-3); margin: 0; }
 .cfg-qr-meta dt { font-size: var(--fs-12); color: var(--text-secondary); }
 .cfg-qr-meta dd { margin: 0; font-size: var(--fs-13); }
+
+/* 一覧(犬種・アンケート・スタッフ) */
+.cfg-list { list-style: none; margin: 0; padding: 0; }
+.cfg-list > li + li { border-top: 1px solid var(--border); }
+.cfg-item {
+  display: grid; grid-template-columns: 28px minmax(0, 1fr) auto auto; align-items: center; gap: var(--sp-2) var(--sp-4);
+  min-height: 64px; padding: var(--sp-2) var(--sp-3) var(--sp-2) var(--sp-5);
+}
+.cfg-item-no { font-size: var(--fs-13); color: var(--text-secondary); }
+.cfg-item-body { display: flex; flex-direction: column; min-width: 0; }
+.cfg-item-body b { font-size: var(--fs-15); overflow-wrap: anywhere; }
+.cfg-item-acts { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 2px; }
+.cfg-off .cfg-item-body b, .cfg-off .cfg-item-body .sub-text, .cfg-off .cfg-item-no { color: var(--text-tertiary); }
+.cfg-list-msg { padding: var(--sp-3) var(--sp-5) 0; }
+@media (max-width: 640px) {
+  .cfg-item { grid-template-columns: 28px minmax(0, 1fr) auto; }
+  .cfg-item-acts { grid-column: 2 / -1; justify-content: flex-start; margin-left: calc(-1 * var(--sp-3)); }
+}
+.cfg-add { display: flex; flex-direction: column; gap: var(--sp-3); padding: var(--sp-4) var(--sp-5); }
+.cfg-add-row { display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--sp-3) var(--sp-4); }
+.cfg-add-row .field:first-child { flex: 1; min-width: 220px; }
