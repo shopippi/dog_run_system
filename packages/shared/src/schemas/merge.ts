@@ -6,11 +6,12 @@ import { MIGRATION_POINTS_LIMIT } from '../migration';
 
 const idSchema = z.number().int().positive();
 
-/** 同じ犬の組み合わせ。take は写真・名前・犬種をどちらから残すか */
+/** 同じ犬の組み合わせ。take は写真・名前・犬種をどちらから残すか。photo は写真だけ別に選ぶとき */
 export const mergeDogPairSchema = z.object({
   keep: idSchema,
   absorb: idSchema,
   take: z.enum(['keep', 'absorb']),
+  photo: z.enum(['keep', 'absorb']).optional(),
 });
 
 /** 統合の確認(POST /admin/api/merges/preview)と実行(POST /admin/api/merges)の入力 */
@@ -21,13 +22,30 @@ export const mergeInputSchema = z
     /** まとめるおうち(統合後は「統合済み」になる) */
     absorbHouseholdId: idSchema,
     dogPairs: z.array(mergeDogPairSchema).max(30).default([]),
-    /** まとめる申請から進んだときの申請(統合したら承認にする) */
-    requestId: idSchema.optional(),
   })
   .refine((v) => v.keepHouseholdId !== v.absorbHouseholdId, {
     error: '同じおうちどうしはまとめられません。まとめる相手のおうちを選び直してください。',
   });
 export type MergeInput = z.infer<typeof mergeInputSchema>;
+
+/**
+ * お客さんが招待からおうちをまとめる(POST /api/invites/:code/merge、C-12)。
+ * 自分のワンちゃんごとに、招待した側の同じ子(いなければ null)と、残す写真を選ぶ。
+ * 一覧にないワンちゃんは、別の子として移す。
+ */
+export const customerMergeSchema = z.object({
+  dogs: z
+    .array(
+      z.object({
+        dogId: idSchema,
+        sameAs: idSchema.nullable(),
+        keepPhoto: z.enum(['mine', 'theirs']).default('theirs'),
+      }),
+    )
+    .max(30, { error: 'ワンちゃんが多すぎます。受付にご相談ください。' })
+    .default([]),
+});
+export type CustomerMergeInput = z.infer<typeof customerMergeSchema>;
 
 /** 却下の理由(確認待ち、A-05・A-08)。選択式 */
 export const REJECT_REASONS = {
@@ -48,19 +66,20 @@ const migrationSourceSchema = z.enum(MIGRATION_SOURCES, { error: '旧カード�
 const migrationPointsSchema = z
   .number({ error: 'ポイント数を数字で入れてください。' })
   .int({ error: 'ポイント数は整数で入れてください。' })
-  .min(0, { error: 'ポイント数は0〜99で入れてください。' })
-  .max(MIGRATION_POINTS_LIMIT, { error: 'ポイント数は0〜99で入れてください。' });
+  .min(0, { error: 'ポイント数は0以上の数で入れてください。' })
+  .max(MIGRATION_POINTS_LIMIT, { error: `ポイント数は${MIGRATION_POINTS_LIMIT}以下の数で入れてください。` });
 
-/** 旧カードの移行の直接入力(POST /admin/api/households/:id/migrate、A-05) */
+const CARD_CHECK_MESSAGE = '旧カードの確認に印を付けてください。';
+
+/**
+ * 旧カードの移行の直接入力(POST /admin/api/households/:id/migrate、A-05)。
+ * 受付で旧カードを目で確かめたこと(confirmed_card)と、紙のカードを回収したか使用済みの印を付けたこと(collected_card)を必須にする(16.1)
+ */
 export const migrationInputSchema = z.object({
   source: migrationSourceSchema,
   points: migrationPointsSchema,
+  confirmed_card: z.literal(true, { error: CARD_CHECK_MESSAGE }),
+  collected_card: z.literal(true, { error: CARD_CHECK_MESSAGE }),
 });
 export type MigrationInput = z.infer<typeof migrationInputSchema>;
 
-/** 旧カードの引き継ぎ申請の承認(POST /admin/api/requests/:id/approve)。ポイント数は写真を見て確認・修正する */
-export const approveMigrationSchema = z.object({
-  points: migrationPointsSchema,
-  /** 申請と違う種類だったときだけ直す */
-  source: migrationSourceSchema.optional(),
-});

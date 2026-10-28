@@ -12,6 +12,11 @@ export type MeRegistered = {
   registered: true;
   member: { id: number; lineDisplayName: string };
   household: { memberNo: string; displayName: string };
+  /**
+   * あとから足した任意のおうちの質問(来たい時間帯など)に、まだ1つも答えていないか。
+   * 会員証に小さく「答える」を出すだけで、登録のあとのアンケートの画面(SurveyPrompt)は出さない。
+   */
+  optionalSurveyPending?: boolean;
   /** 会員証(C-06) */
   card: MemberCard;
 };
@@ -21,12 +26,14 @@ export type MemberCard = {
   /** ポイント残高(台帳から計算) */
   balance: number;
   pointsPerTicket: number;
-  /** 次の無料券まであと何ポイント */
+  /** 無料券と交換できるまで、あと何ポイント(交換できるときは 0) */
   toNextTicket: number;
-  /** 使える無料券 */
+  /** 使える(未使用の)無料券 */
   tickets: { id: number; issuedAt: string; expiresAt: string | null }[];
   /** 今日のチェックイン(済んでいれば) */
   todayVisitId: number | null;
+  /** 今日使った無料券(使っていれば、いちばん新しいもの)。「使用しました」の画面をもう一度開くため */
+  todayUsedTicketId: number | null;
 };
 
 export type MeResponse = MeUnregistered | MeRegistered;
@@ -49,6 +56,13 @@ export type DogSummary = {
   size: DogSize;
   sex: DogSex | null;
   birthYm: string | null;
+  /** 体重(kg、小数1桁)。任意 */
+  weightKg: number | null;
+  /** ほかの犬との相性。任意 */
+  sociability: import('./constants').DogSociability | null;
+  /** 狂犬病の予防注射・混合ワクチンの年(西暦)。任意 */
+  rabiesVaccineYear: number | null;
+  comboVaccineYear: number | null;
   status: DogStatus;
   /** 写真(認証つき API の URL)。写真がなければ null */
   photoUrl: string | null;
@@ -68,6 +82,7 @@ export type TodayVisit = {
   /** 自分がチェックインしたか */
   isMe: boolean;
   dogIds: number[];
+  /** その日に、おうちで無料券を使ったか */
   usedTicket: boolean;
 };
 
@@ -85,7 +100,7 @@ export type CheckinStatus = {
 export type CheckinResult = {
   visitId: number;
   pointsAwarded: number;
-  ticketsIssued: number;
+  /** その日に使った無料券があり、この来場に結びつけたか */
   usedTicket: boolean;
   balanceAfter: number;
 };
@@ -103,7 +118,7 @@ export type CheckinDetail = {
   cancelled: boolean;
   dogs: DogSummary[];
   pointsAwarded: number;
-  ticketsIssued: number;
+  /** その日に、おうちで無料券を使ったか(会員証の「使用する」で使った券) */
   usedTicket: boolean;
   balance: number;
   unusedTickets: number;
@@ -128,13 +143,14 @@ export type InviteInfo = {
   /** はじめての人に聞く質問(家族一人ひとりへの質問だけ) */
   questions: import('./schemas/survey').SurveyQuestion[];
   terms: { termsText: string; privacyText: string } | null;
+  /** 招待を送った家族の LINE の表示名(受付で出した招待なら null) */
+  inviterName: string | null;
+  /** 別のおうちの家族が開いたとき、まとめた後の下見(招待が使えるときだけ) */
+  merge: import('./api-types-merge').InviteMergePreview | null;
 };
 
-export type InviteAcceptResult =
-  /** おうちに参加した */
-  | { result: 'joined'; memberNo: string; householdName: string }
-  /** 別のおうちがあるので、まとめる申請を作った(管理者の確認待ち) */
-  | { result: 'requested' };
+/** 招待を受けて参加した(C-12) */
+export type InviteAcceptResult = { result: 'joined'; memberNo: string; householdName: string };
 
 /** ログイン中の管理画面の利用者(S-01) */
 export type StaffMe = {
@@ -195,7 +211,6 @@ export type HouseholdSearchResponse = {
 /** 代理チェックインの前に見せる内容(S-04) */
 export type ProxyStatus = {
   date: string;
-  unusedTickets: number;
   /** その日にすでにチェックインしていれば、その来場 */
   visitId: number | null;
 };

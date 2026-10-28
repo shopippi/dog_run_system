@@ -83,6 +83,75 @@ export type MergeRecord = {
   undoStatus: 'ok' | 'undone' | 'expired' | 'changed';
 };
 
+// ============================================================
+// C-12 お客さん同士でおうちをまとめる(招待を開いた人が、本人の確認だけでまとめる)
+// ============================================================
+
+/** まとめる前の下見に出すワンちゃん */
+export type InviteMergeDog = {
+  id: number;
+  name: string;
+  breedName: string;
+  /** 一覧用の小さな写真(認証つき)。写真がなければ null */
+  thumbUrl: string | null;
+  /** 写真があるか(同じ子のとき、写真の選択肢に出すか) */
+  hasPhoto: boolean;
+};
+
+/** まとめる前の下見に出すおうち */
+export type InviteMergeHousehold = {
+  memberNo: string;
+  displayName: string;
+  points: number;
+  tickets: number;
+  /** 来場の回数(取り消しを除く) */
+  visits: number;
+  /** 家族の LINE の表示名 */
+  family: string[];
+  dogs: InviteMergeDog[];
+};
+
+/** 招待を開いた人が、すでに別のおうちを持っているときの下見(GET /api/invites/:code の merge) */
+export type InviteMergePreview = {
+  /** 残るおうち(招待した側) */
+  theirs: InviteMergeHousehold;
+  /** 開いた人のおうち(まとめると、会員IDは使わなくなる) */
+  mine: InviteMergeHousehold;
+  /** 開いた人と一緒に移る、自分のおうちのほかの家族 */
+  movingFamily: string[];
+  /** まとめた後(services/merges.ts の計算) */
+  result: {
+    memberNo: string;
+    displayName: string;
+    points: number;
+    tickets: number;
+    /** まとめて新しく発行される無料券 */
+    ticketsIssued: number;
+    visits: number;
+    family: string[];
+  };
+};
+
+/** お客さんがまとめた結果(POST /api/invites/:code/merge) */
+export type CustomerMergeResult = {
+  memberNo: string;
+  householdName: string;
+  points: number;
+  tickets: number;
+  ticketsIssued: number;
+};
+
+/** まとめられた側の家族に、次に開いたとき1回だけ出すお知らせ(GET /api/merge-notice) */
+export type MergeNotice = {
+  mergeId: number;
+  /** まとめた後の会員ID・呼び名 */
+  memberNo: string;
+  householdName: string;
+  /** これまで使っていた会員ID */
+  previousMemberNo: string;
+  points: number;
+};
+
 /**
  * 確認待ちの一覧に出す、旧カードの引き継ぎ申請(C-10)の内容。requests.payload を読んだもの。
  * payload の型そのものは C-10 の担当(E)が api-types-customer.ts の MigrationRequestPayload で定義する
@@ -144,6 +213,8 @@ export type MigrationStatus = {
   displayName: string;
   points: number;
   pointsPerTicket: number;
+  /** 一度に引き継げるポイントの上限(設定 migration_max_points) */
+  maxPoints: number;
   /** 移行元ごとの、引き継ぎ済みの記録(統合でまとめたおうちの分を含む)。まだなら null */
   migrated: Record<import('./constants').MigrationSource, { date: string; points: number } | null>;
   period: { start: string | null; end: string | null };
@@ -157,7 +228,6 @@ export type MigrationResult = {
   memberNo: string;
   source: import('./constants').MigrationSource;
   points: number;
-  ticketsIssued: number;
   /** 引き継ぎ後のポイント残高 */
   balance: number;
 };

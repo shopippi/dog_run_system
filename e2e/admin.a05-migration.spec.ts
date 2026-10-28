@@ -1,67 +1,100 @@
 import { expect, test } from '@playwright/test';
-import { adminLogin, makePhoto, newLineUser, registerViaUi } from './helpers';
-import { insertMigrationRequest, putMedia } from './merge-helpers';
+import { adminLogin, newLineUser, openLiff, registerViaUi } from './helpers';
+import { insertMigrationRequest } from './merge-helpers';
 
-test('A-05 受付で旧カードを見せてもらい、おうちを探してポイントを引き継ぐ。同じ種類は2回目を入れられない', async ({ browser }) => {
+test('A-05 受付で旧カードを確かめて直接入力する。確認の印が2つともないと引き継げない。上限を超えると入れられない。同じ種類は2回目を入れられない', async ({ browser }) => {
   test.setTimeout(90_000);
   const customer = await browser.newPage();
-  const memberNo = await registerViaUi(customer, newLineUser('パパ'), ['コテツ']);
-  await customer.close();
+  const user = newLineUser('パパ');
+  const memberNo = await registerViaUi(customer, user, ['ダイフクマル']);
 
   const page = await browser.newPage({ viewport: { width: 1024, height: 768 }, hasTouch: true });
-  await adminLogin(page, 'admin', '/requests');
-  await page.getByRole('link', { name: '確認待ち' }).click();
-  await page.getByRole('tab', { name: '受付で直接入力' }).click();
+  await adminLogin(page, 'admin');
+  await page.getByRole('navigation', { name: 'メニュー' }).getByRole('link', { name: '旧カードの引き継ぎ' }).click();
+  await expect(page.getByRole('heading', { name: '旧カードの引き継ぎ' })).toBeVisible();
+  // 「確認待ち」のメニューと件数の印はない
+  await expect(page.getByRole('navigation', { name: 'メニュー' }).getByRole('link', { name: '確認待ち' })).toHaveCount(0);
+
   const picker = page.getByRole('group', { name: '引き継ぐおうちを探す' });
   await picker.getByRole('searchbox', { name: '探す言葉' }).fill(memberNo);
   await picker.getByRole('list', { name: '引き継ぐおうちを探すの候補' }).getByRole('button', { name: new RegExp(memberNo) }).click();
 
-  const section = page.getByRole('region', { name: '受付で直接入力' });
+  const section = page.getByRole('region', { name: '直接入力' });
   await section.getByRole('radio', { name: '紙のスタンプカード' }).check();
-  await section.getByLabel('旧カードのポイント数').fill('12');
-  await expect(section.getByText('ポイント数を 0〜99 の数字で入れてください。')).toHaveCount(0);
-  await expect(section.getByText(/引き継ぎ後 2ポイント/)).toBeVisible();
-  await expect(section.getByText(/無料券を1枚発行します/)).toBeVisible();
-  await section.getByLabel('旧カードのポイント数').fill('100');
+  await section.getByLabel('旧カードのポイント数').fill('31');
+  await expect(section.getByText('引き継げるポイントは最大30ポイントです。')).toBeVisible();
   await expect(section.getByRole('button', { name: '引き継ぐ' })).toBeDisabled();
-  await section.getByLabel('旧カードのポイント数').fill('7');
+  await section.getByLabel('旧カードのポイント数').fill('12');
+  await expect(section.getByText(/引き継ぎ後 12ポイント/)).toBeVisible();
+  // 確認の印が2つそろうまで押せない
+  await expect(section.getByRole('button', { name: '引き継ぐ' })).toBeDisabled();
+  await section.getByLabel('旧カードを目で確かめた').check();
+  await expect(section.getByRole('button', { name: '引き継ぐ' })).toBeDisabled();
+  await section.getByLabel('紙のカードは回収した(または使用済みの印を付けた)').check();
   await section.getByRole('button', { name: '引き継ぐ' }).click();
   const dialog = page.getByRole('dialog', { name: '旧カードのポイントを引き継ぐ' });
   await expect(dialog.getByRole('button', { name: 'やめる' })).toBeFocused();
-  await expect(dialog).toContainText('0 → 7ポイント');
+  await expect(dialog).toContainText('0 → 12ポイント');
   await dialog.getByRole('button', { name: '引き継ぐ' }).click();
-  await expect(section.getByText('紙のスタンプカードの7ポイントを引き継ぎました。いまのポイントは7ポイントです。')).toBeVisible();
-  // 同じ種類のカードは2回目を入れられない
+  await expect(section.getByText('紙のスタンプカードの12ポイントを引き継ぎました。いまのポイントは12ポイントです。')).toBeVisible();
+  // 10ポイントを超えても、無料券には自動で替えない(お客さんが会員証で交換する)
+  await openLiff(customer, user);
+  await expect(customer.getByRole('button', { name: '無料券と交換する(10ポイント)' })).toBeVisible();
+  await expect(customer.getByText('未使用 0枚')).toBeVisible();
+  await customer.close();
+
+  // 同じ種類のカードは2回目を入れられない。入力の印は外れている
   await expect(section.getByRole('radio', { name: /紙のスタンプカード\(引き継ぎ済み\)/ })).toBeDisabled();
   await expect(section.getByRole('radio', { name: 'LINEのショップカード' })).toBeChecked();
+  await expect(section.getByLabel('旧カードを目で確かめた')).not.toBeChecked();
+
+  // 引き継ぎ済みの一覧に、いつ・誰が・どのおうち・何ポイントが出る
+  const list = page.getByRole('region', { name: '引き継ぎ済みの一覧' });
+  const row = list.getByRole('listitem', { name: `ダイフクマルのおうち ${memberNo} 紙のスタンプカード` });
+  await expect(row).toContainText('12ポイント');
+  await expect(row).toContainText('管理者');
 });
 
-test('A-05 旧カードの引き継ぎ申請を、写真を見てポイント数を直して承認する', async ({ browser }) => {
+test('A-05 引き継ぎ済みの一覧から元に戻すと、もう一度入力できる。以前に届いた引き継ぎの申請は、確認待ちで却下だけできる', async ({ browser }) => {
   test.setTimeout(90_000);
   const customer = await browser.newPage();
-  const memberNo = await registerViaUi(customer, newLineUser('ママ'), ['ムサシ']);
-  const key = `requests/${memberNo}/card-${Date.now()}.jpg`;
-  putMedia(key, await makePhoto(customer, 800, 600));
-  insertMigrationRequest(memberNo, { source: 'line_card', claimedPoints: 8, note: '最後のスタンプが薄いです' }, key);
+  const memberNo = await registerViaUi(customer, newLineUser('ママ'), ['コジロウ']);
+  insertMigrationRequest(memberNo, { source: 'line_card', claimedPoints: 8, note: '最後のスタンプが薄いです' }, null);
   await customer.close();
 
   const page = await browser.newPage({ viewport: { width: 1024, height: 768 }, hasTouch: true });
-  await adminLogin(page, 'admin', '/requests');
-  await page.getByRole('link', { name: '確認待ち' }).click();
-  const row = page.getByRole('listitem', { name: `旧カードの引き継ぎ ムサシのおうち ${memberNo}` });
-  await expect(row.getByText('LINEのショップカード 8ポイント')).toBeVisible();
-  await row.getByRole('button', { name: '確かめて承認する' }).click();
-  const dialog = page.getByRole('dialog', { name: '旧カードの引き継ぎを承認する' });
-  await expect(dialog.getByRole('img', { name: '旧カードの写真' })).toBeVisible();
-  await expect(dialog.getByLabel('引き継ぐポイント数')).toHaveValue('8');
-  await expect(dialog.getByRole('radio', { name: 'LINEのショップカード' })).toBeChecked();
-  await dialog.getByLabel('引き継ぐポイント数').fill('6');
-  await expect(dialog.getByText(/引き継ぎ後 6ポイント/)).toBeVisible();
-  await dialog.getByRole('button', { name: '承認する' }).click();
-  await expect(row).toHaveCount(0);
+  await adminLogin(page, 'admin', '/migration');
+  const picker = page.getByRole('group', { name: '引き継ぐおうちを探す' });
+  await picker.getByRole('searchbox', { name: '探す言葉' }).fill(memberNo);
+  await picker.getByRole('list', { name: '引き継ぐおうちを探すの候補' }).getByRole('button', { name: new RegExp(memberNo) }).click();
+  const section = page.getByRole('region', { name: '直接入力' });
+  await section.getByRole('radio', { name: 'LINEのショップカード' }).check();
+  await section.getByLabel('旧カードのポイント数').fill('5');
+  await section.getByLabel('旧カードを目で確かめた').check();
+  await section.getByLabel('紙のカードは回収した(または使用済みの印を付けた)').check();
+  await section.getByRole('button', { name: '引き継ぐ' }).click();
+  await page.getByRole('dialog', { name: '旧カードのポイントを引き継ぐ' }).getByRole('button', { name: '引き継ぐ' }).click();
+  await expect(section.getByRole('radio', { name: /LINEのショップカード\(引き継ぎ済み\)/ })).toBeDisabled();
 
-  await page.getByRole('tab', { name: '処理済み' }).click();
-  const done = page.getByRole('listitem', { name: `旧カードの引き継ぎ ムサシのおうち ${memberNo}` });
-  await expect(done.getByText(/^承認/)).toBeVisible();
-  await expect(done.getByText(/6ポイントで承認\(申請は8ポイント\)/)).toBeVisible();
+  const list = page.getByRole('region', { name: '引き継ぎ済みの一覧' });
+  const row = list.getByRole('listitem', { name: `コジロウのおうち ${memberNo} LINEのショップカード` });
+  await row.getByRole('button', { name: '元に戻す' }).click();
+  const undo = page.getByRole('dialog', { name: '引き継ぎを元に戻す' });
+  await expect(undo.getByRole('button', { name: 'やめる' })).toBeFocused();
+  await expect(undo).toContainText('5ポイント');
+  await undo.getByRole('button', { name: '元に戻す' }).click();
+  await expect(list.getByText(/の引き継ぎを元に戻しました。/)).toBeVisible();
+  await expect(row.getByText(/^元に戻しました/)).toBeVisible();
+  await expect(row.getByRole('button', { name: '元に戻す' })).toHaveCount(0);
+
+  // 以前の申請: 確認待ちには却下だけがある(承認のボタンはない)
+  await page.goto('/admin/requests');
+  const req = page.getByRole('listitem', { name: `旧カードの引き継ぎ コジロウのおうち ${memberNo}` });
+  await expect(req).toBeVisible();
+  await expect(req.getByRole('button', { name: '確かめて承認する' })).toHaveCount(0);
+  await req.getByRole('button', { name: '却下する' }).click();
+  const reject = page.getByRole('dialog', { name: '申請を却下する' });
+  await reject.getByRole('radio', { name: 'すでに引き継ぎ済み' }).check();
+  await reject.getByRole('button', { name: '却下する' }).click();
+  await expect(req).toHaveCount(0);
 });

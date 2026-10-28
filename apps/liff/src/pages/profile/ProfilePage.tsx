@@ -1,23 +1,14 @@
 import { checkSurveyAnswers, type ProfileResponse, type SurveyQuestion } from '@dr/shared';
 import { useCallback, useEffect, useState } from 'react';
 import { ErrorNotice, MessageNotice } from '../../components/ErrorNotice';
-import { SurveyForm, toAnswers, type SurveyValues } from '../../components/SurveyForm';
+import { SurveyForm, toAnswers, toSurveyValues, type SurveyValues } from '../../components/SurveyForm';
 import { api, patchJson } from '../../lib/api';
 
 /** 追加の質問は、答えなくてもよい(7.2)。固定の質問だけを必須として扱う */
 const relax = (questions: SurveyQuestion[]) => questions.map((q) => (q.fixedKey ? q : { ...q, required: false }));
 
 /** いまの回答を入力の形にする。選択肢から消えた回答は、選んでいない状態にする */
-function toValues(p: ProfileResponse): SurveyValues {
-  const values: SurveyValues = {};
-  for (const a of p.answers) {
-    const q = p.questions.find((x) => x.id === a.questionId);
-    if (!q || a.value === null) continue;
-    if (q.kind === 'choice' && !q.options.includes(a.value)) continue;
-    values[q.id] = a.value;
-  }
-  return values;
-}
+const toValues = (p: ProfileResponse): SurveyValues => toSurveyValues(p.questions, p.answers);
 
 /** L-10 プロフィール(C-09)。アンケートの回答を変える。アンケートと同じ部品を使う */
 export function ProfilePage() {

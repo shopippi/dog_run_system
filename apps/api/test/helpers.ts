@@ -40,7 +40,7 @@ export async function call<T = any>(path: string, opts: CallOptions = {}): Promi
 
 export { fakeJpeg } from '../../../packages/shared/test/fake-jpeg';
 
-/** 登録で使う犬の入力(breedId 1 = トイプードル、5 = 柴犬、11 = その他) */
+/** 登録で使う犬の入力(breedId 1 = プードル、5 = 柴犬、11 = その他。migrations/0001_init.sql) */
 export const dog = (name: string, extra: Record<string, unknown> = {}) => ({
   name,
   breedId: 1,
@@ -70,12 +70,12 @@ export async function passphrase(): Promise<string> {
   return JSON.parse(row!.value) as string;
 }
 
-/** チェックインする */
-export async function checkin(user: string, dogIds: number[], opts: { useTicket?: boolean; now?: string } = {}) {
+/** チェックインする(無料券はチェックインでは使わない。使うときは useTicketOf) */
+export async function checkin(user: string, dogIds: number[], opts: { now?: string } = {}) {
   return call('/api/checkins', {
     user,
     now: opts.now,
-    body: { passphrase: await passphrase(), dogIds, useTicket: opts.useTicket ?? false },
+    body: { passphrase: await passphrase(), dogIds },
   });
 }
 
@@ -145,4 +145,20 @@ export async function adminCall<T = any>(
     json = text;
   }
   return { status: res.status, body: json as T, cookie: cookie ? `dr_sid=${cookie}` : undefined };
+}
+
+/** 無料券と交換する(C-06)。opId を渡すと、同じ印の二重送信を試せる */
+export async function exchangeTicket(user: string, opts: { now?: string; opId?: string } = {}) {
+  return call('/api/tickets/exchange', { user, now: opts.now, body: opts.opId ? { opId: opts.opId } : {} });
+}
+
+/** 無料券を使う(C-06)。ticketId を省くと、使える券のうち最初の1枚 */
+export async function useTicketOf(user: string, opts: { now?: string; ticketId?: number } = {}) {
+  let id = opts.ticketId;
+  if (id === undefined) {
+    const me = await call('/api/me', { user, now: opts.now });
+    id = me.body.card?.tickets?.[0]?.id;
+    if (id === undefined) throw new Error('使える無料券がありません');
+  }
+  return call(`/api/tickets/${id}/use`, { user, now: opts.now, body: {} });
 }

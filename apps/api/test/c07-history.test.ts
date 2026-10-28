@@ -1,6 +1,6 @@
 import { env } from 'cloudflare:test';
 import { describe, expect, it } from 'vitest';
-import { addFamily, adminCall, call, checkin, createStaff, dog, givePoints, login, registerUser } from './helpers';
+import { addFamily, adminCall, call, checkin, createStaff, dog, exchangeTicket, givePoints, login, registerUser, useTicketOf } from './helpers';
 
 const PAPA = 'U001:パパ';
 const MAMA = 'U002:ママ';
@@ -15,8 +15,10 @@ describe('C-07 来場履歴', () => {
     const [al, niko] = r.dogs;
     await checkin(PAPA, [al!.id, niko!.id], { now: day(0) });
     await givePoints(r.memberNo, 8); // 1 + 8 = 9 ポイント
-    await checkin(MAMA, [niko!.id], { now: day(1) }); // 10ポイントになって無料券が出る
-    await checkin(PAPA, [al!.id], { now: day(2), useTicket: true });
+    await checkin(MAMA, [niko!.id], { now: day(1) }); // 10ポイントになる(無料券は自動では出ない)
+    await exchangeTicket(MAMA, { now: day(1) });
+    await useTicketOf(PAPA, { now: day(2) });
+    await checkin(PAPA, [al!.id], { now: day(2) });
 
     const res = await call('/api/me/visits', { user: PAPA });
     expect(res.status).toBe(200);
@@ -35,9 +37,9 @@ describe('C-07 来場履歴', () => {
       cancelled: false,
     });
     expect(v3.dogs.map((d: { name: string }) => d.name)).toEqual(['アル']);
-    expect(v2).toMatchObject({ date: '2026-10-02', checkedInBy: 'ママ', checkedInByMe: false, pointsAwarded: 1, ticketsIssued: 1 });
+    expect(v2).toMatchObject({ date: '2026-10-02', checkedInBy: 'ママ', checkedInByMe: false, pointsAwarded: 1, ticketsIssued: 0, usedTicket: false });
     expect(v1.dogs).toEqual([
-      { id: al!.id, name: 'アル', breedName: 'トイプードル', thumbUrl: null },
+      { id: al!.id, name: 'アル', breedName: 'プードル', thumbUrl: null },
       { id: niko!.id, name: 'ニコ', breedName: '柴犬', thumbUrl: null },
     ]);
     // 家族が見ても同じ履歴(来場はおうちに付く)
@@ -63,7 +65,7 @@ describe('C-07 来場履歴', () => {
     const h = await env.DB.prepare('SELECT id FROM households').first<{ id: number }>();
     const p = await adminCall('/admin/api/checkins/proxy', {
       cookie,
-      body: { householdId: h!.id, dogIds: [r.dogs[0]!.id], useTicket: false },
+      body: { householdId: h!.id, dogIds: [r.dogs[0]!.id] },
       now: day(1),
     });
     expect(p.status).toBe(201);

@@ -9,47 +9,39 @@ export type LedgerEntryPlan = { delta: number; kind: LedgerKind };
 export type CheckinPlan = {
   /** 来場で付けるポイント */
   pointsAwarded: number;
-  /** ポイントがたまって発行する無料券の枚数 */
-  ticketsIssued: number;
-  /** 台帳に書く行(来場の +1、無料券の発行の -10 など) */
+  /** 台帳に書く行(来場の +1)。無料券はチェックインでは発行しない(交換は会員証の「無料券と交換する」から) */
   ledger: LedgerEntryPlan[];
   balanceBefore: number;
   balanceAfter: number;
 };
 
-/** 台帳の増減を合計して、今のポイント残高を出す。 */
+/** 台帳の増減を合計して、今のポイント残高を出す。交換で引いた分(ticket_issue のマイナス行)も含めた合計が残高。 */
 export function sumLedger(entries: { delta: number }[]): number {
   return entries.reduce((s, e) => s + e.delta, 0);
 }
 
 /**
- * ポイントが無料券1枚分以上たまっていたら、その分の無料券を発行する。
- * 移行・統合・手動の登録でも使う(16.1、5.3)。
- */
-export function ticketsFromBalance(balance: number, pointsPerTicket: number): { tickets: number; balanceAfter: number } {
-  if (balance < pointsPerTicket) return { tickets: 0, balanceAfter: balance };
-  const tickets = Math.floor(balance / pointsPerTicket);
-  return { tickets, balanceAfter: balance - tickets * pointsPerTicket };
-}
-
-/**
- * チェックインで付けるポイントと、発行する無料券を決める。
+ * チェックインで付けるポイントを決める。
  * - おうちごとに1日1ポイント(何頭で来ても、家族の誰がチェックインしても1ポイント)
  * - 無料券を使った日にポイントを付けるかは設定で決める(初期値は付ける)
- * - ポイントが10になった時点で無料券を1枚発行し、10ポイントを差し引く
+ * - ポイントは無料券1枚分を超えてもたまり続ける。無料券には自動で替えない(8章。交換はお客さんが押す)
  */
 export function planCheckin(input: {
   balance: number;
-  useTicket: boolean;
-  settings: Pick<Settings, 'points_per_ticket' | 'daily_point_limit' | 'grant_point_on_ticket_day'>;
+  /** その日に無料券を使ったか(使った日はポイントを付けない設定のときだけ見る) */
+  usedTicketToday: boolean;
+  settings: Pick<Settings, 'daily_point_limit' | 'grant_point_on_ticket_day'>;
 }): CheckinPlan {
-  const { balance, useTicket, settings } = input;
-  const pointsAwarded = useTicket && !settings.grant_point_on_ticket_day ? 0 : Math.min(1, settings.daily_point_limit);
+  const { balance, usedTicketToday, settings } = input;
+  const pointsAwarded = usedTicketToday && !settings.grant_point_on_ticket_day ? 0 : Math.min(1, settings.daily_point_limit);
   const ledger: LedgerEntryPlan[] = [];
   if (pointsAwarded > 0) ledger.push({ delta: pointsAwarded, kind: 'visit' });
-  const { tickets, balanceAfter } = ticketsFromBalance(balance + pointsAwarded, settings.points_per_ticket);
-  for (let i = 0; i < tickets; i++) ledger.push({ delta: -settings.points_per_ticket, kind: 'ticket_issue' });
-  return { pointsAwarded, ticketsIssued: tickets, ledger, balanceBefore: balance, balanceAfter };
+  return { pointsAwarded, ledger, balanceBefore: balance, balanceAfter: balance + pointsAwarded };
+}
+
+/** 無料券と交換できるか(残高が無料券1枚分以上) */
+export function canExchange(balance: number, pointsPerTicket: number): boolean {
+  return balance >= pointsPerTicket;
 }
 
 /** 有効期限。「もらった日から○か月」のときだけ、その日の終わりを期限にする。 */
@@ -65,8 +57,7 @@ export function expiryFor(rule: ExpiryRule, now: Date): string | null {
   return `${ty}-${String(tm).padStart(2, '0')}-${String(td).padStart(2, '0')}T23:59:59+09:00`;
 }
 
-/** 次の無料券まであと何ポイントか */
+/** 無料券と交換できるまで、あと何ポイントか(交換できるときは 0) */
 export function pointsToNextTicket(balance: number, pointsPerTicket: number): number {
-  const r = balance % pointsPerTicket;
-  return pointsPerTicket - r;
+  return Math.max(0, pointsPerTicket - balance);
 }

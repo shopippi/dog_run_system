@@ -1,7 +1,7 @@
 import { env } from 'cloudflare:test';
 import { describe, expect, it } from 'vitest';
 import { refreshDailyStatsRange } from '../src/services/daily-stats';
-import { addFamily, adminCall, call, checkin, createStaff, dog, login, survey } from './helpers';
+import { addFamily, adminCall, call, checkin, createStaff, dog, exchangeTicket, login, survey, useTicketOf } from './helpers';
 
 // ダッシュボード(A-01)の数値の検算。用意した来場データから、手で計算した値と一致することを確かめる(13章の定義)。
 const NOW = '2026-10-28T03:00:00Z'; // 日本時間 2026-10-28(水)12:00 = 今日
@@ -250,8 +250,10 @@ describe('A-01 ダッシュボード(数値の検算)', () => {
     const b = await reg('U002:ママ', [dog('モモ')]);
     await addFamily(a.memberNo, 'U003', 'むすめ');
     await env.DB.prepare("INSERT INTO point_ledger (household_id, delta, kind, actor_type, created_at) VALUES (1, 9, 'migration', 'system', 'x')").run();
-    await checkin('U001:パパ', a.dogs.map((d) => d.id), { now: '2026-10-27T03:00:00Z' }); // 10ポイントで無料券
-    await checkin('U003:むすめ', [a.dogs[0]!.id], { now: NOW, useTicket: true });
+    await checkin('U001:パパ', a.dogs.map((d) => d.id), { now: '2026-10-27T03:00:00Z' }); // 10ポイントになる
+    await exchangeTicket('U001:パパ', { now: '2026-10-27T03:05:00Z' }); // 無料券と交換
+    await useTicketOf('U003:むすめ', { now: NOW });
+    await checkin('U003:むすめ', [a.dogs[0]!.id], { now: NOW });
     await checkin('U002:ママ', [b.dogs[0]!.id], { now: NOW });
     // 追加したアンケート
     const q = await env.DB.prepare(
@@ -270,7 +272,7 @@ describe('A-01 ダッシュボード(数値の検算)', () => {
     // 2頭で来た日は2頭とも数える。同じ犬は1頭として数える
     expect(res.body.dogs.total).toBe(3);
     expect(res.body.dogs.breeds).toEqual([
-      { label: 'トイプードル', count: 2 },
+      { label: 'プードル', count: 2 },
       { label: '柴犬', count: 1 },
     ]);
     expect(res.body.dogs.sizes).toEqual([

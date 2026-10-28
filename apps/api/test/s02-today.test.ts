@@ -1,6 +1,6 @@
 import { env } from 'cloudflare:test';
 import { describe, expect, it } from 'vitest';
-import { adminCall, call, checkin, createStaff, dog, fakeJpeg, givePoints, login, registerUser } from './helpers';
+import { adminCall, call, checkin, createStaff, dog, exchangeTicket, fakeJpeg, givePoints, login, registerUser, useTicketOf } from './helpers';
 
 const PAPA = 'U001:パパ';
 const DAY1 = '2026-10-28T01:00:00Z';
@@ -22,9 +22,11 @@ describe('S-02 今日の来場', () => {
     const a = await registerUser(PAPA, [dog('アル'), dog('ニコ')]);
     const b = await registerUser('U002:ハナママ', [dog('ハナ')]);
     await givePoints(b.memberNo, 9);
-    await checkin('U002:ハナママ', [b.dogs[0]!.id], { now: '2026-10-27T01:00:00Z' }); // 前の日に無料券が出る
+    await checkin('U002:ハナママ', [b.dogs[0]!.id], { now: '2026-10-27T01:00:00Z' }); // 前の日に10ポイントになる
+    await exchangeTicket('U002:ハナママ', { now: '2026-10-27T01:01:00Z' });
     await checkin(PAPA, a.dogs.map((d) => d.id), { now: '2026-10-28T00:30:00Z' });
-    await checkin('U002:ハナママ', [b.dogs[0]!.id], { now: DAY1, useTicket: true });
+    await checkin('U002:ハナママ', [b.dogs[0]!.id], { now: DAY1 });
+    await useTicketOf('U002:ハナママ', { now: '2026-10-28T01:10:00Z' }); // チェックインのあとに「使用する」
 
     const res = await adminCall('/admin/api/today', { cookie: staff, now: '2026-10-28T02:00:00Z' });
     expect(res.status).toBe(200);

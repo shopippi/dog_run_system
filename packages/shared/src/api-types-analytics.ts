@@ -19,7 +19,13 @@ export const SYSTEM_JOB_LABELS: Record<SystemJobName, string> = {
 export type SystemJobStatus = 'running' | 'ok' | 'warning' | 'failed';
 
 /** 自動処理を手動で動かしたときの結果(POST /admin/api/holidays/import など) */
-export type JobRunResult = { status: 'ok' | 'warning' | 'failed'; message: string };
+export type JobRunResult = {
+  status: 'ok' | 'warning' | 'failed';
+  /** 画面に出す日本語の文 */
+  message: string;
+  /** 元の例外の文など(製作者が調べるため。画面には出さない) */
+  detail?: string;
+};
 
 
 /** 横棒グラフの1本 */
@@ -132,8 +138,27 @@ export type DashboardResponse = {
   };
   dayTypes: { dayType: DayType; label: string; days: number; avgDogs: number | null }[];
   events: { date: string; names: string[]; dayType: DayType; dogs: number; baseline: number | null; diffPct: number | null }[];
-  dogs: { total: number; breeds: Bar[]; sizes: Bar[]; ages: Bar[] };
-  owners: { members: number; households: number; ageGroups: Bar[]; genders: Bar[]; areas: Bar[]; referrals: Bar[]; transports: Bar[] };
+  dogs: {
+    total: number;
+    breeds: Bar[];
+    sizes: Bar[];
+    ages: Bar[];
+    /** ほかの犬との相性(担当J) */
+    sociability: Bar[];
+  };
+  owners: {
+    members: number;
+    households: number;
+    ageGroups: Bar[];
+    genders: Bar[];
+    areas: Bar[];
+    referrals: Bar[];
+    transports: Bar[];
+    /** 来たい時間帯・興味のあるイベント(複数選択。選んだ選択肢ごとにおうちを数える)・ほかのドッグランの利用(担当J) */
+    preferredTimes: Bar[];
+    eventInterests: Bar[];
+    otherRuns: Bar[];
+  };
   cohort: { rows: CohortRow[]; offsets: number } | null;
   dormant: { total: number; households: DormantHousehold[] } | null;
   family: { households: number; multi: number; rate: number | null; avgVisitsMulti: number | null; avgVisitsSingle: number | null } | null;
@@ -155,6 +180,8 @@ export type SystemJobRun = {
   finishedAt: string | null;
   status: SystemJobStatus;
   message: string | null;
+  /** 元の例外の文など(製作者の詳細のときだけ。画面には出さない) */
+  detail?: string | null;
 };
 
 /** GET /admin/api/system-status の応答(A-17 簡易・D-02 詳細) */

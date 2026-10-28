@@ -12,6 +12,7 @@ test('A-14 種類を選んでダウンロードすると、BOM つきの日本�
   const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
   await adminLogin(page, 'admin', '/export');
   const panel = page.getByRole('region', { name: 'CSVを作る' });
+  await expect(panel.getByRole('radiogroup', { name: '出す内容' })).toBeVisible();
   await panel.getByRole('radio', { name: 'ワンちゃん' }).check();
   await expect(panel.getByLabel('期間の始め')).toHaveCount(0);
   const [dl] = await Promise.all([page.waitForEvent('download'), panel.getByRole('button', { name: 'ダウンロード' }).click()]);
@@ -20,8 +21,8 @@ test('A-14 種類を選んでダウンロードすると、BOM つきの日本�
   const bytes = await readFile((await dl.path())!);
   expect([...bytes.subarray(0, 3)]).toEqual([0xef, 0xbb, 0xbf]);
   const text = bytes.toString('utf8').slice(1);
-  expect(text.split('\r\n')[0]).toBe('犬ID,会員ID,おうちの呼び名,名前,犬種,サイズ,性別,生まれた年月,状態,写真,登録日時,来場回数');
-  expect(text).toContain(',チョコ,トイプードル,小型,');
+  expect(text.split('\r\n')[0]).toBe('犬ID,会員ID,おうちの呼び名,名前,犬種,サイズ,性別,生まれた年月,状態,写真,登録日時,来場回数,体重(kg),ほかの犬との相性,狂犬病の予防注射の年,混合ワクチンの年');
+  expect(text).toContain(',チョコ,プードル,小型,');
 
   // 来場は期間を選べる。終わりが始めより前なら、直し方を出す
   await panel.getByRole('radio', { name: '来場' }).check();

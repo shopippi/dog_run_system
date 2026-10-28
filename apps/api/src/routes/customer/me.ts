@@ -7,6 +7,7 @@ import { parseJson } from '../../lib/validate';
 import { findActiveMember, refreshDisplayName } from '../../services/members';
 import { findVisitOn } from '../../services/checkins';
 import { pointBalance, usableTickets } from '../../services/points';
+import { ticketsUsedOn } from '../../services/tickets';
 import { insertDogStatements, listHouseholdDogs, normalizeDogInputs } from '../../services/dogs';
 import { alreadyRegistered, registerHousehold } from '../../services/register';
 import { customAnswerStatements, loadVisibleQuestions, splitAnswers } from '../../services/survey';
@@ -33,10 +34,20 @@ meRoutes.get('/me', async (c) => {
   const settings = await loadSettings(db);
   const balance = await pointBalance(db, member.householdId);
   const today = await findVisitOn(db, member.householdId, toJstDate(now));
+  const usedToday = await ticketsUsedOn(db, member.householdId, toJstDate(now));
+  // あとから足した任意のおうちの質問に、まだ1つも答えていないか(会員証に小さく「答える」を出すだけ。C-03)
+  const optional = await db
+    .prepare(
+      `SELECT (preferred_times IS NULL AND event_interests IS NULL AND uses_other_runs IS NULL AND wants_news IS NULL) AS pending
+         FROM households WHERE id = ?`,
+    )
+    .bind(member.householdId)
+    .first<{ pending: number }>();
   const body: MeResponse = {
     registered: true,
     member: { id: member.memberId, lineDisplayName: member.lineDisplayName },
     household: { memberNo: member.memberNo, displayName: member.householdName },
+    optionalSurveyPending: optional?.pending === 1,
     card: {
       dogs: await listHouseholdDogs(db, member.householdId, MEDIA_BASE),
       balance,
@@ -44,6 +55,7 @@ meRoutes.get('/me', async (c) => {
       toNextTicket: pointsToNextTicket(balance, settings.points_per_ticket),
       tickets: await usableTickets(db, member.householdId, now),
       todayVisitId: today?.id ?? null,
+      todayUsedTicketId: usedToday[0]?.id ?? null,
     },
   };
   return c.json(body);

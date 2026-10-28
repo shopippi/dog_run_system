@@ -1,7 +1,7 @@
 // 入力チェック(settings)。ルールの設定(A-12)・犬種(A-11)・アンケート(A-10)・スタッフ(A-13)・
 // イベントと休業日(A-09)・CSV出力(A-14)。
 import { z } from 'zod';
-import { settingsSchema, type SettingKey, type Settings } from '../settings';
+import { LIFF_ID_MESSAGE, settingsSchema, type SettingKey, type Settings } from '../settings';
 
 // ============================================================
 // A-12 ルールの設定
@@ -21,10 +21,11 @@ export const SETTING_FIELDS: Record<SettingKey, { label: string; hint: string }>
   invite_ttl_hours: { label: '家族の招待の有効時間', hint: '1〜168時間で入れてください。' },
   reception_invite_ttl_minutes: { label: '受付で出す招待QRの有効時間', hint: '1〜120分で入れてください。' },
   migration_period: { label: '移行期間', hint: '開始日と終了日を選び直してください。終了日は開始日より後にしてください。' },
+  migration_max_points: { label: '旧カードから引き継げるポイントの上限', hint: '1〜200の数で入れてください。' },
   developer_contact: { label: '製作者の連絡先', hint: '500文字までで入れてください。' },
   terms_text: { label: '利用規約', hint: '20,000文字までで入れてください。' },
   privacy_text: { label: 'プライバシーポリシー', hint: '20,000文字までで入れてください。' },
-  liff_id: { label: 'LINEミニアプリの番号', hint: '半角の英数字とハイフンだけで入れてください。' },
+  liff_id: { label: 'LINEミニアプリの番号', hint: LIFF_ID_MESSAGE },
   merge_keep_same_day_points: { label: 'おうちをまとめたとき、同じ日の来場のポイント', hint: '残すか残さないかを選んでください。' },
   weather_station: { label: '天気の観測地点', hint: '気象庁の地点番号(5桁)と名前を入れてください。' },
 };
@@ -53,7 +54,9 @@ export function checkSettingsPatch(
   const key = (issue?.code === 'unrecognized_keys' ? undefined : issue?.path[0]) as SettingKey | undefined;
   const field = key ? SETTING_FIELDS[key] : undefined;
   if (!field) return { ok: false, message: '変えられない項目が含まれています。画面を読み込み直して、もう一度お試しください。' };
-  return { ok: false, message: `「${field.label}」は、${field.hint}`, key };
+  // 項目に日本語の文が付いていれば、それを出す(付いていなければ、項目ごとの入れ方の説明)
+  const own = issue?.message && /[ぁ-んァ-ヶ一-龠]/.test(issue.message) ? issue.message : field.hint;
+  return { ok: false, message: `「${field.label}」は、${own}`, key };
 }
 
 /** 受付の固定QRコードに入れる URL。LINEミニアプリの番号がなければ、同じドメインの /liff/ を指す(相対 URL) */
@@ -94,7 +97,7 @@ export const orderSchema = z.object({
 // ============================================================
 
 export const SURVEY_TARGET_LABELS = { member: '家族一人ひとり', household: 'おうちごと' } as const;
-export const SURVEY_KIND_LABELS = { choice: '選ぶ', text: '自由に書く' } as const;
+export const SURVEY_KIND_LABELS = { choice: '選ぶ', text: '自由に書く', multi: 'いくつでも選ぶ' } as const;
 export const SURVEY_LABEL_MAX = 100;
 export const SURVEY_OPTION_MAX = 50;
 export const SURVEY_OPTIONS_MAX = 20;
@@ -112,9 +115,9 @@ const questionOptionsSchema = z
   .refine((xs) => xs.length <= SURVEY_OPTIONS_MAX, { error: `選択肢は${SURVEY_OPTIONS_MAX}個までにしてください。` });
 
 const surveyTargetSchema = z.enum(['member', 'household'], { error: '聞く相手を選んでください。' });
-const surveyKindSchema = z.enum(['choice', 'text'], { error: '答え方(選ぶ・自由に書く)を選んでください。' });
+const surveyKindSchema = z.enum(['choice', 'text', 'multi'], { error: '答え方(選ぶ・いくつでも選ぶ・自由に書く)を選んでください。' });
 
-const NEED_OPTIONS = '「選ぶ」の質問には、選択肢を2つ以上入れてください。';
+const NEED_OPTIONS = '「選ぶ」「いくつでも選ぶ」の質問には、選択肢を2つ以上入れてください。';
 
 /** 質問を追加する(7.2) */
 export const surveyQuestionCreateSchema = z
@@ -126,7 +129,7 @@ export const surveyQuestionCreateSchema = z
     required: z.boolean().default(false),
   })
   .superRefine((v, ctx) => {
-    if (v.kind === 'choice' && v.options.length < 2) ctx.addIssue({ code: 'custom', path: ['options'], message: NEED_OPTIONS });
+    if (v.kind !== 'text' && v.options.length < 2) ctx.addIssue({ code: 'custom', path: ['options'], message: NEED_OPTIONS });
   })
   .transform((v) => ({ ...v, options: v.kind === 'text' ? [] : v.options }));
 export type SurveyQuestionCreate = z.infer<typeof surveyQuestionCreateSchema>;

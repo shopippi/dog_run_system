@@ -63,8 +63,9 @@ export function insertDogStatements(
       .prepare(
         `INSERT INTO dogs
            (dog_no, household_id, name, name_search, breed_id, breed_other, size, sex, birth_ym,
+            weight_kg, sociability, rabies_vaccine_year, combo_vaccine_year,
             status, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?)`,
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?)`,
       )
       .bind(
         formatDogNo(memberNo, seqStart + i),
@@ -76,6 +77,10 @@ export function insertDogStatements(
         d.size,
         d.sex ?? null,
         d.birthYm ?? null,
+        d.weightKg ?? null,
+        d.sociability ?? null,
+        d.rabiesVaccineYear ?? null,
+        d.comboVaccineYear ?? null,
         nowIso,
         nowIso,
       ),
@@ -104,6 +109,10 @@ type DogRow = {
   size: DogSummary['size'];
   sex: DogSummary['sex'];
   birth_ym: string | null;
+  weight_kg: number | null;
+  sociability: DogSummary['sociability'];
+  rabies_vaccine_year: number | null;
+  combo_vaccine_year: number | null;
   status: DogSummary['status'];
   photo_key: string | null;
   thumb_key: string | null;
@@ -111,6 +120,7 @@ type DogRow = {
 
 const DOG_SELECT = `
   SELECT d.id, d.dog_no, d.name, d.breed_id, b.name AS breed_name, d.breed_other, d.size, d.sex, d.birth_ym,
+         d.weight_kg, d.sociability, d.rabies_vaccine_year, d.combo_vaccine_year,
          d.status, d.photo_key, d.thumb_key
     FROM dogs d JOIN breeds b ON b.id = d.breed_id`;
 
@@ -125,13 +135,17 @@ export function toDogSummary(r: DogRow, mediaBase: string): DogSummary {
     size: r.size,
     sex: r.sex,
     birthYm: r.birth_ym,
+    weightKg: r.weight_kg,
+    sociability: r.sociability,
+    rabiesVaccineYear: r.rabies_vaccine_year,
+    comboVaccineYear: r.combo_vaccine_year,
     status: r.status,
     photoUrl: r.photo_key ? `${mediaBase}/${r.photo_key}` : null,
     thumbUrl: r.thumb_key ? `${mediaBase}/${r.thumb_key}` : null,
   };
 }
 
-/** おうちの犬の一覧。登録解除した犬は includeRetired のときだけ含める。 */
+/** おうちの犬の一覧。登録をおやすみしている犬(retired)は includeRetired のときだけ含める。 */
 export async function listHouseholdDogs(
   db: D1Database,
   householdId: number,
@@ -230,7 +244,7 @@ export async function saveDogPhoto(
 /** 写真を返す。誰でも開ける URL にはせず、認証つきの API からだけ返す(6.2)。 */
 export async function serveMedia(media: R2Bucket, key: string): Promise<Response> {
   const obj = await media.get(key);
-  if (!obj) throw errors.notFound('写真が見つかりませんでした。');
+  if (!obj) throw errors.notFound('写真が見つかりませんでした。画面を読み込み直してください。');
   return new Response(obj.body, {
     headers: {
       'content-type': obj.httpMetadata?.contentType ?? 'image/jpeg',

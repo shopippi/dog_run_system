@@ -1,22 +1,29 @@
 import { checkSurveyAnswers, type FixedSurveyKey, type SurveyAnswerInput, type SurveyQuestion } from '@dr/shared';
 import { errors } from '../lib/errors';
 import type { MemberContext } from './members';
+import { HOUSEHOLD_FIXED_COLUMNS, MEMBER_FIXED_COLUMNS, toHouseholdColumnValue } from './profile-fields';
 
 type QuestionRow = {
   id: number;
   fixed_key: FixedSurveyKey | null;
   target: SurveyQuestion['target'];
-  kind: SurveyQuestion['kind'];
+  kind: 'choice' | 'text';
+  /** 1 なら「いくつでも選ぶ」(migrations/0007_profile.sql) */
+  multiple: number;
   label: string;
   options: string;
   required: number;
 };
 
+/** データベースの kind と multiple を、画面と API の答え方(choice・multi・text)にする */
+export const surveyKindOf = (r: { kind: string; multiple?: number | null }): SurveyQuestion['kind'] =>
+  r.kind === 'choice' && r.multiple === 1 ? 'multi' : (r.kind as SurveyQuestion['kind']);
+
 const toQuestion = (r: QuestionRow): SurveyQuestion => ({
   id: r.id,
   fixedKey: r.fixed_key,
   target: r.target,
-  kind: r.kind,
+  kind: surveyKindOf(r),
   label: r.label,
   options: JSON.parse(r.options) as string[],
   required: r.required === 1,
@@ -26,23 +33,20 @@ const toQuestion = (r: QuestionRow): SurveyQuestion => ({
 export async function loadVisibleQuestions(db: D1Database): Promise<SurveyQuestion[]> {
   const { results } = await db
     .prepare(
-      'SELECT id, fixed_key, target, kind, label, options, required FROM survey_questions WHERE visible = 1 ORDER BY sort_order, id',
+      'SELECT id, fixed_key, target, kind, multiple, label, options, required FROM survey_questions WHERE visible = 1 ORDER BY sort_order, id',
     )
     .all<QuestionRow>();
   return results.map(toQuestion);
 }
 
-/** 固定の質問の回答を保存する列 */
-const MEMBER_COLUMNS: Partial<Record<FixedSurveyKey, string>> = { age_group: 'age_group', gender: 'gender' };
-const HOUSEHOLD_COLUMNS: Partial<Record<FixedSurveyKey, string>> = {
-  postal_code: 'postal_code',
-  referral: 'referral',
-  transport: 'transport',
-};
+/** 固定の質問の回答を保存する列(services/profile-fields.ts) */
+const MEMBER_COLUMNS = MEMBER_FIXED_COLUMNS;
+const HOUSEHOLD_COLUMNS = HOUSEHOLD_FIXED_COLUMNS;
 
 export type SplitAnswers = {
   member: { age_group?: string | null; gender?: string | null };
-  household: { postal_code?: string | null; referral?: string | null; transport?: string | null };
+  /** おうちの列に入れる値(はい・いいえは 1 / 0、複数選択は JSON の配列) */
+  household: Record<string, string | number | null>;
   /** 管理者が追加した質問の回答 */
   custom: { question: SurveyQuestion; value: string | null }[];
 };
@@ -61,7 +65,7 @@ export function splitAnswers(
     if (q.fixedKey && MEMBER_COLUMNS[q.fixedKey]) {
       (out.member as Record<string, string | null>)[MEMBER_COLUMNS[q.fixedKey]!] = v;
     } else if (q.fixedKey && HOUSEHOLD_COLUMNS[q.fixedKey]) {
-      (out.household as Record<string, string | null>)[HOUSEHOLD_COLUMNS[q.fixedKey]!] = v;
+      out.household[HOUSEHOLD_COLUMNS[q.fixedKey]!] = toHouseholdColumnValue(q.fixedKey, v);
     } else if (!q.fixedKey) {
       out.custom.push({ question: q, value: v });
     }

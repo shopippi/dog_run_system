@@ -34,7 +34,7 @@ async function requireOwnDog(c: Context<AppEnv>, id: number) {
   return member;
 }
 
-// 犬の一覧(C-08)。登録解除した犬も、過去の記録として返す
+// 犬の一覧(C-08)。登録をおやすみしている犬も、過去の記録として返す
 dogRoutes.get('/dogs', async (c) => {
   const member = await requireMember(c.env.DB, c.get('lineUser').userId);
   return c.json({ dogs: await listHouseholdDogs(c.env.DB, member.householdId, MEDIA_BASE, true) });
@@ -57,18 +57,21 @@ dogRoutes.post('/dogs', async (c) => {
   return c.json({ dog: await getDog(c.env.DB, id, MEDIA_BASE) }, 201);
 });
 
-// 名前などの変更(C-08)。犬種とサイズは変えられない
+// 名前などの変更(C-08)。犬種とサイズは変えられない。体重・相性・予防注射の年は、お客さんも変えられる
 dogRoutes.patch('/dogs/:id', async (c) => {
   const id = Number(c.req.param('id'));
   const member = await requireOwnDog(c, id);
   const patch = await parseJson(c, dogPatchSchema);
   const db = c.env.DB;
   const current = await db
-    .prepare("SELECT name, sex, birth_ym, status FROM dogs WHERE id = ?")
+    .prepare(
+      `SELECT name, sex, birth_ym, weight_kg, sociability, rabies_vaccine_year, combo_vaccine_year, status
+         FROM dogs WHERE id = ?`,
+    )
     .bind(id)
-    .first<{ name: string; sex: string | null; birth_ym: string | null; status: string }>();
+    .first<Record<string, string | number | null> & { name: string; status: string }>();
   if (!current || current.status !== 'active') {
-    throw errors.conflict('dog_retired', 'このワンちゃんは登録解除されています。変更が必要なときは受付にお知らせください。');
+    throw errors.conflict('dog_retired', 'このワンちゃんは登録をおやすみしています。「ワンちゃん」の画面で戻してから変えてください。');
   }
   const nowIso = toJstIso(c.get('now'));
   const actor = { type: 'member' as const, id: member.memberId };
@@ -76,27 +79,38 @@ dogRoutes.patch('/dogs/:id', async (c) => {
     ['name', 'name'],
     ['sex', 'sex'],
     ['birthYm', 'birth_ym'],
+    ['weightKg', 'weight_kg'],
+    ['sociability', 'sociability'],
+    ['rabiesVaccineYear', 'rabies_vaccine_year'],
+    ['comboVaccineYear', 'combo_vaccine_year'],
   ];
+  const next: Record<string, string | number | null> = { ...current };
   const statements: D1PreparedStatement[] = [];
   for (const [key, col] of columns) {
     if (!(key in patch)) continue;
     const after = patch[key] ?? null;
-    const before = current[col as keyof typeof current] ?? null;
+    const before = current[col] ?? null;
     if (after === before) continue;
+    next[col] = after;
     statements.push(dogChangeStatement(db, id, col, before, after, actor, nowIso));
   }
   if (statements.length > 0) {
-    const name = patch.name ?? current.name;
+    const name = String(next.name);
     statements.unshift(
       db
         .prepare(
-          `UPDATE dogs SET name = ?, name_search = ?, sex = ?, birth_ym = ?, updated_at = ? WHERE id = ?`,
+          `UPDATE dogs SET name = ?, name_search = ?, sex = ?, birth_ym = ?, weight_kg = ?, sociability = ?,
+                  rabies_vaccine_year = ?, combo_vaccine_year = ?, updated_at = ? WHERE id = ?`,
         )
         .bind(
           name,
           normalizeForSearch(name),
-          'sex' in patch ? (patch.sex ?? null) : current.sex,
-          'birthYm' in patch ? (patch.birthYm ?? null) : current.birth_ym,
+          next.sex ?? null,
+          next.birth_ym ?? null,
+          next.weight_kg ?? null,
+          next.sociability ?? null,
+          next.rabies_vaccine_year ?? null,
+          next.combo_vaccine_year ?? null,
           nowIso,
           id,
         ),
@@ -108,7 +122,10 @@ dogRoutes.patch('/dogs/:id', async (c) => {
   return c.json({ dog: await getDog(db, id, MEDIA_BASE) });
 });
 
-// 登録解除(C-08)。過去の来場記録は残し、チェックインの選択肢には出さない(6.1)
+/** 最後の1頭は、おやすみにできない(チェックインで選ぶワンちゃんがいなくなるため) */
+const lastDogMessage = '最後の1頭は、登録をおやすみできません。新しいワンちゃんを追加してから、おやすみにしてください。';
+
+// 登録をおやすみする(C-08。内部の値は retired)。過去の来場記録は残し、チェックインの選択肢には出さない(6.1)
 dogRoutes.post('/dogs/:id/retire', async (c) => {
   const id = Number(c.req.param('id'));
   const member = await requireOwnDog(c, id);
@@ -119,16 +136,31 @@ dogRoutes.post('/dogs/:id/retire', async (c) => {
     .prepare("SELECT COUNT(*) AS n FROM dogs WHERE household_id = ? AND status = 'active'")
     .bind(member.householdId)
     .first<{ n: number }>();
-  if ((active?.n ?? 0) <= 1) {
-    throw errors.conflict(
-      'last_dog',
-      '最後の1頭は登録解除できません。新しいワンちゃんを追加してから、登録解除してください。',
-    );
-  }
+  if ((active?.n ?? 0) <= 1) throw errors.conflict('last_dog', lastDogMessage);
   const nowIso = toJstIso(c.get('now'));
   await db.batch([
     db.prepare("UPDATE dogs SET status = 'retired', updated_at = ? WHERE id = ?").bind(nowIso, id),
     dogChangeStatement(db, id, 'status', 'active', 'retired', { type: 'member', id: member.memberId }, nowIso),
+    refreshAutoNameStatement(db, member.householdId, nowIso),
+  ]);
+  await syncHouseholdSearchName(db, member.householdId);
+  return c.json({ dog: await getDog(db, id, MEDIA_BASE) });
+});
+
+// おやすみ中のワンちゃんを、登録に戻す(C-08)。チェックインでまた選べるようになる
+dogRoutes.post('/dogs/:id/restore', async (c) => {
+  const id = Number(c.req.param('id'));
+  const member = await requireOwnDog(c, id);
+  const db = c.env.DB;
+  const dog = await db.prepare('SELECT status FROM dogs WHERE id = ?').bind(id).first<{ status: string }>();
+  if (dog?.status === 'merged') {
+    throw errors.conflict('dog_merged', 'このワンちゃんは、おうちをまとめたときに別のワンちゃんと1頭にまとめられています。');
+  }
+  if (dog?.status !== 'retired') return c.json({ dog: await getDog(db, id, MEDIA_BASE) });
+  const nowIso = toJstIso(c.get('now'));
+  await db.batch([
+    db.prepare("UPDATE dogs SET status = 'active', updated_at = ? WHERE id = ?").bind(nowIso, id),
+    dogChangeStatement(db, id, 'status', 'retired', 'active', { type: 'member', id: member.memberId }, nowIso),
     refreshAutoNameStatement(db, member.householdId, nowIso),
   ]);
   await syncHouseholdSearchName(db, member.householdId);

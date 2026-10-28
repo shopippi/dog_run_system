@@ -19,8 +19,6 @@ export type SeedOptions = {
   hashPassword: (password: string) => Promise<string>;
   /** 犬の写真(JPEG)を作る。variant で色や形を変える。なければ写真なしで作る */
   makeDogPhoto?: (variant: number, kind: 'photo' | 'thumb') => Promise<Uint8Array>;
-  /** 旧カード(紙のスタンプカード)の写真 */
-  makeCardPhoto?: () => Promise<Uint8Array>;
   putMedia?: (key: string, bytes: Uint8Array) => Promise<void>;
   /** 写真をつけるおうちの数(先頭から) */
   photoHouseholds?: number;
@@ -42,6 +40,9 @@ function mulberry32(seed: number) {
 }
 
 // ---------------------------------------------------------------- 固定の値
+
+/** 自動処理の履歴に書く、祝日の件数(HOLIDAYS の数) */
+const holidayCount = () => Object.keys(HOLIDAYS).length;
 
 /** 2026年の祝日(内閣府の発表どおり)と、2027年の1月の祝日 */
 export const HOLIDAYS: Record<string, string> = {
@@ -67,26 +68,67 @@ export const HOLIDAYS: Record<string, string> = {
   '2027-01-11': '成人の日',
 };
 
-/** migrations/0001_init.sql の犬種(id は入れた順) */
+/** migrations/0001_init.sql の犬種(id は入れた番号。大まかな分け方で、w は出やすさ) */
 const BREEDS = [
-  { id: 1, size: 'small', w: 18 }, // トイプードル
+  { id: 1, size: 'small', w: 18 }, // プードル
   { id: 2, size: 'small', w: 10 }, // チワワ
-  { id: 3, size: 'small', w: 10 }, // ミニチュアダックスフンド
+  { id: 3, size: 'small', w: 10 }, // ダックスフンド
   { id: 4, size: 'small', w: 6 }, // ポメラニアン
   { id: 5, size: 'medium', w: 12 }, // 柴犬
   { id: 6, size: 'medium', w: 6 }, // フレンチブルドッグ
-  { id: 7, size: 'medium', w: 4 }, // ボーダーコリー
-  { id: 8, size: 'large', w: 4 }, // ゴールデンレトリバー
-  { id: 9, size: 'large', w: 4 }, // ラブラドールレトリバー
+  { id: 7, size: 'medium', w: 3 }, // ボーダーコリー
+  { id: 8, size: 'large', w: 3 }, // ゴールデンレトリバー
+  { id: 9, size: 'large', w: 2 }, // ラブラドールレトリバー
   { id: 10, size: 'small', w: 8 }, // ミックス
-  { id: 11, size: 'small', w: 4 }, // その他
+  { id: 11, size: 'small', w: 2 }, // その他
+  { id: 12, size: 'small', w: 4 }, // ミニチュアシュナウザー
+  { id: 13, size: 'small', w: 3 }, // ヨークシャーテリア
+  { id: 14, size: 'small', w: 3 }, // マルチーズ
+  { id: 15, size: 'small', w: 3 }, // シーズー
+  { id: 16, size: 'small', w: 2 }, // パピヨン
+  { id: 17, size: 'medium', w: 3 }, // コーギー
+  { id: 18, size: 'small', w: 2 }, // ジャックラッセルテリア
+  { id: 22, size: 'medium', w: 2 }, // ビーグル
+  { id: 21, size: 'small', w: 1 }, // パグ
 ] as const;
+/** 「その他」を選んだ犬の自由入力 */
 const OTHER_BREEDS: [string, 'small' | 'medium'][] = [
-  ['ジャックラッセルテリア', 'small'],
-  ['ビーグル', 'medium'],
-  ['ウェルシュコーギー', 'medium'],
-  ['シーズー', 'small'],
+  ['甲斐犬', 'medium'],
+  ['ポメプー', 'small'],
+  ['チワプー', 'small'],
+  ['紀州犬', 'medium'],
 ];
+
+// ---- 2026-10-28 に足した項目(来たい時間帯・興味のあるイベント・体重・相性など)
+// これまでの乱数の並び(おうち・犬・来場の作り方)を変えないよう、番号から決める
+const hash01 = (n: number, salt: number) => (((n * 2654435761) ^ (salt * 40503)) >>> 0) % 1000 / 1000;
+const PREFERRED = ['平日の昼', '平日の夕方', '土日の午前', '土日の午後'];
+const EVENTS = ['しつけ教室', '写真撮影会', '季節のイベント', '犬種別の集まり', '健康・ケアの相談'];
+function pickSome(n: number, salt: number, options: string[], rate: number): string | null {
+  if (hash01(n, salt) > rate) return null; // 答えていないおうち
+  const picked = options.filter((_, i) => hash01(n, salt * 10 + i + 1) < 0.4);
+  return JSON.stringify(picked.length ? picked : [options[Math.floor(hash01(n, salt + 7) * options.length)]!]);
+}
+function profileOf(hid: number) {
+  const yesNo = (salt: number, answerRate: number, yesRate: number) =>
+    hash01(hid, salt) < answerRate ? (hash01(hid, salt + 1) < yesRate ? 1 : 0) : null;
+  return {
+    preferredTimes: pickSome(hid, 1, PREFERRED, 0.6),
+    eventInterests: pickSome(hid, 2, EVENTS, 0.5),
+    usesOtherRuns: yesNo(3, 0.55, 0.45),
+    wantsNews: yesNo(5, 0.6, 0.7),
+  };
+}
+function dogExtraOf(id: number, size: string) {
+  const [lo, hi] = size === 'large' ? [20, 38] : size === 'medium' ? [8, 18] : [2, 8];
+  const soc = hash01(id, 12);
+  return {
+    weightKg: hash01(id, 11) < 0.6 ? Math.round((lo + (hi - lo) * hash01(id, 13)) * 10) / 10 : null,
+    sociability: soc < 0.35 ? 'good' : soc < 0.55 ? 'normal' : soc < 0.65 ? 'shy' : null,
+    rabiesYear: hash01(id, 14) < 0.7 ? (hash01(id, 15) < 0.6 ? 2026 : 2025) : null,
+    comboYear: hash01(id, 16) < 0.6 ? (hash01(id, 17) < 0.6 ? 2026 : 2025) : null,
+  };
+}
 
 const DOG_NAMES = [
   'もも', 'ココ', 'マロン', 'ソラ', 'ハナ', 'レオ', 'チョコ', 'ムギ', 'ラッキー', 'サクラ', 'モカ', 'ルナ', 'リク',
@@ -447,11 +489,6 @@ export async function seedDemo(sql: Database, opts: SeedOptions): Promise<SeedSu
   // ---- 書き込み(待ち時間のある処理は、まとめて書き込む前に済ませる)
   const hashes: string[] = [];
   for (const _ of STAFF) hashes.push(await opts.hashPassword(DEMO_PASSWORD));
-  let cardKey: string | null = null;
-  if (opts.makeCardPhoto && opts.putMedia) {
-    cardKey = `requests/${formatMemberNo(hMomo.id)}/demo-paper-card.jpg`;
-    await opts.putMedia(cardKey, await opts.makeCardPhoto());
-  }
   const run = (q: string, params: SqlValue[] = []) => sql.run(q, params);
   sql.run('BEGIN');
   try {
@@ -467,11 +504,16 @@ export async function seedDemo(sql: Database, opts: SeedOptions): Promise<SeedSu
     // おうち・家族・犬
     for (const h of households.sort((a, b) => a.id - b.id)) {
       const name = autoHouseholdName(h.dogs.map((d) => d.name));
+      const p = profileOf(h.id);
       run(
         `INSERT INTO households (id, member_no, display_name, display_name_search, display_name_auto, registered_at, source,
-                                 postal_code, referral, transport, status, updated_at)
-         VALUES (?, ?, ?, ?, 1, ?, ?, ?, ?, ?, 'active', ?)`,
-        [h.id, formatMemberNo(h.id), name, normalizeForSearch(name), h.regAt, h.source, h.postal, h.referral, h.transport, h.regAt],
+                                 postal_code, referral, transport, preferred_times, event_interests, uses_other_runs, wants_news,
+                                 status, updated_at)
+         VALUES (?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', ?)`,
+        [
+          h.id, formatMemberNo(h.id), name, normalizeForSearch(name), h.regAt, h.source, h.postal, h.referral, h.transport,
+          p.preferredTimes, p.eventInterests, p.usesOtherRuns, p.wantsNews, h.regAt,
+        ],
       );
       for (const m of h.members) {
         run(
@@ -482,10 +524,15 @@ export async function seedDemo(sql: Database, opts: SeedOptions): Promise<SeedSu
         );
       }
       for (const d of h.dogs) {
+        const x = dogExtraOf(d.id, d.size);
         run(
-          `INSERT INTO dogs (id, dog_no, household_id, name, name_search, breed_id, breed_other, size, sex, birth_ym, status, created_at, updated_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?)`,
-          [d.id, d.no, h.id, d.name, normalizeForSearch(d.name), d.breedId, d.breedOther, d.size, d.sex, d.birthYm, h.regAt, h.regAt],
+          `INSERT INTO dogs (id, dog_no, household_id, name, name_search, breed_id, breed_other, size, sex, birth_ym,
+                             weight_kg, sociability, rabies_vaccine_year, combo_vaccine_year, status, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?)`,
+          [
+            d.id, d.no, h.id, d.name, normalizeForSearch(d.name), d.breedId, d.breedOther, d.size, d.sex, d.birthYm,
+            x.weightKg, x.sociability, x.rabiesYear, x.comboYear, h.regAt, h.regAt,
+          ],
         );
       }
       if (h.migration) {
@@ -497,7 +544,9 @@ export async function seedDemo(sql: Database, opts: SeedOptions): Promise<SeedSu
       }
     }
 
-    // 来場・ポイント・無料券(来場の順に、台帳と同じ計算をする)
+    // 来場・ポイント・無料券(来場の順に、台帳と同じ計算をする)。
+    // 無料券は自動では出ない(8章)。デモでは、10ポイントたまったらその来場のあとに会員証で「無料券と交換する」を押したことにする。
+    // 使うときは、その来場の受付で会員証の「使用する」を押したことにする(券はその来場に結びつく)
     const balance = new Map<number, number>(households.map((h) => [h.id, h.migration?.points ?? 0]));
     const unused = new Map<number, number[]>();
     let ticketSeq = 0;
@@ -519,7 +568,7 @@ export async function seedDemo(sql: Database, opts: SeedOptions): Promise<SeedSu
       run(
         `INSERT INTO visits (id, household_id, checked_in_member_id, visit_date, checked_in_at, dog_count, used_ticket, method, created_by_staff_id)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [v.id, hid, v.memberId, v.date, v.at, v.count, v.useTicket ? 1 : 0, v.method, v.staffId],
+        [v.id, hid, v.memberId, v.date, v.at, v.count, 0, v.method, v.staffId],
       );
       for (const dogId of v.dogIds) {
         run(
@@ -529,6 +578,8 @@ export async function seedDemo(sql: Database, opts: SeedOptions): Promise<SeedSu
       }
       const actorType = v.staffId ? 'staff' : 'member';
       const actorId = v.staffId ?? v.memberId;
+      // 交換はお客さんの操作。代理の来場の日は、おうちの最初の家族が会員証で押したことにする
+      const exchangerId = v.memberId ?? households.find((h) => h.id === hid)!.members[0]!.id;
       if (v.useTicket) {
         const t = tickets.shift()!;
         run(`UPDATE tickets SET status = 'used', used_visit_id = ?, used_at = ? WHERE id = ?`, [v.id, v.at, t]);
@@ -542,13 +593,13 @@ export async function seedDemo(sql: Database, opts: SeedOptions): Promise<SeedSu
       while (b >= 10) {
         const tid = ++ticketSeq;
         run(
-          `INSERT INTO tickets (id, household_id, issued_at, source, issued_visit_id, status) VALUES (?, ?, ?, 'points', ?, 'unused')`,
-          [tid, hid, v.at, v.id],
+          `INSERT INTO tickets (id, household_id, issued_at, source, status, note, op_id) VALUES (?, ?, ?, 'points', 'unused', 'ポイントと交換', ?)`,
+          [tid, hid, v.at, `exchange:demo-${tid}`],
         );
         run(
-          `INSERT INTO point_ledger (household_id, delta, kind, visit_id, ticket_id, actor_type, actor_id, created_at)
-           VALUES (?, -10, 'ticket_issue', ?, ?, ?, ?, ?)`,
-          [hid, v.id, tid, actorType, actorId, v.at],
+          `INSERT INTO point_ledger (household_id, delta, kind, ticket_id, reason, actor_type, actor_id, created_at, op_id)
+           VALUES (?, -10, 'ticket_issue', ?, '無料券と交換', 'member', ?, ?, ?)`,
+          [hid, tid, exchangerId, v.at, `exchange:demo-${tid}`],
         );
         tickets.push(tid);
         b -= 10;
@@ -606,38 +657,13 @@ export async function seedDemo(sql: Database, opts: SeedOptions): Promise<SeedSu
       ]);
     }
 
-    // 確認待ち: まとめる申請(nico.mama が taka_papa の招待を開いた)
+    // taka_papa が nico.mama に送った家族の招待(まだ開いていない)。nico.mama が開くと、その場でおうちをまとめられる(C-12)。
+    // デモの日付を進めても使えるよう、期限は長めにしておく
     const takaMember = hTaka.members[0]!;
-    const nicoMember = hNico.members[0]!;
-    const reqAt = toJstIso(new Date(now.getTime() - 26 * 60 * 60 * 1000));
     run(
-      `INSERT INTO requests (id, kind, household_id, related_household_id, requester_member_id, payload, status, created_at)
-       VALUES (1, 'merge', ?, ?, ?, ?, 'pending', ?)`,
-      [
-        hNico.id,
-        hTaka.id,
-        nicoMember.id,
-        JSON.stringify({ via: 'invite', inviteCode: 'demo-merge-invite', memberNo: formatMemberNo(hNico.id), relatedMemberNo: formatMemberNo(hTaka.id) }),
-        reqAt,
-      ],
-    );
-    run(
-      `INSERT INTO invites (code, household_id, kind, created_by_member_id, created_at, expires_at, used_by_member_id, used_at, request_id)
-       VALUES ('demo-merge-invite', ?, 'family', ?, ?, ?, ?, ?, 1)`,
-      [hTaka.id, takaMember.id, toJstIso(new Date(now.getTime() - 27 * 3600e3)), toJstIso(new Date(now.getTime() - 3 * 3600e3)), nicoMember.id, reqAt],
-    );
-
-    // 確認待ち: 旧カードの引き継ぎ申請(紙のスタンプカード)
-    run(
-      `INSERT INTO requests (id, kind, household_id, requester_member_id, payload, attachment_key, status, created_at)
-       VALUES (2, 'migration', ?, ?, ?, ?, 'pending', ?)`,
-      [
-        hMomo.id,
-        hMomo.members[0]!.id,
-        JSON.stringify({ source: 'paper_card', claimedPoints: 7, note: '紙のスタンプカードに7個押してあります' }),
-        cardKey,
-        toJstIso(new Date(now.getTime() - 5 * 3600e3)),
-      ],
+      `INSERT INTO invites (code, household_id, kind, created_by_member_id, created_at, expires_at)
+       VALUES ('demo-merge-invite', ?, 'family', ?, ?, ?)`,
+      [hTaka.id, takaMember.id, toJstIso(new Date(now.getTime() - 3 * 3600e3)), toJstIso(new Date(now.getTime() + 60 * 24 * 3600e3))],
     );
 
     // ルール: 旧カードの移行期間(前後1か月)と、困ったときの連絡先
@@ -649,6 +675,26 @@ export async function seedDemo(sql: Database, opts: SeedOptions): Promise<SeedSu
       'デモ用の連絡先です(製作者 山本 / 090-0000-0000)',
       nowIso,
     ]);
+
+    // 自動処理の実行の履歴(システムの状態の画面が緑になるように、直近3日分の成功を入れる)
+    const job = (name: string, startedAt: string, message: string) =>
+      run(`INSERT INTO system_jobs (name, started_at, finished_at, status, message) VALUES (?, ?, ?, 'ok', ?)`, [
+        name,
+        startedAt,
+        startedAt,
+        message,
+      ]);
+    job('holidays', at(addDays(today, -60), 3 * 60 + 10), `${holidayCount()}件の祝日を取り込みました(デモ用の値)。`);
+    for (let i = 3; i >= 0; i--) {
+      const d = addDays(today, -i);
+      if (i === 0 && nowMinutes < 3 * 60 + 10) break;
+      job('daily_stats', at(d, 3 * 60 + 10), `${addDays(d, -399)}〜${d} の日別の集計を作り直しました。`);
+      job('expiry', at(d, 3 * 60 + 10), '期限が切れたポイントと無料券はありませんでした。');
+      job('backup', at(d, 3 * 60 + 11), 'バックアップを保存しました(デモ用の値)。');
+      job('migration_images', at(d, 3 * 60 + 11), '消す写真はありませんでした。');
+      if (i === 0 && nowMinutes < 5 * 60 + 10) break;
+      job('weather', at(d, 5 * 60 + 10), `${addDays(d, -1)} の天気(東京)を取得しました(デモ用の値)。`);
+    }
 
     sql.run('COMMIT');
   } catch (e) {

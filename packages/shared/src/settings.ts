@@ -13,6 +13,10 @@ export const expiryRuleSchema = z.discriminatedUnion('mode', [
 ]);
 export type ExpiryRule = z.infer<typeof expiryRuleSchema>;
 
+/** LINEミニアプリの番号の入れ方(エラーの文) */
+export const LIFF_ID_MESSAGE =
+  '「1234567890-AbCdEfGh」のような形(数字・ハイフン・英数字)で入れてください。製作者から伝えられた番号をそのまま貼り付けてください。';
+
 export const settingsSchema = z.object({
   /** 無料券1枚に必要なポイント数 */
   points_per_ticket: z.number().int().min(1).max(100),
@@ -39,6 +43,8 @@ export const settingsSchema = z.object({
     start: z.string().nullable(),
     end: z.string().nullable(),
   }),
+  /** 旧カードから一度に引き継げるポイントの上限(16.1。不正を防ぐため。未決事項) */
+  migration_max_points: z.number().int().min(1).max(200),
   /**
    * おうちの統合で、統合前に同じ日に両方のおうちが来場していた分のポイントを、そのまま残すか(5.3、20章の未決事項。初期案は残す)。
    * false にすると、その日のまとめる側の来場で付いたポイントを、統合のときに差し引く
@@ -55,7 +61,7 @@ export const settingsSchema = z.object({
     name: z.string().min(1).max(40),
   }),
   /** LINE ミニアプリ(LIFF)の ID。受付で出す招待QRの URL に使う(未設定なら、同じドメインの /liff/ の URL) */
-  liff_id: z.string().regex(/^$|^\d+-[A-Za-z0-9]+$/, { error: 'LIFF ID の形(例: 1234567890-AbCdEfGh)で入力してください。' }),
+  liff_id: z.string().regex(/^$|^\d+-[A-Za-z0-9]+$/, { error: LIFF_ID_MESSAGE }),
 });
 export type Settings = z.infer<typeof settingsSchema>;
 export type SettingKey = keyof Settings;
@@ -72,6 +78,7 @@ export const DEFAULT_SETTINGS: Omit<Settings, 'checkin_passphrase'> = {
   invite_ttl_hours: 24,
   reception_invite_ttl_minutes: 10,
   migration_period: { start: null, end: null },
+  migration_max_points: 30,
   merge_keep_same_day_points: true,
   developer_contact: '',
   terms_text: '(利用規約の本文は準備中です。管理画面の設定から差し替えてください)',

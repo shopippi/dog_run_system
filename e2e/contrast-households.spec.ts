@@ -84,9 +84,9 @@ for (const scheme of ['light', 'dark'] as const) {
       await page.getByRole('button', { name: '保存する' }).click();
       await page.getByRole('status').waitFor();
       await check(page, 'M-07 犬の編集(保存後・履歴)');
-      await page.getByRole('button', { name: '登録を解除する' }).click();
-      await page.getByRole('dialog', { name: 'ワンちゃんの登録を解除する' }).waitFor();
-      await check(page, 'M-07 登録解除の確認');
+      await page.getByRole('button', { name: '登録をおやすみする' }).click();
+      await page.getByRole('dialog', { name: 'ワンちゃんの登録をおやすみする' }).waitFor();
+      await check(page, 'M-07 登録のおやすみの確認');
       await page.close();
     });
   });

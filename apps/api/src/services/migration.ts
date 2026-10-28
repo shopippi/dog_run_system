@@ -3,6 +3,7 @@ import {
   MIGRATION_SOURCES,
   expiryFor,
   isWithinMigrationPeriod,
+  migrationPointsError,
   planMigration,
   toJstDate,
   toJstIso,
@@ -18,11 +19,12 @@ import { pointBalance } from './points';
 import type { AuditRow, UndoContext } from './undo';
 
 /*
- * 旧カードからの移行(A-05、要件定義書 16章)。
- * - 台帳に「移行」(kind = migration、migration_source)として記録する。無料券1枚分以上になれば、その時点で発行する
+ * 旧カードからの移行(A-05、要件定義書 16章)。受付で旧カードを見せてもらい、管理者が直接入力する(対面だけ)。
+ * - 台帳に「移行」(kind = migration、migration_source)として記録する。無料券1枚分以上になっても自動では交換しない(8章)
+ * - 一度に引き継げるポイントは設定 migration_max_points(初期値 30)まで
  * - 移行元ごとに1おうち1回まで(19.2)。統合でまとめたおうちの分も数える。元に戻した記録は数えない
  * - 移行期間(settings の migration_period)の外は受け付けない。期間が未設定なら受け付ける
- * - 発行した無料券の台帳の行にも migration_source を入れ、元に戻すときに辿れるようにする
+ * - 以前の記録(移行で無料券を発行していたころ)の無料券の行にも migration_source があり、元に戻すときに辿る
  */
 
 const DATE = (iso: string) => {
@@ -78,6 +80,7 @@ export async function migrationStatus(db: D1Database, householdId: number, now: 
     displayName: h.display_name,
     points: await pointBalance(db, h.id),
     pointsPerTicket: settings.points_per_ticket,
+    maxPoints: settings.migration_max_points,
     migrated,
     period: settings.migration_period,
     inPeriod: isWithinMigrationPeriod(settings.migration_period, toJstDate(now)),
@@ -93,8 +96,8 @@ export function outsidePeriod(period: Settings['migration_period']) {
 }
 
 /**
- * 移行を記録する(直接入力と、申請の承認で共通)。
- * periodDate: 移行期間の判定に使う日(直接入力は今日、申請は申請した日)
+ * 移行を記録する(受付での直接入力。16.1)。
+ * 旧カードを目で確かめたことと、紙のカードを回収した(または使用済みの印を付けた)ことは、入力チェックで必須にしている
  */
 export async function recordMigration(
   db: D1Database,
@@ -105,11 +108,11 @@ export async function recordMigration(
     staffId: number;
     now: Date;
     settings: Settings;
-    periodDate: string;
-    request?: { id: number; claimedPoints: number | null };
   },
 ): Promise<MigrationResult> {
   const { settings, now, source } = args;
+  const tooMany = migrationPointsError(args.points, settings.migration_max_points);
+  if (tooMany) throw errors.badRequest(tooMany, { maxPoints: settings.migration_max_points });
   const h = await getHousehold(db, args.householdId);
   if (!h) throw errors.notFound('おうちが見つかりませんでした。画面を読み込み直して、選び直してください。');
   if (h.status === 'merged') {
@@ -119,19 +122,17 @@ export async function recordMigration(
       `このおうちは${to ? ` ${to.member_no} に` : ''}まとめられています。まとめた先のおうちで入力してください。`,
     );
   }
-  if (h.status !== 'active') throw errors.conflict('not_active', 'このおうちは退会しているため、引き継げません。');
-  if (!isWithinMigrationPeriod(settings.migration_period, args.periodDate)) throw outsidePeriod(settings.migration_period);
+  if (h.status !== 'active') throw errors.conflict('not_active', 'このおうちは退会しているため、引き継げません。引き継ぎが必要なときは、製作者に相談してください。');
+  if (!isWithinMigrationPeriod(settings.migration_period, toJstDate(now))) throw outsidePeriod(settings.migration_period);
 
   const ids = await historyHouseholdIds(db, h.id);
   const already = (await migratedRecords(db, ids)).find((r) => r.migration_source === source);
-  if (already) throw alreadyMigrated(source, already.created_at, Boolean(args.request));
+  if (already) throw alreadyMigrated(source, already.created_at);
 
   const nowIso = toJstIso(now);
   const balance = await pointBalance(db, h.id);
-  const plan = planMigration(balance, args.points, settings.points_per_ticket);
-  const reason = args.request
-    ? `${MIGRATION_SOURCE_LABELS[source]}から引き継ぎ(申請を承認)`
-    : `${MIGRATION_SOURCE_LABELS[source]}から引き継ぎ(受付で入力)`;
+  const plan = planMigration(balance, args.points);
+  const reason = `${MIGRATION_SOURCE_LABELS[source]}から引き継ぎ(受付で旧カードを確認)`;
   const marks = ids.map(() => '?').join(',');
 
   const s: D1PreparedStatement[] = [
@@ -141,14 +142,11 @@ export async function recordMigration(
         `INSERT INTO point_ledger (household_id, delta, kind, migration_source, reason, actor_type, actor_id, created_at, expires_at)
          VALUES (CASE WHEN NOT EXISTS (
                    SELECT 1 FROM point_ledger WHERE household_id IN (${marks}) AND migration_source = ? AND ${ACTIVE_MIGRATION}
-                 ) AND (? = 0 OR EXISTS (SELECT 1 FROM requests WHERE id = ? AND status = 'pending'))
-                 THEN ? END, ?, 'migration', ?, ?, 'staff', ?, ?, ?)`,
+                 ) THEN ? END, ?, 'migration', ?, ?, 'staff', ?, ?, ?)`,
       )
       .bind(
         ...ids,
         source,
-        args.request ? 1 : 0,
-        args.request?.id ?? 0,
         h.id,
         args.points,
         source,
@@ -157,36 +155,6 @@ export async function recordMigration(
         nowIso,
         args.points > 0 ? expiryFor(settings.point_expiry, now) : null,
       ),
-  ];
-  for (const entry of plan.ledger) {
-    if (entry.kind !== 'ticket_issue') continue;
-    s.push(
-      db
-        .prepare(`INSERT INTO tickets (household_id, issued_at, expires_at, source, status, note) VALUES (?, ?, ?, 'migration', 'unused', ?)`)
-        .bind(h.id, nowIso, expiryFor(settings.ticket_expiry, now), '旧カードの引き継ぎでポイントがたまったため'),
-      db
-        .prepare(
-          `INSERT INTO point_ledger (household_id, delta, kind, ticket_id, migration_source, reason, actor_type, actor_id, created_at)
-           VALUES (?, ?, 'ticket_issue', (SELECT MAX(id) FROM tickets), ?, ?, 'staff', ?, ?)`,
-        )
-        .bind(h.id, entry.delta, source, reason, args.staffId, nowIso),
-    );
-  }
-  if (args.request) {
-    const note =
-      args.request.claimedPoints !== null && args.request.claimedPoints !== args.points
-        ? `${args.points}ポイントで承認(申請は${args.request.claimedPoints}ポイント)`
-        : `${args.points}ポイントで承認`;
-    s.push(
-      db
-        .prepare(
-          `UPDATE requests SET status = 'approved', handled_by_staff_id = ?, handled_at = ?, handle_note = ?
-            WHERE id = ? AND status = 'pending'`,
-        )
-        .bind(args.staffId, nowIso, note, args.request.id),
-    );
-  }
-  s.push(
     auditStatement(db, {
       staffId: args.staffId,
       action: 'household.migrate',
@@ -197,26 +165,20 @@ export async function recordMigration(
         points: plan.balanceAfter,
         source,
         migratedPoints: args.points,
-        ticketsIssued: plan.ticketsIssued,
-        requestId: args.request?.id ?? null,
+        confirmedCard: true,
+        collectedCard: true,
       },
       reason,
-      undo: { householdId: h.id, source, createdAt: nowIso, requestId: args.request?.id ?? null },
+      undo: { householdId: h.id, source, createdAt: nowIso, requestId: null },
       now,
     }),
-  );
+  ];
   try {
     await db.batch(s);
   } catch (e) {
     if (/NOT NULL constraint failed: point_ledger\.household_id/.test(String((e as Error)?.message))) {
-      // 同時に押された: 申請がその間に処理されたか、同じ移行元の記録が先に入った
-      if (args.request) {
-        const r = await db.prepare('SELECT status FROM requests WHERE id = ?').bind(args.request.id).first<{ status: string }>();
-        if (r?.status !== 'pending') {
-          throw errors.conflict('request_handled', 'この申請は、すでに処理されています。確認待ちの画面を読み込み直してください。');
-        }
-      }
-      throw alreadyMigrated(source, nowIso, Boolean(args.request));
+      // 同時に押された: 同じ移行元の記録が先に入った
+      throw alreadyMigrated(source, nowIso);
     }
     throw e;
   }
@@ -225,23 +187,22 @@ export async function recordMigration(
     memberNo: h.member_no,
     source,
     points: args.points,
-    ticketsIssued: plan.ticketsIssued,
     balance: plan.balanceAfter,
   };
 }
 
-function alreadyMigrated(source: MigrationSource, at: string, isRequest: boolean) {
+function alreadyMigrated(source: MigrationSource, at: string) {
   return errors.conflict(
     'already_migrated',
     `このおうちは、${MIGRATION_SOURCE_LABELS[source]}の引き継ぎが${DATE(at)}に済んでいます。同じカードは1回だけ引き継げます。` +
-      (isRequest ? 'この申請は「却下する」で、理由「すでに引き継ぎ済み」を選んでください。' : ''),
+      '旧カードはお返しせず、引き継ぎ済みとお伝えください。間違えて入力したときは、「旧カードの引き継ぎ」の一覧から元に戻してから入力し直してください。',
   );
 }
 
 /**
  * 移行を元に戻す(操作ログ A-15 から)。
- * 移行の台帳の行と、そのとき発行した無料券の行を打ち消す行を足し、無料券を回収する。
- * 発行した無料券が使われていれば戻せない。申請の承認だった場合は、申請を確認待ちに戻す。
+ * 移行の台帳の行を打ち消す行を足す。以前の記録で、そのとき発行した無料券があれば、その行も打ち消して券を回収する
+ * (発行した無料券が使われていれば戻せない)。以前の申請の承認だった場合は、申請を確認待ちに戻す。
  */
 export async function undoMigration(db: D1Database, log: AuditRow, ctx: UndoContext): Promise<void> {
   const info = JSON.parse(log.undo_info ?? '{}') as {

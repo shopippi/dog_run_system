@@ -111,36 +111,19 @@ describe('C-12 招待からの参加', () => {
     expect(noSurvey.body.error.message).toBe('「年代」に答えてください。');
   });
 
-  it('すでに別のおうちを持つ人が招待を受けると、参加ではなく「まとめる申請」が確認待ちに入る(19.2)', async () => {
+  it('すでに別のおうちを持つ人が招待を開くと、参加ではなく「まとめる」の下見が出る(19.2。まとめる操作は c12-merge.test.ts)', async () => {
     const papa = await registerUser(PAPA, [dog('アル')]);
-    const mama = await registerUser(MAMA, [dog('アル')]);
+    await registerUser(MAMA, [dog('アル')]);
     const code = await invite();
     const info = await call(`/api/invites/${code}`, { user: MAMA, now: T0 });
     expect(info.body.viewer).toBe('other');
-
+    expect(info.body.merge.result.memberNo).toBe(papa.memberNo);
+    // まとめる申請は作らない
     const res = await call(`/api/invites/${code}/accept`, { user: MAMA, now: T0, body: { consent: false, survey: [] } });
-    expect(res.status).toBe(202);
-    expect(res.body).toEqual({ result: 'requested' });
-
-    const req = await env.DB.prepare(
-      `SELECT r.kind, r.status, h1.member_no AS mine, h2.member_no AS related
-         FROM requests r JOIN households h1 ON h1.id = r.household_id JOIN households h2 ON h2.id = r.related_household_id`,
-    ).first();
-    expect(req).toEqual({ kind: 'merge', status: 'pending', mine: mama.memberNo, related: papa.memberNo });
-    // ママはまだ自分のおうちのまま
-    const me = await call('/api/me', { user: MAMA, now: T0 });
-    expect(me.body.household.memberNo).toBe(mama.memberNo);
-  });
-
-  it('同じ組み合わせのまとめる申請は、何度招待を受けても1件だけ', async () => {
-    await registerUser(PAPA);
-    await registerUser(MAMA, [dog('ニコ')]);
-    for (let i = 0; i < 2; i++) {
-      const code = await invite();
-      await call(`/api/invites/${code}/accept`, { user: MAMA, now: T0, body: { consent: false, survey: [] } });
-    }
+    expect(res.status).toBe(409);
+    expect(res.body.error.code).toBe('use_merge');
     const n = await env.DB.prepare('SELECT COUNT(*) AS n FROM requests').first<{ n: number }>();
-    expect(n?.n).toBe(1);
+    expect(n?.n).toBe(0);
   });
 
   it('すでにそのおうちの家族なら、参加し直さない', async () => {

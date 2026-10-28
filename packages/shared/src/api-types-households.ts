@@ -21,6 +21,38 @@ export const AUDIT_ACTION_LABELS: Record<string, string> = {
   'dog.photo_remove': 'ワンちゃんの写真の削除',
   'family.invite': '受付での家族の招待',
   'family.remove': '家族を外す',
+  'family.leave': '家族が自分でおうちから抜けた',
+  'household.merge': 'おうちをまとめる',
+  'household.merge_undo': 'おうちをまとめたのを元に戻す',
+  'household.migrate': '旧カードの引き継ぎ',
+  'household.migrate_undo': '旧カードの引き継ぎを元に戻す',
+  'request.reject': '引き継ぎの申請を見送り',
+  'settings.update': 'ルールの設定の変更',
+  'staff.create': 'スタッフの追加',
+  'staff.status': 'スタッフの利用の停止・再開',
+  'staff.password_reset': 'スタッフのパスワードの再設定',
+  'breed.create': '犬種の選択肢の追加',
+  'breed.update': '犬種の選択肢の変更',
+  'breed.reorder': '犬種の選択肢の並べ替え',
+  'survey_question.create': 'アンケートの質問の追加',
+  'survey_question.update': 'アンケートの質問の変更',
+  'survey_question.reorder': 'アンケートの質問の並べ替え',
+  'event.create': 'イベントの登録',
+  'event.delete': 'イベントの取り消し',
+  'closure.create': '臨時休業日の登録',
+  'closure.delete': '臨時休業日の取り消し',
+  'export.csv': 'CSV出力',
+  'expiry.run': 'ポイント・無料券の有効期限の処理',
+  'migration_images.delete': '引き継ぎ申請の写真の削除',
+  'system.backup': 'バックアップ',
+  'system.holidays_import': '祝日の取り込み',
+  'system.run.weather': '天気の取得の実行',
+  'system.run.holidays': '祝日の取り込みの実行',
+  'system.run.backup': 'バックアップの実行',
+  'system.run.daily_stats': '日ごとの集計の実行',
+  'ticket.exchange': '無料券と交換',
+  'ticket.use': '無料券の使用',
+  'ticket.mark_used': '無料券を使用済みにする',
 };
 
 export function auditActionLabel(action: string): string {
@@ -79,12 +111,12 @@ export const MEMBER_STATUS_LABELS: Record<import('./constants').MemberStatus, st
 
 export const DOG_STATUS_LABELS: Record<import('./constants').DogStatus, string> = {
   active: '登録中',
-  retired: '登録解除',
+  retired: 'おやすみ中',
   merged: '統合済み',
 };
 
 export const TICKET_SOURCE_LABELS: Record<'points' | 'manual' | 'merge' | 'migration', string> = {
-  points: 'ポイントがたまって発行',
+  points: 'ポイントと交換',
   manual: '手動で追加',
   merge: 'おうちの統合',
   migration: '旧カードから移行',
@@ -164,7 +196,7 @@ export type HouseholdDetail = {
   /** 来場の回数(取り消しを除く) */
   visitCount: number;
   family: HouseholdFamilyMember[];
-  /** 犬(登録解除した犬も含む) */
+  /** 犬(おやすみ中の犬も含む) */
   dogs: import('./api-types').DogSummary[];
   /** 来場履歴(新しい順。最大100件) */
   visits: HouseholdVisit[];
@@ -188,8 +220,6 @@ export type ManualPointsPreview = {
   balanceAfter: number;
   ticketsBefore: number;
   ticketsAfter: number;
-  /** ポイントがたまって発行する無料券 */
-  ticketsIssued: number;
   pointsPerTicket: number;
 };
 

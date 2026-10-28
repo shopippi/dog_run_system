@@ -468,14 +468,14 @@ function RegenerateDialog({ onClose, onDone }: { onClose: () => void; onDone: On
 }
 
 function MigrationSection({ settings, onSaved }: { settings: Settings; onSaved: OnSaved }) {
-  const s = useSettingsDraft(settings, ['migration_period'], onSaved);
+  const s = useSettingsDraft(settings, ['migration_period', 'migration_max_points'], onSaved);
   const p = s.draft.migration_period as { start: string | null; end: string | null };
   const startId = useId();
   const endId = useId();
   return (
     <SettingsForm
       title="移行期間"
-      desc="旧カード(LINEのショップカード・紙のスタンプカード)からポイントを引き継げる期間です。期間が終わると、引き継ぎの申請の写真は自動で削除されます。"
+      desc="旧カード(LINEのショップカード・紙のスタンプカード)からポイントを、受付で引き継げる期間と、一度に引き継げるポイントの上限です。期間が終わると、以前の引き継ぎの申請の写真は自動で削除されます。"
       state={s}
     >
       <div className="cfg-row">
@@ -500,6 +500,15 @@ function MigrationSection({ settings, onSaved }: { settings: Settings; onSaved: 
           />
         </div>
       </div>
+      <NumField
+        label="旧カードから引き継げるポイントの上限"
+        unit="ポイントまで"
+        hint="これを超えるポイントは、旧カードの引き継ぎで入力できません(1〜200)"
+        min={1}
+        max={200}
+        value={s.draft.migration_max_points}
+        onChange={(v) => s.set('migration_max_points', v)}
+      />
     </SettingsForm>
   );
 }

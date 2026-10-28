@@ -2,7 +2,7 @@ import { env } from 'cloudflare:test';
 import { describe, expect, it } from 'vitest';
 import { getUndo, type AuditRow } from '../src/services/undo';
 import '../src/routes/admin/settings';
-import { adminCall, call, checkin, createStaff, givePoints, login, passphrase, registerUser } from './helpers';
+import { adminCall, call, checkin, createStaff, exchangeTicket, givePoints, login, passphrase, registerUser } from './helpers';
 
 const NOW = '2026-10-28T01:00:00Z';
 
@@ -47,13 +47,16 @@ describe('A-12 ルールの設定', () => {
     expect(await count()).toBe(n);
   });
 
-  it('無料券に必要なポイント数を変えると、チェックインに効く', async () => {
+  it('無料券に必要なポイント数を変えると、交換に必要なポイント数に効く', async () => {
     const cookie = await as('admin');
     await patch(cookie, { points_per_ticket: 3 });
     const r = await registerUser('U001:パパ');
     await givePoints(r.memberNo, 2);
     const v = await checkin('U001:パパ', [r.dogs[0]!.id], { now: NOW });
-    expect(v.body).toMatchObject({ ticketsIssued: 1, balanceAfter: 0 });
+    expect(v.body).toMatchObject({ balanceAfter: 3 });
+    expect((await call('/api/me', { user: 'U001:パパ', now: NOW })).body.card).toMatchObject({ pointsPerTicket: 3, toNextTicket: 0 });
+    const ex = await exchangeTicket('U001:パパ', { now: NOW });
+    expect(ex.body).toMatchObject({ pointsUsed: 3, balance: 0, unusedTickets: 1 });
     const me = await call('/api/me', { user: 'U001:パパ', now: NOW });
     expect(me.body.card).toMatchObject({ pointsPerTicket: 3, toNextTicket: 3 });
   });
@@ -71,6 +74,12 @@ describe('A-12 ルールの設定', () => {
     expect((await patch(cookie, { ticket_expiry: { mode: 'months_from_last_visit', months: 120 } })).status).toBe(200);
     expect((await patch(cookie, { repeat_days: 366 })).status).toBe(400);
     expect((await patch(cookie, { liff_id: 'abc def' })).status).toBe(400);
+    // 旧カードから引き継げるポイントの上限(1〜200。初期値 30)
+    expect((await adminCall('/admin/api/settings', { cookie })).body.settings.migration_max_points).toBe(30);
+    expect((await patch(cookie, { migration_max_points: 1 })).status).toBe(200);
+    expect((await patch(cookie, { migration_max_points: 200 })).status).toBe(200);
+    expect((await patch(cookie, { migration_max_points: 0 })).body.error.message).toBe('「旧カードから引き継げるポイントの上限」は、1〜200の数で入れてください。');
+    expect((await patch(cookie, { migration_max_points: 201 })).status).toBe(400);
     const period = await patch(cookie, { migration_period: { start: '2026-12-01', end: '2026-11-30' } });
     expect(period.status).toBe(400);
     expect(period.body.error.message).toMatch(/移行期間/);
@@ -88,7 +97,7 @@ describe('A-12 ルールの設定', () => {
     expect(res.status).toBe(200);
     expect(res.body.settings.checkin_passphrase).not.toBe(old);
     expect(res.body.settings.checkin_passphrase).toMatch(/^[0-9a-f]{32}$/);
-    const stale = await call('/api/checkins', { user: 'U001:パパ', now: NOW, body: { passphrase: old, dogIds: [r.dogs[0]!.id], useTicket: false } });
+    const stale = await call('/api/checkins', { user: 'U001:パパ', now: NOW, body: { passphrase: old, dogIds: [r.dogs[0]!.id] } });
     expect(stale.status).toBe(400);
     expect((await checkin('U001:パパ', [r.dogs[0]!.id], { now: NOW })).status).toBe(201);
   });

@@ -1,6 +1,6 @@
 import { env } from 'cloudflare:test';
 import { describe, expect, it } from 'vitest';
-import { addFamily, adminCall, call, checkin, createStaff, dog, givePoints, login, registerUser, survey } from './helpers';
+import { addFamily, adminCall, call, checkin, createStaff, dog, exchangeTicket, givePoints, login, registerUser, survey, useTicketOf } from './helpers';
 
 const PAPA = 'U001:パパ';
 const DAY1 = '2026-10-28T01:00:00Z';
@@ -33,13 +33,15 @@ describe('A-02 おうちの詳細', () => {
     const r = await registerUser(PAPA, [dog('アル'), dog('ニコ', { breedId: 5, size: 'medium', sex: 'female', birthYm: '2020-04' })], {
       survey: survey([
         { questionId: 3, value: '1500001' },
-        { questionId: 6, value: '誕生日会' },
+        { questionId: 10, value: '誕生日会' }, // 6〜9 は固定の質問(来たい時間帯など)
       ]),
     });
     await addFamily(r.memberNo, 'U002', 'ママ');
     await givePoints(r.memberNo, 9);
     await checkin(PAPA, [r.dogs[0]!.id, r.dogs[1]!.id], { now: DAY1 });
-    const v2 = await checkin(PAPA, [r.dogs[1]!.id], { now: DAY2, useTicket: true });
+    await exchangeTicket(PAPA, { now: DAY1 });
+    await useTicketOf(PAPA, { now: DAY2 });
+    const v2 = await checkin(PAPA, [r.dogs[1]!.id], { now: DAY2 });
     await adminCall(`/admin/api/checkins/${v2.body.visitId}/cancel`, { cookie: c.staff, body: { reason: '入力ミス' }, now: DAY2 });
 
     const res = await detail(c.admin, await householdId(r.memberNo));
@@ -64,25 +66,30 @@ describe('A-02 おうちの詳細', () => {
       expect.objectContaining({ name: 'パパ', ageGroup: '30代', gender: '女性', joinMethodLabel: 'はじめに登録', statusLabel: '参加中' }),
     ]);
     expect(d.dogs.map((x: any) => [x.name, x.breedName, x.size, x.sex, x.birthYm])).toEqual([
-      ['アル', 'トイプードル', 'small', null, null],
+      ['アル', 'プードル', 'small', null, null],
       ['ニコ', '柴犬', 'medium', 'female', '2020-04'],
     ]);
     expect(d.visits).toEqual([
-      expect.objectContaining({ date: '2026-10-29', dogs: [{ id: r.dogs[1]!.id, name: 'ニコ' }], cancelled: true, cancelReason: '入力ミス', usedTicket: true }),
+      // 取り消した来場に結びついた無料券の使用は、未使用に戻る
+      expect.objectContaining({ date: '2026-10-29', dogs: [{ id: r.dogs[1]!.id, name: 'ニコ' }], cancelled: true, cancelReason: '入力ミス', usedTicket: false }),
       expect.objectContaining({ date: '2026-10-28', time: '10:00', points: 1, checkedInBy: 'パパ', methodLabel: 'ご本人', cancelled: false }),
     ]);
     expect(d.ledger.map((l: any) => [l.delta, l.kindLabel])).toEqual([
       [-1, '来場の取り消し'],
       [1, '来場'],
-      [-10, '無料券の発行'],
+      [-10, '無料券と交換'],
       [1, '来場'],
       [9, '手動で調整'],
     ]);
-    expect(d.tickets).toEqual([expect.objectContaining({ status: 'unused', statusLabel: '未使用', sourceLabel: 'ポイントがたまって発行' })]);
+    expect(d.tickets).toEqual([expect.objectContaining({ status: 'unused', statusLabel: '未使用', sourceLabel: 'ポイントと交換', usedAt: null })]);
     expect(d.survey.household).toEqual([
       { label: 'お住まいの郵便番号', answer: '1500001' },
       { label: 'このドッグランを知ったきっかけ', answer: 'Instagram' },
       { label: 'ふだんの来場手段', answer: null },
+      { label: '来たい時間帯', answer: null },
+      { label: '興味のあるイベント', answer: null },
+      { label: 'ほかのドッグランも使っていますか', answer: null },
+      { label: 'お知らせをLINEで受け取りますか', answer: null },
       { label: '来てほしいイベント', answer: '誕生日会' },
     ]);
     expect(d.survey.members[1]).toEqual({

@@ -3,6 +3,7 @@ import {
   defaultKeepHousehold,
   expiryFor,
   mergeUndoDeadline,
+  mergePhotoSide,
   mergeUndoStatus,
   planMergeDogs,
   planMergePoints,
@@ -20,6 +21,7 @@ import {
 import { errors } from '../lib/errors';
 import { ADMIN_MEDIA_BASE } from './admin-visits';
 import { auditStatement } from './audit';
+import { refreshDailyStatsForHouseholdsQuietly } from './daily-stats';
 import { refreshAutoNameStatement, syncHouseholdSearchName } from './dogs';
 import { pointBalance, unusedTicketCount } from './points';
 
@@ -171,7 +173,7 @@ async function loadPair(db: D1Database, input: Pick<MergeInput, 'keepHouseholdId
       );
     }
     if (h.row.status !== 'active') {
-      throw errors.conflict('not_active', `${h.row.display_name}(${h.row.member_no})は退会しているため、まとめられません。`);
+      throw errors.conflict('not_active', `${h.row.display_name}(${h.row.member_no})は退会しているため、まとめられません。退会していないおうちを選び直してください。`);
     }
   }
   return { kept, absorbed };
@@ -242,6 +244,7 @@ export async function previewMerge(db: D1Database, input: MergeInput, now: Date,
   return buildPreview(kept, absorbed, input.dogPairs, settings, await sameDayInfo(db, kept, absorbed, settings));
 }
 
+/** 統合で承認にした、まとめる申請の元の状態(以前の統合の記録にだけある。いまは申請を作らない) */
 type RequestState = {
   id: number;
   status: string;
@@ -260,22 +263,29 @@ export type MergeSnapshot = {
   memberIds: number[];
   /** 残す側に移した犬(組み合わせなかった犬と、登録解除の犬) */
   movedDogIds: number[];
-  pairs: { keep: DogRow; absorb: DogRow; take: MergeDogPair['take']; visitDogIds: number[] }[];
+  pairs: { keep: DogRow; absorb: DogRow; take: MergeDogPair['take']; photo?: MergeDogPair['photo']; visitDogIds: number[] }[];
   /** 残す側に移した来場 */
   movedVisitIds: number[];
   /** 同じ日に両方が来場していたため、まとめた側に残した来場 */
   sameDayVisitIds: number[];
   /** 残す側に移した未使用の無料券 */
   movedTicketIds: number[];
-  /** 統合で承認にした、まとめる申請(元の状態) */
-  requests: RequestState[];
+  /** 統合で承認にした、まとめる申請(元の状態)。以前の統合の記録にだけある */
+  requests?: RequestState[];
 };
 
 const MERGE_REASON = 'おうちをまとめたため';
 const UNDO_REASON = 'おうちの統合を元に戻したため';
 
 /**
- * 統合を実行する(5.3)。
+ * まとめる操作をした人。
+ * - staff: 管理者がおうちの統合の画面(A-07)でまとめた
+ * - member: お客さんが招待を開いて、本人の確認でまとめた(C-12)。id は開いた人の家族ID、inviteId は使った招待
+ */
+export type MergeActor = { type: 'staff'; id: number } | { type: 'member'; id: number; inviteId: number };
+
+/**
+ * 統合を実行する(5.3)。管理者の統合(A-07)と、お客さんが招待からまとめる(C-12)の両方で使う。
  * - ポイントは両方の残高を合計する。まとめた側の残高をゼロにする行と、残す側に足す行を台帳に書く(種類は merge)。
  *   合計が無料券1枚分以上なら、その分の無料券を発行する
  * - 無料券の未使用分は、残す側に付け替える
@@ -284,11 +294,13 @@ const UNDO_REASON = 'おうちの統合を元に戻したため';
  *   写真・名前・犬種は、管理者が選んだ方を残す
  * - 来場の記録は残す側に移す(同じ日の分は上のコメントのとおり)
  * - 使わなくなった会員IDは「統合済み」にして、統合先を記録する
+ * - まとめられた側の家族(まとめた本人を除く)には、次に会員証を開いたときに「おうちが一つになりました」と出す
+ * - お客さんがまとめたときは、使った招待を「使用済み」にする(同じ招待で2回まとめない)
  */
 export async function executeMerge(
   db: D1Database,
   input: MergeInput,
-  staffId: number,
+  actor: MergeActor,
   now: Date,
   settings: Settings,
 ): Promise<MergeResult> {
@@ -297,28 +309,7 @@ export async function executeMerge(
   const k = kept.row.id;
   const a = absorbed.row.id;
   const nowIso = toJstIso(now);
-
-  // まとめる申請(指定されたものと、同じ2つのおうちの確認待ちの申請)
-  const { results: requests } = await db
-    .prepare(
-      `SELECT id, kind, status, household_id, related_household_id, handled_by_staff_id, handled_at, handle_note FROM requests
-        WHERE kind = 'merge' AND (id = ?3 OR (status = 'pending'
-          AND ((household_id = ?1 AND related_household_id = ?2) OR (household_id = ?2 AND related_household_id = ?1))))`,
-    )
-    .bind(k, a, input.requestId ?? 0)
-    .all<RequestState & { kind: string; household_id: number; related_household_id: number | null }>();
-  if (input.requestId) {
-    const req = requests.find((r) => r.id === input.requestId);
-    if (!req) throw errors.notFound('申請が見つかりませんでした。確認待ちの画面を読み込み直してください。');
-    if (req.status !== 'pending') {
-      throw errors.conflict('request_handled', 'この申請は、すでに処理されています。確認待ちの画面を読み込み直してください。');
-    }
-    const pair = new Set([req.household_id, req.related_household_id]);
-    if (!pair.has(k) || !pair.has(a)) {
-      throw errors.badRequest('申請のおうちと、選んだおうちが違います。確認待ちの画面から、もう一度開いてください。');
-    }
-  }
-  const pendingRequests = requests.filter((r) => r.status === 'pending');
+  const staffId = actor.type === 'staff' ? actor.id : null;
 
   // 移すものを集める
   const pairedAbsorb = new Set(input.dogPairs.map((p) => p.absorb));
@@ -328,7 +319,13 @@ export async function executeMerge(
   const pairs: MergeSnapshot['pairs'] = [];
   for (const p of input.dogPairs) {
     const { results } = await db.prepare('SELECT id FROM visit_dogs WHERE dog_id = ? ORDER BY id').bind(p.absorb).all<{ id: number }>();
-    pairs.push({ keep: keepDogById.get(p.keep)!, absorb: absorbDogById.get(p.absorb)!, take: p.take, visitDogIds: results.map((r) => r.id) });
+    pairs.push({
+      keep: keepDogById.get(p.keep)!,
+      absorb: absorbDogById.get(p.absorb)!,
+      take: p.take,
+      ...(p.photo ? { photo: p.photo } : {}),
+      visitDogIds: results.map((r) => r.id),
+    });
   }
   const sameDates = new Set(sameDayVisitDates(kept.visitDates, absorbed.visitDates));
   const { results: absorbedVisits } = await db
@@ -344,6 +341,8 @@ export async function executeMerge(
   ]);
   const movedTicketIds = tickets.map((t) => t.id);
   const memberIds = members.map((m) => m.id);
+  // まとめた本人には完了の画面で伝えるので、お知らせは本人以外に出す
+  const noticeIds = memberIds.filter((id) => !(actor.type === 'member' && actor.id === id));
 
   const snapshot: MergeSnapshot = {
     version: 1,
@@ -356,13 +355,6 @@ export async function executeMerge(
     movedVisitIds,
     sameDayVisitIds,
     movedTicketIds,
-    requests: pendingRequests.map((r) => ({
-      id: r.id,
-      status: r.status,
-      handled_by_staff_id: r.handled_by_staff_id,
-      handled_at: r.handled_at,
-      handle_note: r.handle_note,
-    })),
   };
 
   const sameDay = await sameDayInfo(db, kept, absorbed, settings);
@@ -380,8 +372,14 @@ export async function executeMerge(
     AND (SELECT COUNT(*) FROM visits WHERE household_id = ? AND cancelled_at IS NULL) = ?
     AND (SELECT COUNT(*) FROM tickets WHERE household_id = ? AND status = 'unused') = ?
     AND (SELECT COUNT(*) FROM family_members WHERE household_id = ? AND status = 'active') = ?
-    AND (SELECT COUNT(*) FROM dogs WHERE household_id IN (?, ?) AND status = 'active') = ?
-    AND (SELECT COUNT(*) FROM requests WHERE id IN (${marks(Math.max(1, pendingRequests.length))}) AND status = 'pending') = ?`;
+    AND (SELECT COUNT(*) FROM dogs WHERE household_id IN (?, ?) AND status = 'active') = ?${
+      // お客さんがまとめるときは、招待がまだ使われておらず期限内で、本人がまとめる側のおうちにいること
+      actor.type === 'member'
+        ? `
+    AND EXISTS (SELECT 1 FROM invites WHERE id = ? AND household_id = ? AND used_at IS NULL AND expires_at >= ?)
+    AND EXISTS (SELECT 1 FROM family_members WHERE id = ? AND household_id = ? AND status = 'active')`
+        : ''
+    }`;
   const keptVisitCount = await db
     .prepare('SELECT COUNT(*) AS n FROM visits WHERE household_id = ? AND cancelled_at IS NULL')
     .bind(k)
@@ -395,17 +393,28 @@ export async function executeMerge(
     a, movedTicketIds.length,
     a, memberIds.length,
     k, a, kept.dogRows.filter((d) => d.status === 'active').length + absorbed.dogRows.filter((d) => d.status === 'active').length,
-    ...(pendingRequests.length ? pendingRequests.map((r) => r.id) : [0]),
-    pendingRequests.length,
+    ...(actor.type === 'member' ? [actor.inviteId, k, nowIso, actor.id, a] : []),
   ];
+  const memberActor = actor.type === 'member' ? actor : null;
 
   const s: D1PreparedStatement[] = [
     db
       .prepare(
-        `INSERT INTO merges (kept_household_id, absorbed_household_id, dog_pairs, snapshot, request_id, executed_by_staff_id, executed_at)
-         VALUES (CASE WHEN ${guardSql} THEN ? END, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO merges (kept_household_id, absorbed_household_id, dog_pairs, snapshot, executed_by_staff_id,
+                             executed_by_member_id, invite_id, executed_at)
+         VALUES (CASE WHEN ${guardSql} THEN ? END, ?, ?, ?, ?, ?, ?, ?)`,
       )
-      .bind(...guardArgs, k, a, JSON.stringify(input.dogPairs), JSON.stringify(snapshot), input.requestId ?? null, staffId, nowIso),
+      .bind(
+        ...guardArgs,
+        k,
+        a,
+        JSON.stringify(input.dogPairs),
+        JSON.stringify(snapshot),
+        staffId,
+        memberActor?.id ?? null,
+        memberActor?.inviteId ?? null,
+        nowIso,
+      ),
     db
       .prepare("UPDATE households SET status = 'merged', merged_into_id = ?, updated_at = ? WHERE id = ?")
       .bind(k, nowIso, a),
@@ -420,10 +429,10 @@ export async function executeMerge(
   for (const ids of chunks(movedDogIds)) {
     s.push(db.prepare(`UPDATE dogs SET household_id = ?, updated_at = ? WHERE id IN (${marks(ids.length)})`).bind(k, nowIso, ...ids));
   }
-  const actor = { type: 'staff', id: staffId } as const;
   for (const p of pairs) {
     const chosen = p.take === 'absorb' ? p.absorb : p.keep;
     const other = p.take === 'absorb' ? p.keep : p.absorb;
+    const photo = mergePhotoSide(p) === 'absorb' ? p.absorb : p.keep;
     s.push(
       db
         .prepare(
@@ -434,8 +443,8 @@ export async function executeMerge(
         .bind(
           chosen.name,
           chosen.name_search,
-          chosen.photo_key,
-          chosen.thumb_key,
+          photo.photo_key,
+          photo.thumb_key,
           chosen.breed_id,
           chosen.breed_other,
           chosen.size,
@@ -447,13 +456,13 @@ export async function executeMerge(
       db
         .prepare("UPDATE dogs SET status = 'merged', merged_into_id = ?, updated_at = ? WHERE id = ?")
         .bind(p.keep.id, nowIso, p.absorb.id),
-      ...dogChangeRows(db, p.keep, chosen, other, actor, nowIso, MERGE_REASON),
+      ...dogChangeRows(db, p.keep, chosen, other, photo, actor, nowIso, MERGE_REASON),
       db
         .prepare(
           `INSERT INTO dog_changes (dog_id, field, before_value, after_value, reason, actor_type, actor_id, changed_at)
-           VALUES (?, 'status', 'active', 'merged', ?, 'staff', ?, ?)`,
+           VALUES (?, 'status', 'active', 'merged', ?, ?, ?, ?)`,
         )
-        .bind(p.absorb.id, `${MERGE_REASON}(${p.keep.dog_no} に1頭にまとめた)`, staffId, nowIso),
+        .bind(p.absorb.id, `${MERGE_REASON}(${p.keep.dog_no} に1頭にまとめた)`, actor.type, actor.id, nowIso),
     );
     for (const ids of chunks(p.visitDogIds)) {
       s.push(db.prepare(`UPDATE visit_dogs SET dog_id = ? WHERE id IN (${marks(ids.length)})`).bind(p.keep.id, ...ids));
@@ -467,7 +476,7 @@ export async function executeMerge(
   }
   const pointExpiry = expiryFor(settings.point_expiry, now);
   const ticketExpiry = expiryFor(settings.ticket_expiry, now);
-  const reason = `${absorbed.row.member_no} を ${kept.row.member_no} にまとめた`;
+  const reason = `${absorbed.row.member_no} を ${kept.row.member_no} にまとめた${actor.type === 'member' ? '(お客さんの操作)' : ''}`;
   for (const entry of plan.ledger) {
     const householdId = entry.household === 'kept' ? k : a;
     // 同じ日の来場の分を差し引く行(設定で「残さない」にしたときだけ)
@@ -477,13 +486,14 @@ export async function executeMerge(
         db
           .prepare(
             `INSERT INTO point_ledger (household_id, delta, kind, merge_id, reason, actor_type, actor_id, created_at, expires_at)
-             VALUES (?, ?, 'merge', ${mergeIdSql}, ?, 'staff', ?, ?, ?)`,
+             VALUES (?, ?, 'merge', ${mergeIdSql}, ?, ?, ?, ?, ?)`,
           )
           .bind(
             householdId,
             entry.delta,
             sameDayRow ? `${reason}(同じ日に両方が来場していた分を差し引く)` : reason,
-            staffId,
+            actor.type,
+            actor.id,
             nowIso,
             entry.delta > 0 ? pointExpiry : null,
           ),
@@ -499,9 +509,9 @@ export async function executeMerge(
         db
           .prepare(
             `INSERT INTO point_ledger (household_id, delta, kind, ticket_id, merge_id, reason, actor_type, actor_id, created_at)
-             VALUES (?, ?, 'ticket_issue', (SELECT MAX(id) FROM tickets), ${mergeIdSql}, ?, 'staff', ?, ?)`,
+             VALUES (?, ?, 'ticket_issue', (SELECT MAX(id) FROM tickets), ${mergeIdSql}, ?, ?, ?, ?)`,
           )
-          .bind(k, entry.delta, reason, staffId, nowIso),
+          .bind(k, entry.delta, reason, actor.type, actor.id, nowIso),
       );
     }
   }
@@ -515,19 +525,25 @@ export async function executeMerge(
       .bind(absorbed.row.postal_code, absorbed.row.referral, absorbed.row.transport, nowIso, k),
     refreshAutoNameStatement(db, k, nowIso),
   );
-  for (const r of pendingRequests) {
+  for (const ids of chunks(noticeIds)) {
     s.push(
       db
-        .prepare(
-          `UPDATE requests SET status = 'approved', handled_by_staff_id = ?, handled_at = ?, handle_note = ?
-            WHERE id = ? AND status = 'pending'`,
-        )
-        .bind(staffId, nowIso, 'おうちをまとめました', r.id),
+        .prepare(`UPDATE family_members SET merge_notice_id = ${mergeIdSql} WHERE id IN (${marks(ids.length)})`)
+        .bind(...ids),
+    );
+  }
+  if (memberActor) {
+    // 招待は使い切り(5.1)。まとめたら使用済みにする
+    s.push(
+      db
+        .prepare('UPDATE invites SET used_at = ?, used_by_member_id = ? WHERE id = ? AND used_at IS NULL')
+        .bind(nowIso, memberActor.id, memberActor.inviteId),
     );
   }
   s.push(
     auditStatement(db, {
       staffId,
+      actor: { type: actor.type, id: actor.id },
       action: 'household.merge',
       targetType: 'merge',
       targetId: { sql: 'SELECT MAX(id) FROM merges' },
@@ -542,6 +558,7 @@ export async function executeMerge(
         ticketsIssued: plan.ticketsIssued,
         dogPairs: input.dogPairs,
         sameDayVisitIds,
+        ...(memberActor ? { byCustomer: true, inviteId: memberActor.inviteId } : {}),
       },
       reason,
       undo: { householdIds: [k, a] },
@@ -562,6 +579,8 @@ export async function executeMerge(
     throw e;
   }
   await syncHouseholdSearchName(db, k);
+  // 初来場のおうちの数などが変わるため、日ごとの集計を作り直す
+  await refreshDailyStatsForHouseholdsQuietly(db, [k, a], now);
   const mergeId = results[0]!.meta.last_row_id;
   const after = await db.prepare('SELECT display_name FROM households WHERE id = ?').bind(k).first<{ display_name: string }>();
   return {
@@ -581,13 +600,14 @@ function dogChangeRows(
   before: DogRow,
   chosen: DogRow,
   other: DogRow,
-  actor: { type: 'staff'; id: number },
+  photoDog: DogRow,
+  actor: { type: 'staff' | 'member'; id: number },
   nowIso: string,
   reason: string,
 ): D1PreparedStatement[] {
   const after = {
     name: chosen.name,
-    photo: chosen.photo_key ? JSON.stringify({ photo: chosen.photo_key, thumb: chosen.thumb_key }) : null,
+    photo: photoDog.photo_key ? JSON.stringify({ photo: photoDog.photo_key, thumb: photoDog.thumb_key }) : null,
     breed: `${chosen.breed_id}:${chosen.breed_other ?? ''}`,
     size: chosen.size,
     sex: chosen.sex ?? other.sex,
@@ -643,11 +663,12 @@ export async function mergeChangedAfter(db: D1Database, m: MergeRow): Promise<bo
                   WHERE v.household_id IN (?1, ?2) AND vd.created_at > ?3) AS visit_dogs,
          EXISTS (SELECT 1 FROM tickets WHERE household_id IN (?1, ?2) AND used_at >= ?3) AS tickets,
          EXISTS (SELECT 1 FROM audit_log WHERE created_at > ?3 AND action <> 'household.merge'
-                  AND ((target_type = 'household' AND target_id IN (CAST(?1 AS TEXT), CAST(?2 AS TEXT)))
+                  AND ((target_type = 'household' AND target_id IN (?5, ?6))
                     OR (target_type = 'dog' AND target_id IN (SELECT CAST(id AS TEXT) FROM (${dogIdsSql}))))) AS audit,
          EXISTS (SELECT 1 FROM dog_changes WHERE changed_at > ?3 AND dog_id IN (${dogIdsSql})) AS dogs`,
     )
-    .bind(hh[0], hh[1], t, m.id)
+    // 操作ログの対象の ID は整数の文字列(数値を CAST すると "5.0" になり一致しない)
+    .bind(hh[0], hh[1], t, m.id, String(Math.trunc(hh[0]!)), String(Math.trunc(hh[1]!)))
     .first<Record<string, number>>();
   return Object.values(row ?? {}).some((v) => v === 1);
 }
@@ -693,16 +714,17 @@ export async function undoMerge(db: D1Database, mergeId: number, staffId: number
   const nowIso = toJstIso(now);
   const [kb, ab] = await Promise.all([pointBalance(db, k), pointBalance(db, a)]);
 
-  // 確かめた時点から変わっていないこと。変わっていれば executed_by_staff_id が NULL になり、まとめ全体が取り消される
+  // 確かめた時点から変わっていないこと。変わっていれば kept_household_id が NULL になり、まとめ全体が取り消される
+  // (お客さんがまとめた記録は executed_by_staff_id が空なので、空にできない列で確かめる)
   const s: D1PreparedStatement[] = [
     db
       .prepare(
         `UPDATE merges SET undone_at = ?, undone_by_staff_id = ?,
-                executed_by_staff_id = CASE WHEN undone_at IS NULL
+                kept_household_id = CASE WHEN undone_at IS NULL
                   AND (SELECT COALESCE(SUM(delta), 0) FROM point_ledger WHERE household_id = ?) = ?
                   AND (SELECT COALESCE(SUM(delta), 0) FROM point_ledger WHERE household_id = ?) = ?
                   AND (SELECT status FROM households WHERE id = ?) = 'merged'
-                THEN executed_by_staff_id END
+                THEN kept_household_id END
           WHERE id = ?`,
       )
       .bind(nowIso, staffId, k, kb, a, ab, a, m.id),
@@ -765,6 +787,7 @@ export async function undoMerge(db: D1Database, mergeId: number, staffId: number
         { ...p.keep, ...mergedProfile(p) },
         p.keep,
         p.keep,
+        p.keep,
         actor,
         nowIso,
         UNDO_REASON,
@@ -794,6 +817,8 @@ export async function undoMerge(db: D1Database, mergeId: number, staffId: number
           WHERE status = 'unused' AND id IN (SELECT ticket_id FROM point_ledger WHERE merge_id = ? AND kind = 'ticket_issue')`,
       )
       .bind('おうちの統合を元に戻したため回収', m.id),
+    // 「おうちが一つになりました」のお知らせは、まだ見ていなければ出さない
+    db.prepare('UPDATE family_members SET merge_notice_id = NULL WHERE merge_notice_id = ?').bind(m.id),
     // 統合の台帳の行を打ち消す(行は消さない)
     db
       .prepare(
@@ -803,7 +828,7 @@ export async function undoMerge(db: D1Database, mergeId: number, staffId: number
       )
       .bind(UNDO_REASON, staffId, nowIso, m.id),
   );
-  for (const r of snap.requests) {
+  for (const r of snap.requests ?? []) {
     s.push(
       db
         .prepare('UPDATE requests SET status = ?, handled_by_staff_id = ?, handled_at = ?, handle_note = ? WHERE id = ?')
@@ -839,16 +864,18 @@ export async function undoMerge(db: D1Database, mergeId: number, staffId: number
     }
     throw e;
   }
+  await refreshDailyStatsForHouseholdsQuietly(db, [k, a], now);
 }
 
 /** 統合後の、組み合わせた犬の情報(元に戻すときの変更履歴に使う) */
 function mergedProfile(p: MergeSnapshot['pairs'][number]): Partial<DogRow> {
   const chosen = p.take === 'absorb' ? p.absorb : p.keep;
   const other = p.take === 'absorb' ? p.keep : p.absorb;
+  const photo = mergePhotoSide(p) === 'absorb' ? p.absorb : p.keep;
   return {
     name: chosen.name,
-    photo_key: chosen.photo_key,
-    thumb_key: chosen.thumb_key,
+    photo_key: photo.photo_key,
+    thumb_key: photo.thumb_key,
     breed_id: chosen.breed_id,
     breed_other: chosen.breed_other,
     size: chosen.size,

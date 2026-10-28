@@ -1,6 +1,6 @@
 import { env } from 'cloudflare:test';
 import { describe, expect, it } from 'vitest';
-import { addFamily, call, checkin, dog, givePoints, registerUser } from './helpers';
+import { addFamily, call, checkin, dog, exchangeTicket, givePoints, registerUser, useTicketOf } from './helpers';
 
 const PAPA = 'U001:パパ';
 const MAMA = 'U002:ママ';
@@ -16,7 +16,7 @@ describe('C-04 チェックイン', () => {
     const r = await registerUser(PAPA, [dog('アル'), dog('ニコ')]);
     const res = await checkin(PAPA, r.dogs.map((d) => d.id), { now: DAY1 });
     expect(res.status).toBe(201);
-    expect(res.body).toMatchObject({ pointsAwarded: 1, ticketsIssued: 0, usedTicket: false, balanceAfter: 1 });
+    expect(res.body).toEqual({ visitId: expect.any(Number), pointsAwarded: 1, usedTicket: false, balanceAfter: 1 });
 
     const v = await env.DB.prepare('SELECT visit_date, checked_in_at, dog_count, method FROM visits').first();
     expect(v).toEqual({ visit_date: '2026-10-28', checked_in_at: '2026-10-28T10:00:00+09:00', dog_count: 2, method: 'self' });
@@ -62,75 +62,79 @@ describe('C-04 チェックイン', () => {
     expect(await ledger()).toEqual([{ delta: 1, kind: 'visit' }]);
   });
 
-  it('9ポイントのおうちがチェックインすると、無料券が1枚発行され、残高は0ポイントになる(19.2)', async () => {
+  it('9ポイントのおうちがチェックインすると10ポイントになる。無料券は自動では発行しない(8章)', async () => {
     const r = await registerUser(PAPA);
     await givePoints(r.memberNo, 9);
     const res = await checkin(PAPA, [r.dogs[0]!.id], { now: DAY1 });
-    expect(res.body).toMatchObject({ pointsAwarded: 1, ticketsIssued: 1, balanceAfter: 0 });
+    expect(res.body).toMatchObject({ pointsAwarded: 1, balanceAfter: 10 });
     const status = await call('/api/checkins/today', { user: PAPA, now: DAY1 });
-    expect(status.body).toMatchObject({ balance: 0, unusedTickets: 1 });
-    const t = await env.DB.prepare('SELECT source, status, issued_visit_id IS NOT NULL AS linked FROM tickets').first();
-    expect(t).toEqual({ source: 'points', status: 'unused', linked: 1 });
-    expect((await ledger()).slice(-2)).toEqual([
-      { delta: 1, kind: 'visit' },
-      { delta: -10, kind: 'ticket_issue' },
-    ]);
+    expect(status.body).toMatchObject({ balance: 10, unusedTickets: 0 });
+    expect(await env.DB.prepare('SELECT COUNT(*) AS n FROM tickets').first()).toEqual({ n: 0 });
+    expect((await ledger()).slice(-1)).toEqual([{ delta: 1, kind: 'visit' }]);
+    // さらに来ても、ポイントはたまり続ける
+    expect((await checkin(PAPA, [r.dogs[0]!.id], { now: DAY2 })).body).toMatchObject({ balanceAfter: 11 });
   });
 
-  it('無料券を使うと「使用済み」になり、その日もポイントは付く(初期設定)', async () => {
+  it('その日に「使用する」で使った無料券は、チェックインした来場に結びつき、その日もポイントは付く(初期設定)', async () => {
     const r = await registerUser(PAPA);
-    await givePoints(r.memberNo, 9);
-    await checkin(PAPA, [r.dogs[0]!.id], { now: DAY1 });
-    const res = await checkin(PAPA, [r.dogs[0]!.id], { now: DAY2, useTicket: true });
+    await givePoints(r.memberNo, 10);
+    expect((await exchangeTicket(PAPA, { now: DAY1 })).status).toBe(201);
+    expect((await useTicketOf(PAPA, { now: DAY2 })).status).toBe(200);
+    const res = await checkin(PAPA, [r.dogs[0]!.id], { now: '2026-10-29T02:00:00Z' });
     expect(res.status).toBe(201);
     expect(res.body).toMatchObject({ usedTicket: true, pointsAwarded: 1, balanceAfter: 1 });
     const t = await env.DB.prepare('SELECT status, used_visit_id FROM tickets').first<{ status: string; used_visit_id: number }>();
-    expect(t?.status).toBe('used');
-    expect(t?.used_visit_id).toBe(res.body.visitId);
-    const v = await env.DB.prepare('SELECT used_ticket FROM visits WHERE id = ?').bind(res.body.visitId).first();
-    expect(v).toEqual({ used_ticket: 1 });
+    expect(t).toEqual({ status: 'used', used_visit_id: res.body.visitId });
+    const today = await call('/api/checkins/today', { user: PAPA, now: '2026-10-29T03:00:00Z' });
+    expect(today.body.visit).toMatchObject({ usedTicket: true });
   });
 
-  it('設定で「無料券を使った日はポイントなし」にすると付かない', async () => {
+  it('設定で「無料券を使った日はポイントなし」にすると、その日に無料券を使ってからのチェックインには付かない', async () => {
     await env.DB.prepare(
       "INSERT INTO settings (key, value, updated_at) VALUES ('grant_point_on_ticket_day', 'false', '2026-01-01T00:00:00+09:00')",
     ).run();
     const r = await registerUser(PAPA);
-    await givePoints(r.memberNo, 9);
-    await checkin(PAPA, [r.dogs[0]!.id], { now: DAY1 });
-    const res = await checkin(PAPA, [r.dogs[0]!.id], { now: DAY2, useTicket: true });
-    expect(res.body).toMatchObject({ pointsAwarded: 0, balanceAfter: 0 });
+    await givePoints(r.memberNo, 10);
+    await exchangeTicket(PAPA, { now: DAY1 });
+    await useTicketOf(PAPA, { now: DAY2 });
+    const res = await checkin(PAPA, [r.dogs[0]!.id], { now: '2026-10-29T02:00:00Z' });
+    expect(res.body).toMatchObject({ pointsAwarded: 0, balanceAfter: 0, usedTicket: true });
   });
 
-  it('無料券がないのに使おうとすると、外すよう案内する', async () => {
+  it('チェックインで「無料券を使う」を送っても、無料券は使われない(チェックインでは選ばない)', async () => {
     const r = await registerUser(PAPA);
-    const res = await checkin(PAPA, [r.dogs[0]!.id], { now: DAY1, useTicket: true });
-    expect(res.status).toBe(400);
-    expect(res.body.error.message).toMatch(/使える無料券がありません/);
-    expect(await env.DB.prepare('SELECT COUNT(*) AS n FROM visits').first()).toEqual({ n: 0 });
+    await givePoints(r.memberNo, 10);
+    await exchangeTicket(PAPA, { now: DAY1 });
+    const passphrase = JSON.parse(
+      (await env.DB.prepare("SELECT value FROM settings WHERE key = 'checkin_passphrase'").first<{ value: string }>())!.value,
+    );
+    const res = await call('/api/checkins', { user: PAPA, now: DAY2, body: { passphrase, dogIds: [r.dogs[0]!.id], useTicket: true } });
+    expect(res.status).toBe(201);
+    expect(res.body).toMatchObject({ usedTicket: false });
+    expect(await env.DB.prepare('SELECT status FROM tickets').first()).toEqual({ status: 'unused' });
   });
 
-  it('期限切れの無料券は使えない', async () => {
+  it('前の日に使った無料券は、次の日のチェックインには結びつかない', async () => {
     const r = await registerUser(PAPA);
-    await env.DB.prepare(
-      `INSERT INTO tickets (household_id, issued_at, expires_at, source, status)
-       SELECT id, '2026-01-01T00:00:00+09:00', '2026-10-27T23:59:59+09:00', 'manual', 'unused' FROM households`,
-    ).run();
-    const res = await checkin(PAPA, [r.dogs[0]!.id], { now: DAY1, useTicket: true });
-    expect(res.status).toBe(400);
+    await givePoints(r.memberNo, 10);
+    await exchangeTicket(PAPA, { now: DAY1 });
+    await useTicketOf(PAPA, { now: DAY1 });
+    const res = await checkin(PAPA, [r.dogs[0]!.id], { now: DAY2 });
+    expect(res.body).toMatchObject({ usedTicket: false });
+    expect(await env.DB.prepare('SELECT used_visit_id FROM tickets').first()).toEqual({ used_visit_id: null });
   });
 
   it('受付のQRコードの合言葉が違うとチェックインできない', async () => {
     const r = await registerUser(PAPA);
     const res = await call('/api/checkins', {
       user: PAPA,
-      body: { passphrase: 'wrong', dogIds: [r.dogs[0]!.id], useTicket: false },
+      body: { passphrase: 'wrong', dogIds: [r.dogs[0]!.id] },
     });
     expect(res.status).toBe(400);
     expect(res.body.error.message).toMatch(/QRコード/);
   });
 
-  it('よそのおうちの犬や、登録解除した犬は選べない', async () => {
+  it('よそのおうちの犬や、おやすみ中の犬は選べない', async () => {
     const r = await registerUser(PAPA, [dog('アル'), dog('ニコ')]);
     const other = await registerUser('U900:よそ', [dog('ハナ')]);
     expect((await checkin(PAPA, [other.dogs[0]!.id], { now: DAY1 })).status).toBe(400);

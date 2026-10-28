@@ -1,5 +1,5 @@
 import { addDays, classifyWeather, toJstDate, toJstIso, type Settings, type WeatherKind } from '@dr/shared';
-import type { JobOutcome } from './jobs';
+import { errorText, JobError, type JobOutcome } from './jobs';
 
 // B-01 天気の取得。取得元は WeatherSource として差し替えられる(気象庁向けの実装は JmaAmedasSource)。
 // 取得先の URL と項目の対応は docs/weather.md。
@@ -61,9 +61,14 @@ export class JmaAmedasSource implements WeatherSource {
     let p = this.cache.get(url);
     if (!p) {
       p = (async () => {
-        const res = await fetch(url, { headers: { 'user-agent': 'dog-run-system (weather)' } });
+        let res: Response;
+        try {
+          res = await fetch(url, { headers: { 'user-agent': 'dog-run-system (weather)' } });
+        } catch (e) {
+          throw new JobError('天気の取得先(気象庁のサイト)につながりませんでした', errorText(e));
+        }
         if (res.status === 404) return null;
-        if (!res.ok) throw new Error(`気象庁のサイトから天気を受け取れませんでした(応答 ${res.status})`);
+        if (!res.ok) throw new JobError('天気の取得先(気象庁のサイト)から天気を受け取れませんでした', `応答 ${res.status}`);
         return (await res.json()) as AmedasFile;
       })();
       this.cache.set(url, p);
@@ -133,7 +138,7 @@ export async function fetchWeather(
   if (missing.length === 0) return { message: '前日までの天気は、すでに取得済みです。' };
   const targets = missing.slice(0, WEATHER_MAX_DAYS_PER_RUN);
   const got: string[] = [];
-  const failed: { date: string; reason: string }[] = [];
+  const failed: { date: string; reason: string; said: string | null }[] = [];
   const nowIso = toJstIso(now);
   for (const date of targets) {
     try {
@@ -150,18 +155,25 @@ export async function fetchWeather(
         .run();
       got.push(date);
     } catch (e) {
-      failed.push({ date, reason: String((e as Error)?.message ?? e) });
+      failed.push({
+        date,
+        reason: e instanceof JobError ? `${e.message}(${e.detail ?? ''})` : errorText(e),
+        said: e instanceof JobError ? e.message : null,
+      });
     }
   }
   const left = missing.length - targets.length;
   const parts: string[] = [];
   if (got.length) parts.push(`${got.join('、')} の天気(${station.name})を取得しました。`);
   if (failed.length) {
-    parts.push(`${failed.map((f) => f.date).join('、')} は取れませんでした(${failed[0]!.reason})。次の朝にもう一度取りに行きます。`);
+    const said = failed.find((f) => f.said)?.said;
+    parts.push(`${failed.map((f) => f.date).join('、')} の天気は取れませんでした${said ? `(${said})` : ''}。次の朝にもう一度取りに行きます。`);
   }
   if (left > 0) parts.push(`ほかに${left}日分が残っています。次の朝に続きを取ります。`);
   const message = parts.join('');
-  if (got.length === 0) return { status: 'failed', message };
-  if (failed.length || left > 0) return { status: 'warning', message };
+  // 取れなかった理由(元の例外の文。英語のこともある)は、画面に出さず detail に分ける
+  const detail = failed.length ? failed.map((f) => `${f.date}: ${f.reason}`).join(' / ') : undefined;
+  if (got.length === 0) return { status: 'failed', message, detail };
+  if (failed.length || left > 0) return { status: 'warning', message, detail };
   return { message };
 }

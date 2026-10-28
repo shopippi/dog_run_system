@@ -13,10 +13,12 @@ import { DogsPage } from './pages/dogs/DogsPage';
 import { FamilyPage } from './pages/family/FamilyPage';
 import { JoinPage } from './pages/family/JoinPage';
 import { SurveyPrompt } from './pages/SurveyPrompt';
-import { MigrationRequestPage } from './pages/migration/MigrationRequestPage';
 import { HistoryPage } from './pages/history/HistoryPage';
 import { ProfilePage } from './pages/profile/ProfilePage';
 import { HelpPage } from './pages/help/HelpPage';
+import { useMergeNotice } from './hooks/useMergeNotice';
+import { MergeNoticeScreen } from './pages/family/MergeNoticeScreen';
+import { TicketUsedPage } from './pages/tickets/TicketUsedPage';
 
 export function App() {
   const { me, error, loading, reload } = useMe();
@@ -69,7 +71,6 @@ export function App() {
 function backFor(path: string): HeaderBack | null {
   if (path === '/dogs/new' || /^\/dogs\/\d+$/.test(path)) return { to: '/dogs', label: 'ワンちゃん' };
   if (path === '/dogs' || path === '/family' || path === '/checkin') return { to: '/', label: '会員証' };
-  if (path === '/migration') return { to: '/', label: '会員証' };
   if (path === '/history') return { to: '/', label: '会員証' };
   if (path === '/profile') return { to: '/', label: '会員証' };
   if (path === '/help') return { to: '/', label: '会員証' };
@@ -78,6 +79,8 @@ function backFor(path: string): HeaderBack | null {
 
 function Registered() {
   const survey = usePendingSurvey();
+  const mergeNotice = useMergeNotice();
+  if (mergeNotice.notice) return <MergeNoticeScreen notice={mergeNotice.notice} onDone={mergeNotice.dismiss} />;
   if (survey.questions && survey.questions.length > 0) {
     return <SurveyPrompt questions={survey.questions} onDone={survey.dismiss} />;
   }
@@ -89,10 +92,10 @@ function Registered() {
       <Route path="/family" element={<FamilyPage />} />
       <Route path="/dogs/new" element={<DogNewPage />} />
       <Route path="/dogs/:id" element={<DogEditPage />} />
-      <Route path="/migration" element={<MigrationRequestPage />} />
       <Route path="/history" element={<HistoryPage />} />
       <Route path="/profile" element={<ProfilePage />} />
       <Route path="/help" element={<HelpPage />} />
+      <Route path="/tickets/:id" element={<TicketUsedPage />} />
       <Route path="*" element={<CardPage />} />
     </Routes>
   );

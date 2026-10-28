@@ -19,7 +19,7 @@ export type AdminBreed = {
   visible: boolean;
   /** 「その他」(自由入力)。消せず、常に最後 */
   isOther: boolean;
-  /** この犬種で登録されている犬の数(登録解除・統合済みを除く) */
+  /** この犬種で登録されている犬の数(おやすみ中・統合済みを除く) */
   dogCount: number;
 };
 
@@ -68,6 +68,8 @@ export type AdminStaff = {
   createdAt: string;
   /** パスワードを5回まちがえて、ログインできない状態か */
   locked: boolean;
+  /** ログインできない状態が解除されるまでの分(切り上げ)。ログインできるときは null */
+  lockedMinutes?: number | null;
   /** ログイン中の本人か(自分は停止できない) */
   isMe: boolean;
 };

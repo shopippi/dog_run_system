@@ -2,15 +2,20 @@ import {
   type HouseholdFamilyMember,
   DOG_SEX_LABELS,
   DOG_SIZE_LABELS,
+  DOG_SOCIABILITY_LABELS,
   DOG_STATUS_LABELS,
+  formatWeight,
   type DogSummary,
   type HouseholdDetail,
+  type HouseholdTicket,
 } from '@dr/shared';
 import { useState, type ReactNode } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { DogFace } from '../components/DogFace';
 import { FamilyInviteDialog, RemoveFamilyDialog } from '../components/FamilyDialogs';
+import { HouseholdProfileDialog } from '../components/HouseholdProfileDialog';
 import { ManualPointsDialog } from '../components/ManualPointsDialog';
+import { TicketUseDialog } from '../components/TicketUseDialog';
 import { ErrorNotice } from '../components/ErrorNotice';
 import { Icon } from '../components/Icon';
 import { PageHead } from '../components/PageHead';
@@ -73,6 +78,8 @@ function Detail({
   const activeDogs = d.dogs.filter((x) => x.status === 'active');
   const activeFamily = d.family.filter((m) => m.status === 'active').length;
   const [removing, setRemoving] = useState<HouseholdFamilyMember | null>(null);
+  const [usingTicket, setUsingTicket] = useState<HouseholdTicket | null>(null);
+  const [profileOpen, setProfileOpen] = useState(false);
   return (
     <>
       <section className="panel hh-head" aria-label="おうちの概要">
@@ -87,7 +94,7 @@ function Detail({
         <div className="kpis hh-kpis">
           <Kpi label="ポイント" value={d.balance} unit="ポイント" />
           <Kpi label="使える無料券" value={d.usableTickets} unit="枚" />
-          <Kpi label="次の無料券まで" value={d.toNextTicket} unit="ポイント" />
+          <Kpi label="無料券と交換まで" value={d.toNextTicket} unit="ポイント" />
           <Kpi label="来場" value={d.visitCount} unit="回" />
         </div>
       </section>
@@ -152,6 +159,22 @@ function Detail({
               true,
               <p>
                 {removing.name ?? '家族'}さんを外しました。間違えたときは、<Link to="/audit">操作ログ</Link>から元に戻せます。
+              </p>,
+            );
+          }}
+        />
+      )}
+      {usingTicket && (
+        <TicketUseDialog
+          d={d}
+          ticket={usingTicket}
+          onClose={() => setUsingTicket(null)}
+          onDone={() => {
+            setUsingTicket(null);
+            onChanged(
+              true,
+              <p>
+                無料券を1枚、使用済みにしました。来場1回分の料金を無料にしてください。間違えたときは、<Link to="/audit">操作ログ</Link>から元に戻せます。
               </p>,
             );
           }}
@@ -244,6 +267,11 @@ function Detail({
                 </span>
                 <span className="hh-end">
                   <span className={`badge${t.status === 'unused' ? ' warning' : ''}`}>{t.statusLabel}</span>
+                  {canEdit && t.status === 'unused' && (
+                    <button type="button" className="btn sub tk-mark" onClick={() => setUsingTicket(t)}>
+                      使用済みにする
+                    </button>
+                  )}
                 </span>
               </li>
             ))}
@@ -255,7 +283,14 @@ function Detail({
         <Section title="アンケート">
           <div className="hh-survey">
             <div>
-              <h3 className="hh-sub">おうち</h3>
+              <div className="hp-head">
+                <h3 className="hh-sub">おうち</h3>
+                {canEdit && (
+                  <button type="button" className="btn ghost" onClick={() => setProfileOpen(true)}>
+                    おうちの回答を変える
+                  </button>
+                )}
+              </div>
               <Answers list={d.survey.household} />
             </div>
             {d.survey.members.map((m) => (
@@ -266,6 +301,21 @@ function Detail({
             ))}
           </div>
         </Section>
+      )}
+      {profileOpen && (
+        <HouseholdProfileDialog
+          d={d}
+          onClose={() => setProfileOpen(false)}
+          onDone={() => {
+            setProfileOpen(false);
+            onChanged(
+              true,
+              <p>
+                おうちの回答を変えました。間違えたときは、<Link to="/audit">操作ログ</Link>から元に戻せます。
+              </p>,
+            );
+          }}
+        />
       )}
     </>
   );
@@ -285,7 +335,14 @@ function Answers({ list }: { list: { label: string; answer: string | null }[] })
 }
 
 function DogRow({ dog }: { dog: DogSummary }) {
-  const facts = [dog.breedName, DOG_SIZE_LABELS[dog.size], dog.sex ? DOG_SEX_LABELS[dog.sex] : null, dog.birthYm ? `${formatYm(dog.birthYm)}生まれ` : null]
+  const facts = [
+    dog.breedName,
+    DOG_SIZE_LABELS[dog.size],
+    dog.sex ? DOG_SEX_LABELS[dog.sex] : null,
+    dog.birthYm ? `${formatYm(dog.birthYm)}生まれ` : null,
+    formatWeight(dog.weightKg),
+    dog.sociability ? `ほかの犬: ${DOG_SOCIABILITY_LABELS[dog.sociability]}` : null,
+  ]
     .filter(Boolean)
     .join(' · ');
   return (

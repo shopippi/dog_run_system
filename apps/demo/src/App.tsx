@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { startBridge } from './bridge';
 import { DemoEngine } from './engine/engine';
 import { loadSqlJs } from './engine/sqljs';
-import { makeCardPhoto, makeDogPhoto } from './seed/art';
+import { makeDogPhoto } from './seed/art';
 import { ACCOUNTS, DEMO_PASSWORD, STAFF } from './seed/fixtures';
 import { SCENES } from './scenes';
 
@@ -44,7 +44,7 @@ let booting: Promise<DemoEngine> | null = null;
 function boot(): Promise<DemoEngine> {
   booting ??= (async () => {
     const SQL = await loadSqlJs();
-    const engine = await DemoEngine.create({ SQL, photos: { makeDogPhoto, makeCardPhoto } });
+    const engine = await DemoEngine.create({ SQL, photos: { makeDogPhoto } });
     if (!engine.jar('admin').header(engine.now().getTime())) {
       await engine.loginAs('admin', 'admin@example.com', DEMO_PASSWORD);
     }
@@ -251,9 +251,10 @@ function Demo({ engine }: { engine: DemoEngine }) {
       if (ui.role !== 'admin') await loginAs('admin');
       openAdmin('/');
     } else if (n === 5) {
-      openPhone('/', 'U-demo-nico');
+      // taka_papa からの招待を nico.mama が開く。まとめた後に開き直すと「すでにこのおうちの家族です」と出る
+      openPhone('/invite/demo-merge-invite', 'U-demo-nico');
       if (ui.role !== 'admin') await loginAs('admin');
-      openAdmin('/requests');
+      openAdmin('/audit');
     } else if (n === 6) {
       openPhone('/', 'U-demo-mama');
       if (ui.role !== 'admin') await loginAs('admin');
@@ -261,7 +262,7 @@ function Demo({ engine }: { engine: DemoEngine }) {
     } else if (n === 7) {
       openPhone('/', 'U-demo-momo');
       if (ui.role !== 'admin') await loginAs('admin');
-      openAdmin('/requests');
+      openAdmin('/migration');
     } else if (n === 8) {
       await loginAs('staff');
       openAdmin('/search');

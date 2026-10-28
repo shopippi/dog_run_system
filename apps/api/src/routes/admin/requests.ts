@@ -1,9 +1,7 @@
 import {
   MIGRATION_SOURCES,
-  approveMigrationSchema,
   migrationInputSchema,
   rejectRequestSchema,
-  toJstDate,
   toJstIso,
   type RequestMigrationView,
   type RequestHousehold,
@@ -18,15 +16,20 @@ import { requireRole } from '../../lib/staff-auth';
 import { parseJson } from '../../lib/validate';
 import { ADMIN_MEDIA_BASE } from '../../services/admin-visits';
 import { auditStatement } from '../../services/audit';
-import { migrationStatus, recordMigration, resolveActiveHousehold, undoMigration } from '../../services/migration';
+import { migrationStatus, recordMigration, undoMigration } from '../../services/migration';
 import { registerUndo } from '../../services/undo';
 
-// A-05 旧カードの移行の承認・却下、A-08 まとめる申請の確認
+// A-05 以前に届いた旧カードの移行の申請の確認(却下だけ)
+// (旧カードの引き継ぎは受付で直接入力する形になった(16.1)。おうちをまとめるのは、お客さんが招待から自分でまとめる形になった(C-12)。
+//  以前の申請の行は消さずに残す。「まとめる申請」(kind 'merge')は確認待ちに出さず、承認・却下もしない)
 export const requestsRoutes = new Hono<AppEnv>();
+
+/** 確認待ちに出す申請(以前の「まとめる申請」を除く) */
+const SHOWN = "kind <> 'merge'";
 
 // 確認待ちの件数(メニューの印)。管理者と製作者
 requestsRoutes.get('/requests/count', requireRole('admin'), async (c) => {
-  const row = await c.env.DB.prepare("SELECT COUNT(*) AS n FROM requests WHERE status = 'pending'").first<{ n: number }>();
+  const row = await c.env.DB.prepare(`SELECT COUNT(*) AS n FROM requests WHERE status = 'pending' AND ${SHOWN}`).first<{ n: number }>();
   return c.json({ pending: row?.n ?? 0 });
 });
 
@@ -48,7 +51,7 @@ type RequestRow = {
 
 /**
  * 旧カードの引き継ぎ申請(C-10)の payload を読む。形は { source: 'line_card' | 'paper_card', claimedPoints, note? }
- * (型は C-10 の担当の MigrationRequestPayload)。形が崩れていても一覧は出す
+ * (以前のお客さんの申請 C-10 の形。申請はもう作られない)。形が崩れていても一覧は出す
  */
 export function parseMigrationPayload(raw: string): RequestMigrationView | null {
   try {
@@ -130,7 +133,7 @@ requestsRoutes.get('/requests', requireRole('admin'), async (c) => {
          FROM requests r
          LEFT JOIN family_members m ON m.id = r.requester_member_id
          LEFT JOIN staff_users s ON s.id = r.handled_by_staff_id
-        WHERE ${handled ? "r.status <> 'pending'" : "r.status = 'pending'"}
+        WHERE ${handled ? "r.status <> 'pending'" : "r.status = 'pending'"} AND r.${SHOWN}
         ORDER BY ${handled ? 'r.handled_at DESC, r.id DESC' : 'r.created_at, r.id'}
         LIMIT 200`,
     )
@@ -139,7 +142,7 @@ requestsRoutes.get('/requests', requireRole('admin'), async (c) => {
     db,
     results.flatMap((r) => (r.related_household_id ? [r.household_id, r.related_household_id] : [r.household_id])),
   );
-  const pending = await db.prepare("SELECT COUNT(*) AS n FROM requests WHERE status = 'pending'").first<{ n: number }>();
+  const pending = await db.prepare(`SELECT COUNT(*) AS n FROM requests WHERE status = 'pending' AND ${SHOWN}`).first<{ n: number }>();
   const body: RequestListResponse = {
     pending: pending?.n ?? 0,
     pointsPerTicket: (await loadSettings(db)).points_per_ticket,
@@ -176,7 +179,8 @@ export async function findRequest(db: D1Database, id: number): Promise<RequestRe
     .prepare('SELECT id, kind, status, household_id, related_household_id, payload, created_at FROM requests WHERE id = ?')
     .bind(id)
     .first<RequestRecord>();
-  if (!r) throw errors.notFound('申請が見つかりませんでした。確認待ちの画面を読み込み直してください。');
+  // 以前の「まとめる申請」は、もう処理しない(見つからない扱い)
+  if (!r || r.kind === 'merge') throw errors.notFound('申請が見つかりませんでした。確認待ちの画面を読み込み直してください。');
   return r;
 }
 
@@ -221,39 +225,15 @@ requestsRoutes.post('/requests/:id/reject', requireRole('admin'), async (c) => {
   return c.json({ ok: true });
 });
 
-// 申請の承認。旧カードの引き継ぎ申請は、管理者が写真を見てポイント数を確認・修正して承認する(A-05)。
-// まとめる申請は、統合の画面(M-08)で統合すると承認になる。ここでは承認しない
+// 申請の承認。旧カードの引き継ぎは対面だけになった(16.1)。以前に届いた引き継ぎの申請は承認せず、却下してから受付で入力してもらう
 requestsRoutes.post('/requests/:id/approve', requireRole('admin'), async (c) => {
   const db = c.env.DB;
   const r = await findRequest(db, Number(c.req.param('id')) || 0);
   if (r.status !== 'pending') throw requestHandled();
-  if (r.kind === 'merge') {
-    throw errors.conflict(
-      'use_merge',
-      'まとめる申請は、「統合の画面に進む」から、同じワンちゃんを組み合わせてまとめてください。まとめると承認になります。',
-    );
-  }
-  const input = await parseJson(c, approveMigrationSchema);
-  const payload = parseMigrationPayload(r.payload);
-  const source = input.source ?? payload?.source;
-  if (!source) throw errors.badRequest('旧カードの種類(LINEのショップカード・紙のスタンプカード)を選んでください。');
-  // 申請のあとにおうちが統合されていれば、統合先に付ける
-  const h = await resolveActiveHousehold(db, r.household_id);
-  if (!h || h.status !== 'active') {
-    throw errors.conflict('not_active', '申請したおうちは退会しているため、引き継げません。「却下する」で処理してください。');
-  }
-  const result = await recordMigration(db, {
-    householdId: h.id,
-    source,
-    points: input.points,
-    staffId: c.get('staff').id,
-    now: c.get('now'),
-    settings: await loadSettings(db),
-    // 移行期間は、申請した日で判定する(期間の終わりの前に申請された分は、あとから承認できる)
-    periodDate: toJstDate(new Date(r.created_at)),
-    request: { id: r.id, claimedPoints: payload?.claimedPoints ?? null },
-  });
-  return c.json(result);
+  throw errors.conflict(
+    'migration_in_person',
+    '旧カードの引き継ぎは、受付で旧カードを確かめて入力する方法だけになりました。この申請は「却下する」で処理し、お客さんに受付で旧カードを見せてもらってください。',
+  );
 });
 
 // 旧カードの移行の状態(引き継ぎ済みの移行元、いまのポイント、移行期間)
@@ -262,7 +242,8 @@ requestsRoutes.get('/households/:id/migration', requireRole('admin'), async (c) 
   return c.json(await migrationStatus(db, Number(c.req.param('id')) || 0, c.get('now'), await loadSettings(db)));
 });
 
-// 旧カードの移行の直接入力(受付で旧カードを見せてもらったとき。16.1)
+// 旧カードの移行の直接入力(受付で旧カードを見せてもらったときだけ。お客さんの申請はない。16.1)。
+// 「旧カードを目で確かめた」「紙のカードは回収した(または使用済みの印を付けた)」の2つの印を必須にする(入力チェック)
 requestsRoutes.post('/households/:id/migrate', requireRole('admin'), async (c) => {
   const input = await parseJson(c, migrationInputSchema);
   const db = c.env.DB;
@@ -274,7 +255,6 @@ requestsRoutes.post('/households/:id/migrate', requireRole('admin'), async (c) =
     staffId: c.get('staff').id,
     now,
     settings: await loadSettings(db),
-    periodDate: toJstDate(now),
   });
   return c.json(result, 201);
 });

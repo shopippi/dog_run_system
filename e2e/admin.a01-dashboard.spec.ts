@@ -31,11 +31,13 @@ test.describe('A-01 ダッシュボード', () => {
     // 今月のチェックインが数に入っている
     await expect(kpis.locator('.kpi', { hasText: '来場頭数' }).locator('.v')).not.toHaveText(/^0頭$/);
     await expect(page.getByRole('region', { name: '来場の推移' }).locator('canvas')).toBeVisible();
-    await expect(page.getByRole('region', { name: '犬種' }).locator('canvas')).toHaveAttribute('aria-label', /トイプードル/);
+    await expect(page.getByRole('region', { name: '犬種' }).locator('canvas')).toHaveAttribute('aria-label', /プードル/);
 
     // 期間を切り替える
     await page.getByRole('radiogroup', { name: '期間' }).getByRole('radio', { name: '過去12か月' }).check();
-    await expect(page.getByRole('status').filter({ hasText: '〜' })).not.toContainText('読み込んでいます');
+    await expect(page.locator('p.dash-period-label')).not.toContainText('読み込んでいます');
+    // 期間の見出しには年を入れる(年をまたぐ期間でも分かるように)
+    await expect(page.locator('p.dash-period-label')).toContainText(/^\d{4}年\d{1,2}月1日\(.\)〜(\d{4}年)?\d{1,2}月\d{1,2}日\(.\)/);
     const dormant = page.getByRole('list', { name: 'しばらく来ていない常連さん' });
     await expect(dormant.getByText('クルミ', { exact: true })).toBeVisible();
     await expect(dormant.getByText(/3回来場/).first()).toBeVisible();
@@ -51,7 +53,7 @@ test.describe('A-01 ダッシュボード', () => {
     await expect(fromInput).toBeVisible();
     await fromInput.fill(daysAgo(6));
     await expect(page.getByRole('region', { name: '来場の推移' })).toBeVisible();
-    await expect(page.locator('p[role=status]', { hasText: '〜' })).toContainText('営業日');
+    await expect(page.locator('p.dash-period-label')).toContainText('営業日');
   });
 
   test('受付スタッフには、管理者向けの指標(継続状況・常連さん・家族・追加したアンケート)を出さない', async ({ page }) => {

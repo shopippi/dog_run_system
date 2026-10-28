@@ -50,13 +50,13 @@ test('手順1〜4: はじめての登録、9ポイントのおうちのチェッ
   await expect(p.getByText('DR-000031')).toBeVisible();
   await expect(page.getByTestId('who-note')).toContainText('ポチのおうち(DR-000031)');
 
-  // 2 9ポイントのおうちがチェックイン: こむぎだけ選ぶと10ポイントになり、無料券が出る
+  // 2 9ポイントのおうちがチェックイン: こむぎだけ選ぶと10ポイントになる(無料券への交換は会員証で押す)
   await scene(page, 2);
   await expect(page.getByTestId('who-note')).toContainText('9ポイント');
   await p.getByRole('checkbox', { name: /だいず/ }).uncheck();
   await p.getByRole('button', { name: 'チェックインする' }).click();
   await expect(p.getByRole('region', { name: 'チェックイン完了' })).toBeVisible();
-  await expect(p.getByText('無料券が1枚発行されました')).toBeVisible();
+  await expect(p.getByText(/会員証の「無料券と交換する」から、無料券と交換できます/)).toBeVisible();
   await expect(adminFrame(page).getByRole('listitem', { name: /こむぎ/ })).toBeVisible();
 
   // 3 ママがパパを招待: LINE のトークに届いた招待を、パパの LINE で開いて参加する
@@ -77,7 +77,7 @@ test('手順1〜4: はじめての登録、9ポイントのおうちのチェッ
   await expect(p.getByText('今日はこむぎママさんがチェックイン済みです。')).toBeVisible();
   await p.getByRole('button', { name: 'ワンちゃんを追加する' }).click();
   await expect(p.getByRole('region', { name: 'チェックイン完了' })).toBeVisible();
-  await expect(page.getByTestId('who-note')).toContainText('こむぎ・だいずのおうち(DR-000001)・0ポイント');
+  await expect(page.getByTestId('who-note')).toContainText('こむぎ・だいずのおうち(DR-000001)・10ポイント');
 });
 
 test('管理画面: ログイン・今日の来場・取り消し・製作者は見るだけ', async ({ page }) => {
@@ -127,7 +127,7 @@ test('再読み込みしても続きから使え、「翌日にする」と「�
 
   await page.reload();
   await page.getByRole('heading', { name: '打ち合わせ用の手順' }).waitFor();
-  await expect(page.getByTestId('who-note')).toContainText('0ポイント');
+  await expect(page.getByTestId('who-note')).toContainText('10ポイント');
 
   const today = await page.getByTestId('demo-today').textContent();
   await page.getByRole('button', { name: '翌日にする' }).click();
@@ -143,4 +143,35 @@ test('再読み込みしても続きから使え、「翌日にする」と「�
   await expect(page.getByRole('status')).toContainText('最初の状態に戻しました', { timeout: 30_000 });
   await expect(page.getByTestId('demo-today')).toHaveText(today!);
   await expect(page.getByTestId('who-note')).toContainText('9ポイント');
+});
+
+test('管理画面: 写真は API から読んでから出し(404 にならない)、システムの状態は天気・祝日もふくめて緑', async ({ page }) => {
+  const notFound: string[] = [];
+  page.on('response', (r) => {
+    if (r.status() === 404 && /\/api\/media\//.test(r.url())) notFound.push(r.url());
+  });
+  await openDemo(page);
+  const a = adminFrame(page);
+
+  // おうちの詳細の犬の写真は blob: の URL で出る
+  await scene(page, 6);
+  const photo = a.locator('img.av').first();
+  await expect(photo).toBeVisible();
+  await expect(photo).toHaveAttribute('src', /^blob:/);
+  expect(await photo.evaluate((img: HTMLImageElement) => img.naturalWidth)).toBeGreaterThan(0);
+
+  // 旧カードの引き継ぎ(受付で直接入力)の画面を開いても、写真の読み込みで 404 にならない
+  await scene(page, 7);
+  expect(notFound).toEqual([]);
+
+  // システムの状態: 初期データに実行の履歴があり、すべて緑。天気は外につながずにスキップして成功にする
+  await a.getByRole('link', { name: 'システムの状態' }).click();
+  const list = a.getByRole('region', { name: '自動で動く処理' });
+  await expect(list.getByRole('listitem', { name: '天気の取得 正常' })).toBeVisible();
+  await expect(list.getByRole('listitem', { name: '祝日の取り込み 正常' })).toBeVisible();
+  await expect(a.getByRole('alert')).toHaveCount(0);
+  const weather = list.getByRole('listitem', { name: /天気の取得/ });
+  await weather.getByRole('button', { name: '今すぐ実行' }).click();
+  await expect(weather.getByRole('status')).toContainText('スキップしました(インターネットにつながらない環境のため)。');
+  await expect(list.getByRole('listitem', { name: '天気の取得 正常' })).toBeVisible();
 });

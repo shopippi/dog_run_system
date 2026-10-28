@@ -87,7 +87,11 @@ export function StaffPage() {
                 <span className="badges">
                   <span className={`badge${s.role === 'admin' ? ' info' : ''}`}>{STAFF_ROLE_LABELS[s.role]}</span>
                   {s.status === 'suspended' && <span className="badge">停止中</span>}
-                  {s.locked && <span className="badge warning">ロック中</span>}
+                  {s.locked && (
+                    <span className="badge warning">
+                      しばらく入れない状態{s.lockedMinutes ? `(${s.lockedMinutes}分後に解除)` : ''}
+                    </span>
+                  )}
                 </span>
                 {!readOnly && (
                   <span className="cfg-item-acts">
@@ -296,7 +300,7 @@ function PasswordDialog({ s, onClose, onDone }: { s: AdminStaff; onClose: () => 
       }
     >
       <p>
-        <b>{s.name}さん</b>の新しいパスワードを作ります。ロックされているときは、ロックも解除します。
+        <b>{s.name}さん</b>の新しいパスワードを作ります。パスワードを5回まちがえて入れない状態のときは、すぐに入れるようになります。
       </p>
       <RadioSegment
         label="新しいパスワード"

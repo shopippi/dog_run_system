@@ -23,13 +23,13 @@ function formatYmd(iso: string) {
 /**
  * M-08 おうちの統合(A-07、要件定義書 5.3)。
  * 2つのおうちを探して選ぶ → 残す会員IDを選ぶ → 同じワンちゃんを組み合わせる → 結果を確かめる → 「まとめる」。
- * 確認待ちの「まとめる申請」から開いたときは、2つのおうちが選ばれた状態で始まる(?a=&b=&request=)。
+ * ?a=&b= を付けて開いたときは、2つのおうちが選ばれた状態で始まる。
+ * (お客さん同士なら、招待を開いた人が自分でまとめられる(C-12)。ここは受付でまとめるときに使う)
  */
 export function MergePage() {
   const [params] = useSearchParams();
   const { readOnly, staff } = useAuth();
   const isStaff = staff?.role === 'staff';
-  const requestId = Number(params.get('request')) || undefined;
   const [slots, setSlots] = useState<[number | null, number | null]>(() => [
     Number(params.get('a')) || null,
     Number(params.get('b')) || null,
@@ -93,7 +93,7 @@ export function MergePage() {
     reset();
   };
 
-  if (done) return <MergeDone result={done.result} absorbedNo={done.absorbedNo} fromRequest={requestId !== undefined} />;
+  if (done) return <MergeDone result={done.result} absorbedNo={done.absorbedNo} />;
 
   const nextSlot: 0 | 1 | null = a === null ? 0 : b === null ? 1 : null;
   const ready = preview !== null && preview.kept.id === keep;
@@ -184,7 +184,6 @@ export function MergePage() {
         <MergeConfirm
           preview={preview}
           dogPairs={dogPairs}
-          requestId={requestId}
           onClose={() => setConfirming(false)}
           onDone={(r) => {
             setConfirming(false);
@@ -411,13 +410,11 @@ function ResultPanel({ preview }: { preview: MergePreview }) {
 function MergeConfirm({
   preview,
   dogPairs,
-  requestId,
   onClose,
   onDone,
 }: {
   preview: MergePreview;
   dogPairs: MergeDogPair[];
-  requestId?: number;
   onClose: () => void;
   onDone: (r: MergeResult) => void;
 }) {
@@ -432,7 +429,6 @@ function MergeConfirm({
           keepHouseholdId: preview.kept.id,
           absorbHouseholdId: preview.absorbed.id,
           dogPairs,
-          requestId,
         }),
       );
     } catch (e) {
@@ -474,7 +470,7 @@ function MergeConfirm({
 }
 
 /** まとめた後。30日以内なら、ここからも元に戻せる */
-function MergeDone({ result, absorbedNo, fromRequest }: { result: MergeResult; absorbedNo: string; fromRequest: boolean }) {
+function MergeDone({ result, absorbedNo }: { result: MergeResult; absorbedNo: string }) {
   const [undoing, setUndoing] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
@@ -514,15 +510,9 @@ function MergeDone({ result, absorbedNo, fromRequest }: { result: MergeResult; a
               <dd>{formatYmd(result.undoDeadline)}まで(この間に来場やポイントの変更があると、戻せません)</dd>
             </dl>
             <div className="mg-actions">
-              {fromRequest ? (
-                <Link className="btn sub" to="/requests">
-                  確認待ちにもどる
-                </Link>
-              ) : (
-                <Link className="btn sub" to="/search">
-                  おうちを探す
-                </Link>
-              )}
+              <Link className="btn sub" to="/search">
+                おうちを探す
+              </Link>
               <button type="button" className="btn ghost" onClick={() => setUndoing(true)}>
                 元に戻す
               </button>
