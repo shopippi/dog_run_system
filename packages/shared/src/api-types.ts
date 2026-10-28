@@ -75,3 +75,23 @@ export type CheckinResult = {
   usedTicket: boolean;
   balanceAfter: number;
 };
+
+/** チェックイン完了画面(L-06)の表示内容(C-05) */
+export type CheckinDetail = {
+  visitId: number;
+  memberNo: string;
+  householdName: string;
+  visitDate: string;
+  checkedInAt: string;
+  checkedInBy: string;
+  /** 今日の来場か(前の日の画面は、受付で見せても使えない) */
+  isToday: boolean;
+  cancelled: boolean;
+  dogs: DogSummary[];
+  pointsAwarded: number;
+  ticketsIssued: number;
+  usedTicket: boolean;
+  balance: number;
+  unusedTickets: number;
+  pointsPerTicket: number;
+};

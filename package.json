@@ -8,13 +8,14 @@
   "scripts": {
     "build": "pnpm --filter @dr/liff build && pnpm --filter @dr/admin build && pnpm --filter @dr/api assets",
     "dev": "pnpm build && pnpm --filter @dr/api dev",
-    "typecheck": "pnpm -r typecheck",
+    "typecheck": "pnpm -r typecheck && tsc -p tsconfig.json",
     "test": "pnpm -r test",
     "test:e2e": "playwright test",
     "db:migrate:local": "pnpm --filter @dr/api db:migrate:local"
   },
   "devDependencies": {
     "@playwright/test": "1.63.0",
-    "typescript": "5.9.3"
+    "typescript": "5.9.3",
+    "@types/node": "^22.15.17"
   }
 }

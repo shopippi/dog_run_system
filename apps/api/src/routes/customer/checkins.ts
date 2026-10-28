@@ -1,11 +1,11 @@
-import { addVisitDogsSchema, checkinSchema, toJstDate, type CheckinStatus } from '@dr/shared';
+import { addVisitDogsSchema, checkinSchema, toJstDate, type CheckinDetail, type CheckinStatus } from '@dr/shared';
 import { Hono } from 'hono';
 import type { AppEnv } from '../../env';
 import { errors } from '../../lib/errors';
 import { loadSettings } from '../../lib/settings';
 import { parseJson } from '../../lib/validate';
 import { addDogsToVisit, recordCheckin, requireActiveDogs, todayVisit } from '../../services/checkins';
-import { listHouseholdDogs } from '../../services/dogs';
+import { listHouseholdDogs, listVisitDogs } from '../../services/dogs';
 import { requireMember } from '../../services/members';
 import { pointBalance, unusedTicketCount } from '../../services/points';
 import { MEDIA_BASE } from './media';
@@ -72,4 +72,59 @@ checkinRoutes.post('/checkins/:id/dogs', async (c) => {
   const ids = await requireActiveDogs(c.env.DB, member.householdId, dogIds);
   await addDogsToVisit(c.env.DB, visit.id, visit.visit_date, ids, member.memberId, now);
   return c.json({ visit: await todayVisit(c.env.DB, member.householdId, member.memberId, now) });
+});
+
+// 完了画面の表示内容(C-05)。自分のおうちの来場だけ
+checkinRoutes.get('/checkins/:id', async (c) => {
+  const member = await requireMember(c.env.DB, c.get('lineUser').userId);
+  const id = Number(c.req.param('id'));
+  const db = c.env.DB;
+  const v = await db
+    .prepare(
+      `SELECT v.id, v.household_id, v.visit_date, v.checked_in_at, v.used_ticket, v.cancelled_at,
+              COALESCE(m.line_display_name, '') AS checked_in_by
+         FROM visits v LEFT JOIN family_members m ON m.id = v.checked_in_member_id
+        WHERE v.id = ?`,
+    )
+    .bind(Number.isInteger(id) ? id : 0)
+    .first<{
+      id: number;
+      household_id: number;
+      visit_date: string;
+      checked_in_at: string;
+      used_ticket: number;
+      cancelled_at: string | null;
+      checked_in_by: string;
+    }>();
+  if (!v || v.household_id !== member.householdId) {
+    throw errors.notFound('チェックインが見つかりませんでした。会員証から開き直してください。');
+  }
+  const awarded = await db
+    .prepare("SELECT COALESCE(SUM(delta), 0) AS n FROM point_ledger WHERE visit_id = ? AND kind = 'visit'")
+    .bind(v.id)
+    .first<{ n: number }>();
+  const issued = await db
+    .prepare("SELECT COUNT(*) AS n FROM tickets WHERE issued_visit_id = ? AND status <> 'void'")
+    .bind(v.id)
+    .first<{ n: number }>();
+  const now = c.get('now');
+  const settings = await loadSettings(db);
+  const body: CheckinDetail = {
+    visitId: v.id,
+    memberNo: member.memberNo,
+    householdName: member.householdName,
+    visitDate: v.visit_date,
+    checkedInAt: v.checked_in_at,
+    checkedInBy: v.checked_in_by,
+    isToday: v.visit_date === toJstDate(now),
+    cancelled: v.cancelled_at !== null,
+    dogs: await listVisitDogs(db, v.id, MEDIA_BASE),
+    pointsAwarded: awarded?.n ?? 0,
+    ticketsIssued: issued?.n ?? 0,
+    usedTicket: v.used_ticket === 1,
+    balance: await pointBalance(db, member.householdId),
+    unusedTickets: await unusedTicketCount(db, member.householdId, now),
+    pointsPerTicket: settings.points_per_ticket,
+  };
+  return c.json(body);
 });
