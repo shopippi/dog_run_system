@@ -86,3 +86,60 @@ export const breedPatchSchema = z
 export const orderSchema = z.object({
   ids: z.array(z.number().int().positive()).max(500),
 });
+
+// ============================================================
+// A-10 アンケートの管理
+// ============================================================
+
+export const SURVEY_TARGET_LABELS = { member: '家族一人ひとり', household: 'おうちごと' } as const;
+export const SURVEY_KIND_LABELS = { choice: '選ぶ', text: '自由に書く' } as const;
+export const SURVEY_LABEL_MAX = 100;
+export const SURVEY_OPTION_MAX = 50;
+export const SURVEY_OPTIONS_MAX = 20;
+
+const questionLabelSchema = z
+  .string({ error: '質問の文を入力してください。' })
+  .trim()
+  .min(1, { error: '質問の文を入力してください。' })
+  .max(SURVEY_LABEL_MAX, { error: `質問の文は${SURVEY_LABEL_MAX}文字までで入力してください。` });
+
+/** 選択肢。前後の空白と空の行は除き、同じものは1つにする */
+const questionOptionsSchema = z
+  .array(z.string().trim().max(SURVEY_OPTION_MAX, { error: `選択肢は1つ${SURVEY_OPTION_MAX}文字までで入力してください。` }))
+  .transform((xs) => [...new Set(xs.filter((x) => x !== ''))])
+  .refine((xs) => xs.length <= SURVEY_OPTIONS_MAX, { error: `選択肢は${SURVEY_OPTIONS_MAX}個までにしてください。` });
+
+const surveyTargetSchema = z.enum(['member', 'household'], { error: '聞く相手を選んでください。' });
+const surveyKindSchema = z.enum(['choice', 'text'], { error: '答え方(選ぶ・自由に書く)を選んでください。' });
+
+const NEED_OPTIONS = '「選ぶ」の質問には、選択肢を2つ以上入れてください。';
+
+/** 質問を追加する(7.2) */
+export const surveyQuestionCreateSchema = z
+  .object({
+    target: surveyTargetSchema,
+    kind: surveyKindSchema,
+    label: questionLabelSchema,
+    options: questionOptionsSchema.default([]),
+    required: z.boolean().default(false),
+  })
+  .superRefine((v, ctx) => {
+    if (v.kind === 'choice' && v.options.length < 2) ctx.addIssue({ code: 'custom', path: ['options'], message: NEED_OPTIONS });
+  })
+  .transform((v) => ({ ...v, options: v.kind === 'text' ? [] : v.options }));
+export type SurveyQuestionCreate = z.infer<typeof surveyQuestionCreateSchema>;
+
+/** 質問を変える。固定の質問は、文と選択肢だけ変えられる(7.1) */
+export const surveyQuestionPatchSchema = z
+  .object({
+    target: surveyTargetSchema,
+    kind: surveyKindSchema,
+    label: questionLabelSchema,
+    options: questionOptionsSchema,
+    required: z.boolean(),
+    visible: z.boolean(),
+  })
+  .partial()
+  .refine((v) => Object.keys(v).length > 0, { error: '変える内容がありません。画面を読み込み直してください。' });
+export type SurveyQuestionPatch = z.infer<typeof surveyQuestionPatchSchema>;
+export const SURVEY_NEED_OPTIONS_MESSAGE = NEED_OPTIONS;

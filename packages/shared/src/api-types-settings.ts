@@ -24,3 +24,35 @@ export type AdminBreed = {
 };
 
 export type AdminBreedsResponse = { breeds: AdminBreed[] };
+
+/** 管理画面のアンケートの質問(A-10) */
+export type AdminSurveyQuestion = {
+  id: number;
+  /** 固定の質問のキー。管理者が追加した質問は null */
+  fixedKey: string | null;
+  /** 固定の質問(文と選択肢だけ変えられる。非表示にできない) */
+  isFixed: boolean;
+  target: import('./constants').SurveyTarget;
+  kind: import('./constants').SurveyKind;
+  label: string;
+  options: string[];
+  required: boolean;
+  visible: boolean;
+  /** 追加した質問の回答の数(「答えない」を除く)。固定の質問は null */
+  answerCount: number | null;
+};
+
+export type AdminSurveyQuestionsResponse = { questions: AdminSurveyQuestion[] };
+
+/** 追加した質問の回答の集計(GET /admin/api/survey-questions/:id/summary) */
+export type SurveySummary = {
+  question: AdminSurveyQuestion;
+  /** 答えた数(「答えない」を除く) */
+  answered: number;
+  /** 「答えない」を選んだ数 */
+  skipped: number;
+  /** 選択肢ごとの数。今の選択肢にない回答(選択肢を変える前の回答)は current: false */
+  counts: { option: string; count: number; current: boolean }[];
+  /** 自由に書く質問の回答(新しい順に50件まで) */
+  texts: { answer: string; answeredAt: string }[];
+};

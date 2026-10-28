@@ -378,3 +378,14 @@ input::placeholder { color: var(--text-tertiary); }
 .cfg-add { display: flex; flex-direction: column; gap: var(--sp-3); padding: var(--sp-4) var(--sp-5); }
 .cfg-add-row { display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--sp-3) var(--sp-4); }
 .cfg-add-row .field:first-child { flex: 1; min-width: 220px; }
+
+/* アンケートの集計 */
+.cfg-bars { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--sp-2); }
+.cfg-bars li { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) auto; align-items: center; gap: var(--sp-3); }
+.cfg-bar-label { display: flex; flex-direction: column; min-width: 0; overflow-wrap: anywhere; }
+.cfg-bar-track { height: 8px; border-radius: 4px; background: var(--surface-sunk); overflow: hidden; }
+.cfg-bar { display: block; height: 100%; background: var(--accent); border-radius: 4px; }
+.cfg-bar-n { min-width: 40px; text-align: right; font-variant-numeric: tabular-nums; }
+.cfg-texts { list-style: none; margin: 0; padding: 0; max-height: 320px; overflow: auto; }
+.cfg-texts li { display: flex; flex-direction: column; padding: var(--sp-2) 0; overflow-wrap: anywhere; }
+.cfg-texts li + li { border-top: 1px solid var(--border); }

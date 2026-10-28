@@ -60,6 +60,22 @@ async function checkScreen(page: Page, folder: string, screen: string, touch: bo
 }
 
 test.describe('設定まわりの画面の見え方', () => {
+  test.describe.configure({ mode: 'serial' });
+
+  // アンケートの集計を見るための質問(ほかのテストのお客さんに出ないよう、すぐ非表示にする)
+  test.beforeAll(async ({ browser }) => {
+    const page = await browser.newPage();
+    await adminLogin(page, 'admin');
+    const headers = { 'x-dr-admin': '1' };
+    const created = await page.request.post('/admin/api/survey-questions', {
+      headers,
+      data: { target: 'household', kind: 'choice', label: '見え方の確認用の質問', options: ['はい', 'いいえ', 'どちらでもない'] },
+    });
+    const { id } = (await created.json()) as { id: number };
+    await page.request.patch(`/admin/api/survey-questions/${id}`, { headers, data: { visible: false } });
+    await page.close();
+  });
+
   for (const v of VIEWPORTS) {
     test(`${v.name}: 横にはみ出さず、押しやすい大きさになっている`, async ({ browser }) => {
       test.setTimeout(120_000);
@@ -83,6 +99,19 @@ test.describe('設定まわりの画面の見え方', () => {
       await page.getByRole('dialog', { name: '犬種を変える' }).waitFor();
       await checkScreen(page, v.name, 'M-12 犬種を変える', v.touch);
       await page.getByRole('button', { name: 'やめる' }).click();
+
+      // M-11 アンケートの設定
+      await page.getByRole('link', { name: 'アンケート' }).click();
+      await page.getByRole('list', { name: '質問' }).getByRole('listitem', { name: '年代' }).waitFor();
+      await checkScreen(page, v.name, 'M-11 アンケートの設定', v.touch);
+      await page.getByRole('button', { name: 'このドッグランを知ったきっかけを変える' }).click();
+      await page.getByRole('dialog', { name: '質問を変える' }).waitFor();
+      await checkScreen(page, v.name, 'M-11 質問を変える', v.touch);
+      await page.getByRole('button', { name: 'やめる' }).click();
+      await page.getByRole('button', { name: '見え方の確認用の質問の集計' }).first().click();
+      await page.getByRole('dialog', { name: '回答の集計' }).getByRole('list').waitFor();
+      await checkScreen(page, v.name, 'M-11 回答の集計', v.touch);
+      await page.getByRole('button', { name: '閉じる' }).click();
 
       await page.close();
     });

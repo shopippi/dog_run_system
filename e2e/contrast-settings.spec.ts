@@ -105,6 +105,14 @@ for (const scheme of ['light', 'dark'] as const) {
       await page.getByRole('dialog', { name: '犬種を変える' }).waitFor();
       await check(page, 'M-12 犬種を変える');
       await page.getByRole('button', { name: 'やめる' }).click();
+
+      await page.getByRole('link', { name: 'アンケート' }).click();
+      await page.getByRole('list', { name: '質問' }).getByRole('listitem', { name: '年代' }).waitFor();
+      await check(page, 'M-11 アンケートの設定');
+      await page.getByRole('button', { name: '年代を変える' }).click();
+      await page.getByRole('dialog', { name: '質問を変える' }).waitFor();
+      await check(page, 'M-11 質問を変える');
+      await page.getByRole('button', { name: 'やめる' }).click();
       await page.close();
 
       const dev = await browser.newPage({ ...TABLET, colorScheme: scheme });
