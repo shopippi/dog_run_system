@@ -44,6 +44,8 @@ export const settingsSchema = z.object({
   /** 利用規約とプライバシーポリシーの本文 */
   terms_text: z.string().max(20000),
   privacy_text: z.string().max(20000),
+  /** LINE ミニアプリ(LIFF)の番号。受付のQRコードの URL に使う。空なら同じドメインの /liff/ を指す */
+  liff_id: z.string().trim().max(64).regex(/^[0-9A-Za-z-]*$/),
 });
 export type Settings = z.infer<typeof settingsSchema>;
 export type SettingKey = keyof Settings;
@@ -63,4 +65,5 @@ export const DEFAULT_SETTINGS: Omit<Settings, 'checkin_passphrase'> = {
   developer_contact: '',
   terms_text: '(利用規約の本文は準備中です。管理画面の設定から差し替えてください)',
   privacy_text: '(プライバシーポリシーの本文は準備中です。管理画面の設定から差し替えてください)',
+  liff_id: '',
 };
