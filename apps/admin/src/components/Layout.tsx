@@ -22,6 +22,7 @@ const GROUPS: Group[] = [
     label: '運営',
     items: [
       { to: '/migration', label: '旧カードの引き継ぎ', icon: 'inbox', adminOnly: true },
+      { to: '/merge', label: 'おうちの統合', icon: 'users', adminOnly: true },
       { to: '/dashboard', label: 'ダッシュボード', icon: 'chart' },
       { to: '/events', label: 'イベント・休業日', icon: 'flag', adminOnly: true },
     ],

@@ -145,7 +145,7 @@ test('再読み込みしても続きから使え、「翌日にする」と「�
   await expect(page.getByTestId('who-note')).toContainText('9ポイント');
 });
 
-test('管理画面: 写真は API から読んでから出し(404 にならない)、システムの状態は天気・祝日もふくめて緑', async ({ page }) => {
+test('管理画面: 写真は API から読んでから出し(404 にならない)、システムの状態は天気・祝日もふくめて正常', async ({ page }) => {
   const notFound: string[] = [];
   page.on('response', (r) => {
     if (r.status() === 404 && /\/api\/media\//.test(r.url())) notFound.push(r.url());

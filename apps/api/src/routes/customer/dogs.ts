@@ -154,7 +154,7 @@ dogRoutes.post('/dogs/:id/restore', async (c) => {
   const db = c.env.DB;
   const dog = await db.prepare('SELECT status FROM dogs WHERE id = ?').bind(id).first<{ status: string }>();
   if (dog?.status === 'merged') {
-    throw errors.conflict('dog_merged', 'このワンちゃんは、おうちをまとめたときに別のワンちゃんと1頭にまとめられています。');
+    throw errors.conflict('dog_merged', 'このワンちゃんは、おうちをまとめたときに別のワンちゃんと1頭にまとめられています。「ワンちゃん」の一覧から、まとめた後の子を開いてください。');
   }
   if (dog?.status !== 'retired') return c.json({ dog: await getDog(db, id, MEDIA_BASE) });
   const nowIso = toJstIso(c.get('now'));
