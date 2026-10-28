@@ -18,6 +18,8 @@ export default defineConfig({
     { name: 'liff', testMatch: /liff\..*\.spec\.ts/, use: { ...devices['iPhone 13'], browserName: 'chromium' } },
     // 受付・管理画面は、タブレットの大きさで確かめる
     { name: 'admin', testMatch: /admin\..*\.spec\.ts/, use: { viewport: { width: 1024, height: 768 }, hasTouch: true } },
+    // 文字と背景のコントラスト(お客さん向けと管理画面の両方。画面の大きさはテストの中で決める)
+    { name: 'contrast', testMatch: /contrast\.spec\.ts/ },
   ],
   webServer: {
     command: 'bash e2e/start-server.sh',

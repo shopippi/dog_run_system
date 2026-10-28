@@ -12,11 +12,12 @@ const VIEWPORTS = [
 /**
  * 1つの画面を確かめる。
  * - 横にはみ出していない(横スクロールが出ない)
- * - 押す部品の高さが 40px 以上(一覧の中の「取り消す」などの控えめなボタンも含む)
+ * - 押す部品の高さが、指で操作する端末(hasTouch)では 44px 以上、マウスでは 40px 以上
+ *   (一覧の中の「取り消す」などの控えめなボタンも含む)
  * - 入力欄の文字が 16px 以上
  * SHOT_DIR を指定すると、画面の写真を保存する。
  */
-async function checkScreen(page: Page, folder: string, screen: string) {
+async function checkScreen(page: Page, folder: string, screen: string, touch: boolean) {
   await page.waitForLoadState('networkidle');
   // 開くときの動き(ダイアログなど)が終わってから確かめる
   await page.evaluate(() =>
@@ -27,7 +28,8 @@ async function checkScreen(page: Page, folder: string, screen: string) {
         .map((a) => a.finished.catch(() => undefined)),
     ),
   );
-  const problems = await page.evaluate(() => {
+  const minHeight = touch ? 44 : 40;
+  const problems = await page.evaluate((minHeight) => {
     const out: string[] = [];
     const doc = document.documentElement;
     if (doc.scrollWidth > doc.clientWidth + 1) out.push(`横にはみ出し: ${doc.scrollWidth}px > ${doc.clientWidth}px`);
@@ -38,7 +40,7 @@ async function checkScreen(page: Page, folder: string, screen: string) {
       const r = el.getBoundingClientRect();
       if (r.width === 0 || el.closest('[hidden]')) continue;
       const name = (el.getAttribute('aria-label') ?? el.textContent ?? '').trim().slice(0, 20);
-      if (r.height < 39.5) out.push(`押す部品が低い(${Math.round(r.height)}px): ${name}`);
+      if (r.height < minHeight - 0.5) out.push(`押す部品が低い(${Math.round(r.height)}px): ${name}`);
       if (r.right > doc.clientWidth + 1) out.push(`押す部品がはみ出し: ${name}`);
     }
     for (const el of document.querySelectorAll<HTMLElement>('input:not([type=checkbox]):not([type=radio]), select, textarea')) {
@@ -46,7 +48,7 @@ async function checkScreen(page: Page, folder: string, screen: string) {
       if (size < 16) out.push(`入力欄の文字が小さい(${size}px): ${el.getAttribute('aria-label') ?? el.id}`);
     }
     return out;
-  });
+  }, minHeight);
   expect(problems, `${folder} / ${screen}`).toEqual([]);
   if (process.env.SHOT_DIR) {
     await page.screenshot({ path: `${process.env.SHOT_DIR}/${folder}/${screen}.png`, fullPage: true });
@@ -59,7 +61,7 @@ async function registerWithPhoto(page: Page, user: string, names: [string, ...st
   await page.getByLabel('利用規約とプライバシーポリシーに同意します').check();
   await page.getByRole('button', { name: '同意して次へ' }).click();
   for (const [i, name] of names.entries()) {
-    if (i > 0) await page.getByRole('button', { name: '＋ もう1頭追加する' }).click();
+    if (i > 0) await page.getByRole('button', { name: 'もう1頭追加する' }).click();
     const form = page.locator('fieldset.dog-form').nth(i);
     await form.getByLabel('名前').fill(name);
     await form.getByRole('combobox', { name: /犬種/ }).selectOption({ label: i === 0 ? '柴犬' : 'トイプードル' });
@@ -130,7 +132,7 @@ test.describe('受付・管理画面の見え方', () => {
 
       await page.goto('/admin/');
       await page.getByRole('button', { name: 'ログイン' }).waitFor();
-      await checkScreen(page, v.name, 'M-01 ログイン');
+      await checkScreen(page, v.name, 'M-01 ログイン', v.touch);
       await adminLogin(page, 'staff');
 
       // 今日の来場(会員以外のお客さんも記録する)
@@ -141,15 +143,20 @@ test.describe('受付・管理画面の見え方', () => {
       await walkin.getByRole('button', { name: '記録する' }).click();
       await walkin.getByRole('status').waitFor();
       await expect(list.getByText('会員以外 2頭').first()).toBeVisible();
-      await checkScreen(page, v.name, 'M-02 今日の来場');
+      await checkScreen(page, v.name, 'M-02 今日の来場', v.touch);
 
       // 取り消しの確認(確かめたら「やめる」で閉じる)
-      await page.getByRole('listitem', { name: /マロン/ }).getByRole('button', { name: '取り消す' }).click();
+      const cancelButton = page.getByRole('listitem', { name: /マロン/ }).getByRole('button', { name: '取り消す' });
+      await cancelButton.click();
       const dialog = page.getByRole('dialog', { name: 'チェックインを取り消す' });
       await expect(dialog).toBeVisible();
-      await checkScreen(page, v.name, 'M-02 取り消しの確認');
+      // 開いたときは安全な方(やめる)にフォーカスがある
+      await expect(dialog.getByRole('button', { name: 'やめる' })).toBeFocused();
+      await checkScreen(page, v.name, 'M-02 取り消しの確認', v.touch);
       await dialog.getByRole('button', { name: 'やめる' }).click();
       await expect(dialog).toHaveCount(0);
+      // 閉じたら、開く前のボタンにフォーカスが戻る
+      await expect(cancelButton).toBeFocused();
 
       // おうちを探す(名前で探す → 選ぶ)
       await page.getByRole('link', { name: 'おうちを探す' }).click();
@@ -157,12 +164,12 @@ test.describe('受付・管理画面の見え方', () => {
       const results = page.getByRole('list', { name: '見つかったおうち' });
       await results.getByRole('button', { name: /マロン・ショコラのおうち/ }).click();
       await expect(page.getByRole('region', { name: 'マロン・ショコラのおうちの内容' })).toBeVisible();
-      await checkScreen(page, v.name, 'M-04 おうちを探す(名前)');
+      await checkScreen(page, v.name, 'M-04 おうちを探す(名前)', v.touch);
 
       // 写真で探す
       await page.getByRole('tab', { name: '写真で探す' }).click();
       await expect(page.getByRole('list', { name: '最近来たワンちゃん' }).getByText('マロン', { exact: true })).toBeVisible();
-      await checkScreen(page, v.name, 'M-04 おうちを探す(写真)');
+      await checkScreen(page, v.name, 'M-04 おうちを探す(写真)', v.touch);
 
       // 代理チェックイン(おうちを選んだところ。確定はしない)
       await page.getByRole('link', { name: '代理チェックイン' }).click();
@@ -170,7 +177,7 @@ test.describe('受付・管理画面の見え方', () => {
       await page.getByRole('list', { name: '見つかったおうち' }).getByRole('button', { name: /ソラのおうち/ }).click();
       const proxy = page.getByRole('group', { name: '代理チェックイン' });
       await expect(proxy.getByRole('button', { name: '代理でチェックインする' })).toBeEnabled();
-      await checkScreen(page, v.name, 'M-03 代理チェックイン');
+      await checkScreen(page, v.name, 'M-03 代理チェックイン', v.touch);
 
       await page.close();
     });
@@ -182,7 +189,7 @@ test.describe('受付・管理画面の見え方', () => {
     await adminLogin(page, 'developer');
     await expect(page.getByText('製作者のアカウントは見るだけです')).toBeVisible();
     await expect(page.getByRole('list', { name: '今日の来場' }).getByText('マロン・ショコラ', { exact: true })).toBeVisible();
-    await checkScreen(page, v.name, 'M-02 今日の来場(製作者・見るだけ)');
+    await checkScreen(page, v.name, 'M-02 今日の来場(製作者・見るだけ)', v.touch);
     await page.close();
   });
 });

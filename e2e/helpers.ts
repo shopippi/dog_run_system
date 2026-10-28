@@ -42,7 +42,7 @@ export async function registerViaUi(page: Page, user: string, dogNames: string[]
   await page.getByLabel('利用規約とプライバシーポリシーに同意します').check();
   await page.getByRole('button', { name: '同意して次へ' }).click();
   for (const [i, name] of dogNames.entries()) {
-    if (i > 0) await page.getByRole('button', { name: '＋ もう1頭追加する' }).click();
+    if (i > 0) await page.getByRole('button', { name: 'もう1頭追加する' }).click();
     const form = page.locator('fieldset.dog-form').nth(i);
     await form.getByLabel('名前').fill(name);
     await form.getByRole('combobox', { name: /犬種/ }).selectOption({ label: 'トイプードル' });
