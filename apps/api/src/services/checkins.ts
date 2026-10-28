@@ -69,6 +69,8 @@ export async function recordCheckin(
     visitDate: string;
     now: Date;
     settings: Settings;
+    /** 同じまとまりで書き込む追加の処理(操作ログなど) */
+    extra?: D1PreparedStatement[];
   },
 ): Promise<CheckinResult> {
   const { householdId, visitDate, now, settings } = args;
@@ -147,6 +149,7 @@ export async function recordCheckin(
     );
   }
 
+  statements.push(...(args.extra ?? []));
   let results: D1Result[];
   try {
     results = await db.batch(statements);

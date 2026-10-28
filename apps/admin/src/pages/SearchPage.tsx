@@ -17,7 +17,7 @@ function formatDate(ymd: string | null) {
  * M-04 おうちを探す(S-06)。犬の名前・おうちの呼び名・会員IDで探す。
  * 「写真で探す」では、最近来たおうちの犬の写真を並べる(6.3)。
  */
-export function SearchPage({ actions }: { actions?: (h: HouseholdHit) => ReactNode }) {
+export function SearchPage({ actions, howto }: { actions?: (h: HouseholdHit) => ReactNode; howto?: string }) {
   const { staff } = useAuth();
   const [mode, setMode] = useState<Mode>('name');
   const [q, setQ] = useState('');
@@ -52,7 +52,8 @@ export function SearchPage({ actions }: { actions?: (h: HouseholdHit) => ReactNo
   return (
     <main className="con-body">
       <p className="howto">
-        {nameHint}の一部を入れると、当てはまるおうちが出ます。ひらがなとカタカナはどちらでも探せます。名前が分からないときは「写真で探す」から選んでください。
+        {howto ??
+          `${nameHint}の一部を入れると、当てはまるおうちが出ます。ひらがなとカタカナはどちらでも探せます。名前が分からないときは「写真で探す」から選んでください。`}
       </p>
       <div className="seg" role="tablist" aria-label="探し方">
         <button type="button" role="tab" aria-selected={mode === 'name'} onClick={() => setMode('name')}>
@@ -86,7 +87,7 @@ export function SearchPage({ actions }: { actions?: (h: HouseholdHit) => ReactNo
         </div>
       )}
       {error ? <ErrorNotice error={error} /> : null}
-      {selected && <HouseholdCard h={selected} onClose={() => setSelected(null)} actions={actions} />}
+      {selected && <HouseholdCard key={selected.id} h={selected} onClose={() => setSelected(null)} actions={actions} />}
       {hits === null ? null : hits.length === 0 ? (
         <p className="empty">
           {mode === 'photo' ? 'まだ来場したおうちがありません。' : '見つかりませんでした。別の言葉や、会員IDで探してみてください。'}

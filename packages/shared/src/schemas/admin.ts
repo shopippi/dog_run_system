@@ -19,3 +19,18 @@ export const walkinSchema = z.object({
     .min(1, { error: '頭数は1頭以上で入れてください。' })
     .max(30, { error: '一度に記録できるのは30頭までです。' }),
 });
+
+/** 代理チェックイン(S-04)。日付を指定して後から入力することもできる */
+export const proxyCheckinSchema = z.object({
+  householdId: z.number().int().positive(),
+  dogIds: z.array(z.number().int().positive()).min(1, { error: '来たワンちゃんを1頭以上選んでください。' }).max(30),
+  useTicket: z.boolean(),
+  /** 来場日(日本時間)。省略すると今日 */
+  date: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, { error: '日付を選び直してください。' })
+    .optional(),
+});
+
+/** 後から入力できるのは、何日前までか */
+export const PROXY_MAX_DAYS_BACK = 90;

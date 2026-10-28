@@ -115,3 +115,15 @@ body { font-size: 16px; }
 .sel-dogs { display: flex; flex-wrap: wrap; gap: 16px; }
 .sel-dog { display: flex; flex-direction: column; align-items: center; gap: 4px; }
 .sel-dog b { font-family: var(--f-display); font-size: 1.1rem; }
+.proxy { display: flex; flex-direction: column; gap: 12px; border-top: 1px solid var(--line); padding-top: 12px; }
+.date-field { max-width: 320px; }
+.dogpick { display: flex; flex-wrap: wrap; gap: 8px; }
+.dogpick label {
+  display: inline-flex; align-items: center; gap: 10px; min-height: 60px; padding: 6px 14px 6px 10px;
+  border: 1.5px solid var(--line); border-radius: 14px; background: var(--surface);
+}
+.dogpick label:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); }
+.dogpick input { width: 22px; height: 22px; accent-color: var(--accent); margin: 0; }
+.dogpick b { font-family: var(--f-display); }
+.check { display: inline-flex; align-items: center; gap: 10px; min-height: 44px; font-weight: 700; }
+.check input { width: 22px; height: 22px; accent-color: var(--gold); }

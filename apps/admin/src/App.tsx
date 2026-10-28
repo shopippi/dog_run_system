@@ -3,6 +3,7 @@ import { ErrorNotice } from './components/ErrorNotice';
 import { Layout } from './components/Layout';
 import { AuthProvider, useAuth } from './lib/auth';
 import { LoginPage } from './pages/LoginPage';
+import { ProxyCheckin } from './components/ProxyCheckin';
 import { SearchPage } from './pages/SearchPage';
 import { TodayPage } from './pages/TodayPage';
 
@@ -30,6 +31,16 @@ function Gate() {
       <Routes>
         <Route path="/" element={<TodayPage />} />
         <Route path="/search" element={<SearchPage />} />
+        <Route
+          path="/proxy"
+          element={
+            <SearchPage
+              key="proxy"
+              howto="スマホを持っていないお客さんを、犬の名前や会員IDで探して選び、来たワンちゃんを選んで「代理でチェックインする」を押してください。紙に書いた分は、来場日を選んで入力できます。"
+              actions={(h) => <ProxyCheckin h={h} />}
+            />
+          }
+        />
         <Route path="*" element={<Placeholder />} />
       </Routes>
     </Layout>
