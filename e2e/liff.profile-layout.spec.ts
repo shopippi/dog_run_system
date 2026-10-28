@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { newLineUser, openLiff, registerViaUi } from './helpers';
+import { answerSurvey, newLineUser, openLiff, registerViaUi } from './helpers';
 
 // 飼い主とワンちゃんの情報・ワンちゃんの登録のおやすみ(担当J)の見え方。確かめ方は e2e/liff.layout.spec.ts と同じ。
 const IOS_UA =
@@ -71,6 +71,53 @@ for (const d of DEVICES) {
       // L-09 犬の管理(おやすみ中のワンちゃん)
       await page.getByText('おやすみ中のワンちゃん').waitFor();
       await checkScreen(page, d.name, 'L-09 犬の管理(おやすみ中)');
+    });
+
+    test('飼い主とワンちゃんの情報の画面が、LINE の画面の中に収まる', async ({ page }) => {
+      test.setTimeout(90_000);
+      const user = newLineUser('ママ');
+      await openLiff(page, user);
+      await page.getByLabel('利用規約とプライバシーポリシーに同意します').check();
+      await page.getByRole('button', { name: '同意して次へ' }).click();
+
+      // L-02 犬の登録(体重・相性・予防注射の欄を開いたところ)
+      const form = page.locator('fieldset.dog-form').first();
+      await form.getByLabel('名前').fill('アルフォンス');
+      await form.getByRole('combobox', { name: /犬種/ }).selectOption({ label: 'バーニーズマウンテンドッグ' });
+      await checkScreen(page, d.name, 'L-02 犬の登録(任意の項目を閉じたところ)');
+      await form.locator('details.pf-more summary').click();
+      await form.getByLabel('体重').fill('38.5');
+      await form.getByRole('radio', { name: 'ふつう' }).check();
+      await form.getByLabel('狂犬病の予防注射').selectOption({ label: '2026年' });
+      await checkScreen(page, d.name, 'L-02 犬の登録(任意の項目)');
+      await page.getByRole('button', { name: '次へ' }).click();
+
+      // L-03 アンケート(よければ教えてください)
+      await answerSurvey(page);
+      const later = page.getByRole('region', { name: 'よければ教えてください' });
+      await later.getByRole('checkbox', { name: '健康・ケアの相談' }).check();
+      await later.getByRole('checkbox', { name: '土日の午前' }).check();
+      await checkScreen(page, d.name, 'L-03 アンケート(任意の質問)');
+      await page.getByRole('button', { name: '登録する' }).click();
+      await page.getByText('登録が完了しました').waitFor();
+
+      // L-10 プロフィール(新しい項目)
+      await openLiff(page, user, '/profile');
+      await page.getByRole('heading', { name: 'プロフィール' }).waitFor();
+      await checkScreen(page, d.name, 'L-10 プロフィール(新しい項目)');
+
+      // L-09 犬の変更(任意の項目が入っているので開いている)
+      await openLiff(page, user, '/dogs');
+      await page.getByRole('link', { name: /アルフォンス/ }).click();
+      await page.locator('details.pf-more[open]').waitFor();
+      await checkScreen(page, d.name, 'L-09 犬の変更(任意の項目)');
+
+      // L-07 会員証(任意のアンケートに答えていないおうちには、小さくお誘いを出す)
+      const other = newLineUser('パパ');
+      await registerViaUi(page, other, ['ニコ']);
+      await openLiff(page, other);
+      await page.locator('.pf-nudge').waitFor();
+      await checkScreen(page, d.name, 'L-07 会員証(任意のアンケートのお誘い)');
     });
   });
 }

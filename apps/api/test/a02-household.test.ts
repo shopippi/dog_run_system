@@ -33,7 +33,7 @@ describe('A-02 おうちの詳細', () => {
     const r = await registerUser(PAPA, [dog('アル'), dog('ニコ', { breedId: 5, size: 'medium', sex: 'female', birthYm: '2020-04' })], {
       survey: survey([
         { questionId: 3, value: '1500001' },
-        { questionId: 6, value: '誕生日会' },
+        { questionId: 10, value: '誕生日会' }, // 6〜9 は固定の質問(来たい時間帯など)
       ]),
     });
     await addFamily(r.memberNo, 'U002', 'ママ');
@@ -83,6 +83,10 @@ describe('A-02 おうちの詳細', () => {
       { label: 'お住まいの郵便番号', answer: '1500001' },
       { label: 'このドッグランを知ったきっかけ', answer: 'Instagram' },
       { label: 'ふだんの来場手段', answer: null },
+      { label: '来たい時間帯', answer: null },
+      { label: '興味のあるイベント', answer: null },
+      { label: 'ほかのドッグランも使っていますか', answer: null },
+      { label: 'お知らせをLINEで受け取りますか', answer: null },
       { label: '来てほしいイベント', answer: '誕生日会' },
     ]);
     expect(d.survey.members[1]).toEqual({

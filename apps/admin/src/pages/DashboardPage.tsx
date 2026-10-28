@@ -186,6 +186,9 @@ function Body({ data, busy }: { data: DashboardResponse; busy: boolean }) {
         <Panel title="年齢" note="期間の終わりの日の年齢です。7歳からがシニアです。">
           <BarChart bars={data.dogs.ages} unit="頭" label="年齢" />
         </Panel>
+        <Panel title="ほかの犬との相性" note="お客さんが登録した、ほかの犬との相性です。小型犬だけの時間帯などを考えるときに使います。">
+          <BarChart bars={data.dogs.sociability} unit="頭" label="ほかの犬との相性" />
+        </Panel>
         <Panel title="飼い主の年代" note={`チェックインした家族 ${data.owners.members}人です。`}>
           <BarChart bars={data.owners.ageGroups} unit="人" label="飼い主の年代" />
         </Panel>
@@ -200,6 +203,15 @@ function Body({ data, busy }: { data: DashboardResponse; busy: boolean }) {
         </Panel>
         <Panel title="ふだんの来場手段">
           <BarChart bars={data.owners.transports} unit="軒" label="ふだんの来場手段" />
+        </Panel>
+        <Panel title="来たい時間帯" note="いくつでも選べる質問です。選んだ時間帯ごとに、おうちを数えています。">
+          <BarChart bars={data.owners.preferredTimes} unit="軒" label="来たい時間帯" />
+        </Panel>
+        <Panel title="興味のあるイベント" note="いくつでも選べる質問です。選んだイベントごとに、おうちを数えています。">
+          <BarChart bars={data.owners.eventInterests} unit="軒" label="興味のあるイベント" />
+        </Panel>
+        <Panel title="ほかのドッグランの利用">
+          <BarChart bars={data.owners.otherRuns} unit="軒" label="ほかのドッグランの利用" />
         </Panel>
         {full && data.family && (
           <Panel title="家族での利用" note="期間中に来場したおうちのうち、LINEでつながっている家族が2人以上のおうちです。">

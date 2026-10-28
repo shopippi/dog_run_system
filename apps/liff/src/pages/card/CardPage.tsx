@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { DogAvatar } from '../../components/DogAvatar';
 import { ErrorNotice } from '../../components/ErrorNotice';
 import { Icon } from '../../components/Icon';
+import { ProfileNudge } from '../../components/ProfileNudge';
 import { useMe } from '../../hooks/useMe';
 import { canScan, scanCheckinCode } from '../../lib/liff';
 
@@ -96,6 +97,7 @@ function Card({ me }: { me: MeRegistered }) {
           <Icon name="chevron-right" />
         </Link>
       </nav>
+      <ProfileNudge pending={me.optionalSurveyPending} />
       <p className="note">1日1ポイント。{card.pointsPerTicket}ポイントで無料券1枚(来場1回分)。</p>
       <Link to="/help" className="cu-link">
         使い方・よくある質問

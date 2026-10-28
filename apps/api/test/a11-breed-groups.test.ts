@@ -134,8 +134,9 @@ describe('A-11 犬種を大まかな分け方にする', () => {
       expect(names.has(group), group).toBe(true);
       expect(sql).toContain(`('${old}', '${group}')`);
     }
-    const pairs = sql.match(/\('[^']+', '[^']+'\)/g) ?? [];
-    const inSql = new Set(pairs.filter((p) => !/^\('(small|medium|large)/.test(p)));
+    const cte = env.TEST_MIGRATIONS.find((x) => x.name.startsWith('0007_'))!.queries.filter((q) => q.includes('WITH m(old, new)')).join('\n');
+    const pairs = cte.match(/\('[^']+', '[^']+'\)/g) ?? [];
+    const inSql = new Set(pairs);
     expect(inSql.size).toBe(Object.keys(BREED_GROUP_ALIASES).length);
   });
 });

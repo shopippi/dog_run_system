@@ -1,5 +1,7 @@
 import {
   SURVEY_NEED_OPTIONS_MESSAGE,
+  YES_NO_SURVEY_KEYS,
+  decodeMultiAnswer,
   orderSchema,
   surveyQuestionCreateSchema,
   surveyQuestionPatchSchema,
@@ -14,9 +16,11 @@ import { errors } from '../../lib/errors';
 import { requireRole } from '../../lib/staff-auth';
 import { parseJson } from '../../lib/validate';
 import { auditStatement } from '../../services/audit';
+import { surveyKindOf } from '../../services/survey';
 import { registerUndo } from '../../services/undo';
 
 // A-10 アンケートの管理(M-11)
+// - 答え方は「選ぶ」「いくつでも選ぶ」(multi。データベースでは kind = 'choice' と multiple = 1)「自由に書く」
 // - 固定の質問(7.1)は、文と選択肢だけ変えられる。非表示・削除はできない
 // - 追加した質問(7.2)は、追加・変更・非表示・並べ替えができる。削除はしない(非表示)
 // - 追加した質問は、既存の会員には次に LIFF を開いたときに1回だけ出る(/api/survey。services/survey.ts)
@@ -27,7 +31,9 @@ type Row = {
   id: number;
   fixed_key: string | null;
   target: AdminSurveyQuestion['target'];
-  kind: AdminSurveyQuestion['kind'];
+  kind: 'choice' | 'text';
+  /** 1 なら「いくつでも選ぶ」(データベースの kind は 'choice'。migrations/0007_profile.sql) */
+  multiple: number;
   label: string;
   options: string;
   required: number;
@@ -36,7 +42,7 @@ type Row = {
   answer_count: number | null;
 };
 
-const SELECT = `SELECT q.id, q.fixed_key, q.target, q.kind, q.label, q.options, q.required, q.visible, q.is_fixed,
+const SELECT = `SELECT q.id, q.fixed_key, q.target, q.kind, q.multiple, q.label, q.options, q.required, q.visible, q.is_fixed,
     CASE WHEN q.is_fixed = 1 THEN NULL
          ELSE (SELECT COUNT(*) FROM survey_answers a WHERE a.question_id = q.id AND a.skipped = 0) END AS answer_count
   FROM survey_questions q`;
@@ -46,7 +52,7 @@ const toQuestion = (r: Row): AdminSurveyQuestion => ({
   fixedKey: r.fixed_key,
   isFixed: r.is_fixed === 1,
   target: r.target,
-  kind: r.kind,
+  kind: surveyKindOf(r),
   label: r.label,
   options: JSON.parse(r.options) as string[],
   required: r.required === 1,
@@ -84,9 +90,12 @@ const pickEditable = (q: AdminSurveyQuestion): Editable => ({
 });
 const updateStatement = (db: D1Database, id: number, v: Editable) =>
   db
-    .prepare('UPDATE survey_questions SET target = ?, kind = ?, label = ?, options = ?, required = ?, visible = ? WHERE id = ?')
-    .bind(v.target, v.kind, v.label, JSON.stringify(v.options), v.required ? 1 : 0, v.visible ? 1 : 0, id);
+    .prepare('UPDATE survey_questions SET target = ?, kind = ?, multiple = ?, label = ?, options = ?, required = ?, visible = ? WHERE id = ?')
+    .bind(v.target, ...dbKind(v.kind), v.label, JSON.stringify(v.options), v.required ? 1 : 0, v.visible ? 1 : 0, id);
 const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
+/** 答え方を、データベースの kind と multiple にする(kind の CHECK は choice・text だけのため) */
+const dbKind = (kind: AdminSurveyQuestion['kind']): ['choice' | 'text', 0 | 1] =>
+  kind === 'text' ? ['text', 0] : ['choice', kind === 'multi' ? 1 : 0];
 
 // 質問の一覧(固定の質問・非表示を含む)。管理者(製作者は見るだけ)
 surveyQuestionsRoutes.get('/survey-questions', requireRole('admin'), async (c) => c.json(await listAll(c.env.DB)));
@@ -99,10 +108,10 @@ surveyQuestionsRoutes.post('/survey-questions', requireRole('admin'), async (c) 
   const res = await db.batch([
     db
       .prepare(
-        `INSERT INTO survey_questions (fixed_key, target, kind, label, options, required, sort_order, visible, is_fixed, created_at)
-         VALUES (NULL, ?, ?, ?, ?, ?, (SELECT COALESCE(MAX(sort_order), 0) + 10 FROM survey_questions), 1, 0, ?)`,
+        `INSERT INTO survey_questions (fixed_key, target, kind, multiple, label, options, required, sort_order, visible, is_fixed, created_at)
+         VALUES (NULL, ?, ?, ?, ?, ?, ?, (SELECT COALESCE(MAX(sort_order), 0) + 10 FROM survey_questions), 1, 0, ?)`,
       )
-      .bind(input.target, input.kind, input.label, JSON.stringify(input.options), input.required ? 1 : 0, toJstIso(now)),
+      .bind(input.target, ...dbKind(input.kind), input.label, JSON.stringify(input.options), input.required ? 1 : 0, toJstIso(now)),
     auditStatement(db, {
       staffId: c.get('staff').id,
       action: 'survey_question.create',
@@ -155,9 +164,13 @@ surveyQuestionsRoutes.patch('/survey-questions/:id', requireRole('admin'), async
     if (q.kind === 'text' && input.options && input.options.length > 0) {
       throw errors.badRequest('この質問は自由に書く質問なので、選択肢は入れられません。');
     }
+    // はい・いいえの質問は、回答を 1 / 0 で保存しているので選択肢を変えられない(担当J)
+    if ((YES_NO_SURVEY_KEYS as readonly string[]).includes(q.fixedKey ?? '') && input.options && !same(input.options, current.options)) {
+      throw errors.badRequest('「はい・いいえ」で答える質問は、選択肢を変えられません。文だけ変えられます。');
+    }
   }
   if (next.kind === 'text') next.options = [];
-  if (next.kind === 'choice' && next.options.length < 2) throw errors.badRequest(SURVEY_NEED_OPTIONS_MESSAGE);
+  if (next.kind !== 'text' && next.options.length < 2) throw errors.badRequest(SURVEY_NEED_OPTIONS_MESSAGE);
   if ((next.target !== current.target || next.kind !== current.kind) && (q.answerCount ?? 0) > 0) {
     throw errors.conflict(
       'question_answered',
@@ -206,13 +219,21 @@ surveyQuestionsRoutes.get('/survey-questions/:id/summary', requireRole('admin'),
     .prepare('SELECT COUNT(*) AS n FROM survey_answers WHERE question_id = ? AND skipped = 1')
     .bind(q.id)
     .first<{ n: number }>();
-  const byAnswer = new Map(results.map((r) => [r.answer, r.n]));
+  // いくつでも選ぶ質問は、選んだ選択肢ごとに数える(1つの回答が、いくつかの選択肢に数えられる)
+  const rows =
+    q.kind === 'multi'
+      ? [...results.reduce((m, r) => {
+          for (const o of decodeMultiAnswer(r.answer)) m.set(o, (m.get(o) ?? 0) + r.n);
+          return m;
+        }, new Map<string, number>())].map(([answer, n]) => ({ answer, n }))
+      : results;
+  const byAnswer = new Map(rows.map((r) => [r.answer, r.n]));
   const answered = results.reduce((sum, r) => sum + r.n, 0);
   const counts: SurveyQuestionSummary['counts'] = [];
   let texts: SurveyQuestionSummary['texts'] = [];
-  if (q.kind === 'choice') {
+  if (q.kind === 'choice' || q.kind === 'multi') {
     for (const o of q.options) counts.push({ option: o, count: byAnswer.get(o) ?? 0, current: true });
-    for (const r of results.filter((r) => !q.options.includes(r.answer)).sort((a, b) => b.n - a.n)) {
+    for (const r of rows.filter((r) => !q.options.includes(r.answer)).sort((a, b) => b.n - a.n)) {
       counts.push({ option: r.answer, count: r.n, current: false });
     }
   } else {

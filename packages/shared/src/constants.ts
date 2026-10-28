@@ -104,7 +104,8 @@ export type StaffStatus = (typeof STAFF_STATUSES)[number];
 export const SURVEY_TARGETS = ['member', 'household'] as const;
 export type SurveyTarget = (typeof SURVEY_TARGETS)[number];
 
-export const SURVEY_KINDS = ['choice', 'text'] as const;
+/** 答え方: choice 1つ選ぶ / text 自由に書く / multi いくつでも選ぶ(複数選択) */
+export const SURVEY_KINDS = ['choice', 'text', 'multi'] as const;
 export type SurveyKind = (typeof SURVEY_KINDS)[number];
 
 export const DAY_TYPES = ['weekday', 'saturday', 'sunday', 'holiday'] as const;
@@ -116,7 +117,18 @@ export type AuditActor = ActorType;
 
 // 固定のアンケート(要件定義書 7.1)。選択肢の文言は survey_questions に入り、管理画面から変えられる。
 // 回答は分析しやすいよう households / family_members の列に保存する。
-export const FIXED_SURVEY_KEYS = ['age_group', 'gender', 'postal_code', 'referral', 'transport'] as const;
+export const FIXED_SURVEY_KEYS = [
+  'age_group',
+  'gender',
+  'postal_code',
+  'referral',
+  'transport',
+  // 2026-10-28 に足した、おうちへの任意の質問(担当J)
+  'preferred_times',
+  'event_interests',
+  'uses_other_runs',
+  'wants_news',
+] as const;
 export type FixedSurveyKey = (typeof FIXED_SURVEY_KEYS)[number];
 
 export const AGE_GROUPS = ['10代', '20代', '30代', '40代', '50代', '60代', '70代以上'] as const;
@@ -215,3 +227,33 @@ export const BREED_GROUP_ALIASES: Readonly<Record<string, string>> = {
   '雑種': 'ミックス',
   'MIX': 'ミックス',
 };
+
+// ---------------------------------------------------------------
+// 飼い主とワンちゃんの情報(2026-10-28 に足した項目。要件定義書 6.1・7.1、担当J)
+// ---------------------------------------------------------------
+
+/** 来たい時間帯(おうち・任意・複数選択) */
+export const PREFERRED_TIMES = ['平日の昼', '平日の夕方', '土日の午前', '土日の午後'] as const;
+/** 興味のあるイベント(おうち・任意・複数選択) */
+export const EVENT_INTERESTS = ['しつけ教室', '写真撮影会', '季節のイベント', '犬種別の集まり', '健康・ケアの相談'] as const;
+/** はい・いいえで答える固定の質問の選択肢。households には 1(はい)/ 0(いいえ)で入れる */
+export const YES_NO = ['はい', 'いいえ'] as const;
+/** はい・いいえで答える固定の質問(選択肢は変えられない) */
+export const YES_NO_SURVEY_KEYS = ['uses_other_runs', 'wants_news'] as const;
+/** いくつでも選ぶ固定の質問(households に JSON の配列で入れる) */
+export const MULTI_SURVEY_KEYS = ['preferred_times', 'event_interests'] as const;
+
+/** ほかの犬との相性(ワンちゃん・任意)。小型犬だけの時間帯などの運営に使う */
+export const DOG_SOCIABILITY = ['good', 'normal', 'shy'] as const;
+export type DogSociability = (typeof DOG_SOCIABILITY)[number];
+export const DOG_SOCIABILITY_LABELS: Record<DogSociability, string> = {
+  good: '得意',
+  normal: 'ふつう',
+  shy: '苦手',
+};
+
+/** ワンちゃんの体重(kg、小数1桁) */
+export const DOG_WEIGHT_MIN = 0.1;
+export const DOG_WEIGHT_MAX = 100;
+/** 予防注射・ワクチンの年の最初(最後は今年) */
+export const VACCINE_YEAR_MIN = 2000;

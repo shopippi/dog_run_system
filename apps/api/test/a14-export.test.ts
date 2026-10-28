@@ -28,7 +28,7 @@ describe('A-14 CSV出力', () => {
     const bytes = new Uint8Array(await res.arrayBuffer());
     expect([...bytes.slice(0, 3)]).toEqual([0xef, 0xbb, 0xbf]);
     expect(new TextDecoder().decode(bytes).split('\r\n')[0]).toBe(
-      '会員ID,おうちの呼び名,登録日時,登録のしかた,状態,統合先の会員ID,郵便番号,知ったきっかけ,来場手段,家族の人数,ワンちゃんの数,ポイント,使える無料券,来場回数,最初の来場日,最後の来場日',
+      '会員ID,おうちの呼び名,登録日時,登録のしかた,状態,統合先の会員ID,郵便番号,知ったきっかけ,来場手段,家族の人数,ワンちゃんの数,ポイント,使える無料券,来場回数,最初の来場日,最後の来場日,来たい時間帯,興味のあるイベント,ほかのドッグランの利用,お知らせの受け取り',
     );
   });
 
@@ -37,15 +37,15 @@ describe('A-14 CSV出力', () => {
     const r = await registerUser('U001:パパ', [dog('アル'), dog('ニコ', { breedId: 11, breedOther: 'ポメプー' })]);
     await checkin('U001:パパ', [r.dogs[0]!.id], { now: DAY1 });
     const h = await csv(cookie, 'households');
-    expect(h.lines[1]).toMatch(/^DR-000001,アル・ニコのおうち,.*,新規,有効,,,Instagram,,1,2,1,0,1,2026-10-27,2026-10-27$/);
+    expect(h.lines[1]).toMatch(/^DR-000001,アル・ニコのおうち,.*,新規,有効,,,Instagram,,1,2,1,0,1,2026-10-27,2026-10-27,,,,$/);
 
     const m = await csv(cookie, 'members');
     expect(m.lines[0]).toBe('会員ID,おうちの呼び名,LINEの名前,年代,性別,参加日時,参加のしかた,状態,抜けた日時');
     expect(m.lines[1]).toMatch(/^DR-000001,アル・ニコのおうち,パパ,30代,女性,.*,初回登録,参加中,$/);
 
     const d = await csv(cookie, 'dogs');
-    expect(d.lines[1]).toMatch(/^DR-000001-1,DR-000001,アル・ニコのおうち,アル,プードル,小型,,,登録中,なし,.*,1$/);
-    expect(d.lines[2]).toMatch(/^DR-000001-2,.*,ニコ,ポメプー,小型,.*,0$/);
+    expect(d.lines[1]).toMatch(/^DR-000001-1,DR-000001,アル・ニコのおうち,アル,プードル,小型,,,登録中,なし,.*,1,,,,$/);
+    expect(d.lines[2]).toMatch(/^DR-000001-2,.*,ニコ,ポメプー,小型,.*,0,,,,$/);
   });
 
   it('来場とポイント台帳は期間を指定できる。取り消しも出る', async () => {

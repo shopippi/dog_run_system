@@ -98,6 +98,37 @@ const OTHER_BREEDS: [string, 'small' | 'medium'][] = [
   ['紀州犬', 'medium'],
 ];
 
+// ---- 2026-10-28 に足した項目(来たい時間帯・興味のあるイベント・体重・相性など)
+// これまでの乱数の並び(おうち・犬・来場の作り方)を変えないよう、番号から決める
+const hash01 = (n: number, salt: number) => (((n * 2654435761) ^ (salt * 40503)) >>> 0) % 1000 / 1000;
+const PREFERRED = ['平日の昼', '平日の夕方', '土日の午前', '土日の午後'];
+const EVENTS = ['しつけ教室', '写真撮影会', '季節のイベント', '犬種別の集まり', '健康・ケアの相談'];
+function pickSome(n: number, salt: number, options: string[], rate: number): string | null {
+  if (hash01(n, salt) > rate) return null; // 答えていないおうち
+  const picked = options.filter((_, i) => hash01(n, salt * 10 + i + 1) < 0.4);
+  return JSON.stringify(picked.length ? picked : [options[Math.floor(hash01(n, salt + 7) * options.length)]!]);
+}
+function profileOf(hid: number) {
+  const yesNo = (salt: number, answerRate: number, yesRate: number) =>
+    hash01(hid, salt) < answerRate ? (hash01(hid, salt + 1) < yesRate ? 1 : 0) : null;
+  return {
+    preferredTimes: pickSome(hid, 1, PREFERRED, 0.6),
+    eventInterests: pickSome(hid, 2, EVENTS, 0.5),
+    usesOtherRuns: yesNo(3, 0.55, 0.45),
+    wantsNews: yesNo(5, 0.6, 0.7),
+  };
+}
+function dogExtraOf(id: number, size: string) {
+  const [lo, hi] = size === 'large' ? [20, 38] : size === 'medium' ? [8, 18] : [2, 8];
+  const soc = hash01(id, 12);
+  return {
+    weightKg: hash01(id, 11) < 0.6 ? Math.round((lo + (hi - lo) * hash01(id, 13)) * 10) / 10 : null,
+    sociability: soc < 0.35 ? 'good' : soc < 0.55 ? 'normal' : soc < 0.65 ? 'shy' : null,
+    rabiesYear: hash01(id, 14) < 0.7 ? (hash01(id, 15) < 0.6 ? 2026 : 2025) : null,
+    comboYear: hash01(id, 16) < 0.6 ? (hash01(id, 17) < 0.6 ? 2026 : 2025) : null,
+  };
+}
+
 const DOG_NAMES = [
   'もも', 'ココ', 'マロン', 'ソラ', 'ハナ', 'レオ', 'チョコ', 'ムギ', 'ラッキー', 'サクラ', 'モカ', 'ルナ', 'リク',
   'コタロウ', 'きなこ', 'あずき', 'ベル', 'ミルク', 'ナナ', 'ハル', 'くるみ', 'ゴン', 'テン', 'ジロー', 'マル', 'ラテ',
@@ -477,11 +508,16 @@ export async function seedDemo(sql: Database, opts: SeedOptions): Promise<SeedSu
     // おうち・家族・犬
     for (const h of households.sort((a, b) => a.id - b.id)) {
       const name = autoHouseholdName(h.dogs.map((d) => d.name));
+      const p = profileOf(h.id);
       run(
         `INSERT INTO households (id, member_no, display_name, display_name_search, display_name_auto, registered_at, source,
-                                 postal_code, referral, transport, status, updated_at)
-         VALUES (?, ?, ?, ?, 1, ?, ?, ?, ?, ?, 'active', ?)`,
-        [h.id, formatMemberNo(h.id), name, normalizeForSearch(name), h.regAt, h.source, h.postal, h.referral, h.transport, h.regAt],
+                                 postal_code, referral, transport, preferred_times, event_interests, uses_other_runs, wants_news,
+                                 status, updated_at)
+         VALUES (?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', ?)`,
+        [
+          h.id, formatMemberNo(h.id), name, normalizeForSearch(name), h.regAt, h.source, h.postal, h.referral, h.transport,
+          p.preferredTimes, p.eventInterests, p.usesOtherRuns, p.wantsNews, h.regAt,
+        ],
       );
       for (const m of h.members) {
         run(
@@ -492,10 +528,15 @@ export async function seedDemo(sql: Database, opts: SeedOptions): Promise<SeedSu
         );
       }
       for (const d of h.dogs) {
+        const x = dogExtraOf(d.id, d.size);
         run(
-          `INSERT INTO dogs (id, dog_no, household_id, name, name_search, breed_id, breed_other, size, sex, birth_ym, status, created_at, updated_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?)`,
-          [d.id, d.no, h.id, d.name, normalizeForSearch(d.name), d.breedId, d.breedOther, d.size, d.sex, d.birthYm, h.regAt, h.regAt],
+          `INSERT INTO dogs (id, dog_no, household_id, name, name_search, breed_id, breed_other, size, sex, birth_ym,
+                             weight_kg, sociability, rabies_vaccine_year, combo_vaccine_year, status, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?)`,
+          [
+            d.id, d.no, h.id, d.name, normalizeForSearch(d.name), d.breedId, d.breedOther, d.size, d.sex, d.birthYm,
+            x.weightKg, x.sociability, x.rabiesYear, x.comboYear, h.regAt, h.regAt,
+          ],
         );
       }
       if (h.migration) {

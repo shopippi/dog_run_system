@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { newLineUser, openLiff, registerViaUi } from './helpers';
+import { adminLogin, answerSurvey, newLineUser, openLiff, registerViaUi } from './helpers';
 
 // 飼い主とワンちゃんの情報・ワンちゃんの登録のおやすみ(担当J)の、文字と背景のコントラスト(WCAG の 4.5:1)。
 // lowContrast は e2e/contrast.spec.ts と同じもの。
@@ -107,6 +107,65 @@ for (const scheme of ['light', 'dark'] as const) {
       await page.getByRole('button', { name: 'おやすみする', exact: true }).click();
       await page.getByText('おやすみ中のワンちゃん').waitFor();
       await check(page, 'L-09 犬の管理(おやすみ中)');
+      await page.close();
+    });
+
+    test('飼い主とワンちゃんの情報の文字が背景に対して読める(お客さん向け)', async ({ browser }) => {
+      test.setTimeout(90_000);
+      const page = await browser.newPage({ ...PHONE, colorScheme: scheme });
+      const user = newLineUser('ママ');
+      await openLiff(page, user);
+      await page.getByLabel('利用規約とプライバシーポリシーに同意します').check();
+      await page.getByRole('button', { name: '同意して次へ' }).click();
+      const form = page.locator('fieldset.dog-form').first();
+      await form.getByLabel('名前').fill('アル');
+      await form.getByRole('combobox', { name: /犬種/ }).selectOption({ label: 'プードル' });
+      await form.locator('details.pf-more summary').click();
+      await form.getByLabel('体重').fill('4.2');
+      await form.getByRole('radio', { name: '得意' }).check();
+      await check(page, 'L-02 犬の登録(任意の項目)');
+      await page.getByRole('button', { name: '次へ' }).click();
+      await answerSurvey(page);
+      await page.getByRole('checkbox', { name: '平日の昼' }).check();
+      await check(page, 'L-03 アンケート(任意の質問)');
+      await page.getByRole('button', { name: '登録する' }).click();
+      await page.getByText('登録が完了しました').waitFor();
+      await openLiff(page, user, '/profile');
+      await page.getByRole('heading', { name: 'プロフィール' }).waitFor();
+      await check(page, 'L-10 プロフィール(新しい項目)');
+
+      const other = newLineUser('パパ');
+      await registerViaUi(page, other, ['ニコ']);
+      await openLiff(page, other);
+      await page.locator('.pf-nudge').waitFor();
+      await check(page, 'L-07 会員証(任意のアンケートのお誘い)');
+      await page.close();
+    });
+
+    test('飼い主とワンちゃんの情報の文字が背景に対して読める(管理画面)', async ({ browser }) => {
+      test.setTimeout(90_000);
+      const customer = await browser.newPage();
+      // ライトとダークで別のおうちにする(データベースはテスト全体で共有するため)
+      const dogName = scheme === 'light' ? 'ダイフク' : 'サクラモチ';
+      await registerViaUi(customer, newLineUser('パパ'), [dogName]);
+      await customer.close();
+      const page = await browser.newPage({ viewport: { width: 1280, height: 800 }, colorScheme: scheme });
+      await adminLogin(page, 'admin');
+      await page.getByRole('link', { name: 'おうちを探す' }).click();
+      await page.getByRole('searchbox', { name: '探す言葉' }).fill(dogName);
+      await page.getByRole('link', { name: `${dogName}のおうちの詳細を開く` }).click();
+      await page.getByRole('button', { name: 'おうちの回答を変える' }).click();
+      const dialog = page.getByRole('dialog', { name: 'おうちの回答を変える' });
+      await dialog.getByRole('checkbox', { name: '平日の夕方' }).check();
+      await check(page, 'M-06 おうちの回答を変える');
+      await dialog.getByRole('button', { name: 'やめる' }).click();
+      await page.getByRole('link', { name: `${dogName}の情報を見る・変える` }).click();
+      await page.getByLabel('体重(kg)').fill('200');
+      await page.getByText(/体重は0.1から100まで/).waitFor();
+      await check(page, 'M-07 ワンちゃんの情報の変更(体重・相性・予防注射)');
+      await page.getByRole('link', { name: 'アンケート' }).click();
+      await page.getByRole('listitem', { name: '来たい時間帯' }).waitFor();
+      await check(page, 'M-11 アンケートの設定(いくつでも選ぶ)');
       await page.close();
     });
   });

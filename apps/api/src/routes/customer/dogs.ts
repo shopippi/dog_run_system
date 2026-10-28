@@ -57,16 +57,19 @@ dogRoutes.post('/dogs', async (c) => {
   return c.json({ dog: await getDog(c.env.DB, id, MEDIA_BASE) }, 201);
 });
 
-// 名前などの変更(C-08)。犬種とサイズは変えられない
+// 名前などの変更(C-08)。犬種とサイズは変えられない。体重・相性・予防注射の年は、お客さんも変えられる
 dogRoutes.patch('/dogs/:id', async (c) => {
   const id = Number(c.req.param('id'));
   const member = await requireOwnDog(c, id);
   const patch = await parseJson(c, dogPatchSchema);
   const db = c.env.DB;
   const current = await db
-    .prepare("SELECT name, sex, birth_ym, status FROM dogs WHERE id = ?")
+    .prepare(
+      `SELECT name, sex, birth_ym, weight_kg, sociability, rabies_vaccine_year, combo_vaccine_year, status
+         FROM dogs WHERE id = ?`,
+    )
     .bind(id)
-    .first<{ name: string; sex: string | null; birth_ym: string | null; status: string }>();
+    .first<Record<string, string | number | null> & { name: string; status: string }>();
   if (!current || current.status !== 'active') {
     throw errors.conflict('dog_retired', 'このワンちゃんは登録をおやすみしています。「ワンちゃん」の画面で戻してから変えてください。');
   }
@@ -76,27 +79,38 @@ dogRoutes.patch('/dogs/:id', async (c) => {
     ['name', 'name'],
     ['sex', 'sex'],
     ['birthYm', 'birth_ym'],
+    ['weightKg', 'weight_kg'],
+    ['sociability', 'sociability'],
+    ['rabiesVaccineYear', 'rabies_vaccine_year'],
+    ['comboVaccineYear', 'combo_vaccine_year'],
   ];
+  const next: Record<string, string | number | null> = { ...current };
   const statements: D1PreparedStatement[] = [];
   for (const [key, col] of columns) {
     if (!(key in patch)) continue;
     const after = patch[key] ?? null;
-    const before = current[col as keyof typeof current] ?? null;
+    const before = current[col] ?? null;
     if (after === before) continue;
+    next[col] = after;
     statements.push(dogChangeStatement(db, id, col, before, after, actor, nowIso));
   }
   if (statements.length > 0) {
-    const name = patch.name ?? current.name;
+    const name = String(next.name);
     statements.unshift(
       db
         .prepare(
-          `UPDATE dogs SET name = ?, name_search = ?, sex = ?, birth_ym = ?, updated_at = ? WHERE id = ?`,
+          `UPDATE dogs SET name = ?, name_search = ?, sex = ?, birth_ym = ?, weight_kg = ?, sociability = ?,
+                  rabies_vaccine_year = ?, combo_vaccine_year = ?, updated_at = ? WHERE id = ?`,
         )
         .bind(
           name,
           normalizeForSearch(name),
-          'sex' in patch ? (patch.sex ?? null) : current.sex,
-          'birthYm' in patch ? (patch.birthYm ?? null) : current.birth_ym,
+          next.sex ?? null,
+          next.birth_ym ?? null,
+          next.weight_kg ?? null,
+          next.sociability ?? null,
+          next.rabies_vaccine_year ?? null,
+          next.combo_vaccine_year ?? null,
           nowIso,
           id,
         ),

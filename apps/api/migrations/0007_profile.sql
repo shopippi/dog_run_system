@@ -2,6 +2,36 @@
 -- 追加だけ(既存の列は変えない)
 
 -- ============================================================
+-- C-03 飼い主とワンちゃんの情報の見直し(docs/changes-2026-10-28.md 7章、要件定義書 6.1・7.1)
+-- 新しい項目はすべて任意。分析と運営に使う
+-- ============================================================
+
+-- おうち(最初の1人が答え、あとから家族の誰でも変えられる)
+ALTER TABLE households ADD COLUMN preferred_times TEXT;           -- 来たい時間帯(JSON の配列。例 ["平日の昼","土日の午前"])
+ALTER TABLE households ADD COLUMN event_interests TEXT;           -- 興味のあるイベント(JSON の配列)
+ALTER TABLE households ADD COLUMN uses_other_runs INTEGER CHECK (uses_other_runs IN (0, 1));  -- ほかのドッグランも使っている(1 はい / 0 いいえ)
+ALTER TABLE households ADD COLUMN wants_news INTEGER CHECK (wants_news IN (0, 1));            -- お知らせを受け取る(将来の LINE 配信の同意)
+
+-- ワンちゃん
+ALTER TABLE dogs ADD COLUMN weight_kg REAL CHECK (weight_kg IS NULL OR (weight_kg >= 0.1 AND weight_kg <= 100));  -- 体重(kg、小数1桁)
+ALTER TABLE dogs ADD COLUMN sociability TEXT CHECK (sociability IN ('good', 'normal', 'shy'));   -- ほかの犬との相性(得意・ふつう・苦手)
+ALTER TABLE dogs ADD COLUMN rabies_vaccine_year INTEGER;          -- 狂犬病の予防注射の年(西暦)
+ALTER TABLE dogs ADD COLUMN combo_vaccine_year INTEGER;           -- 混合ワクチンの年(西暦)
+
+-- アンケートの「いくつでも選ぶ」(複数選択)。survey_questions.kind には CHECK (kind IN ('choice', 'text')) があり、
+-- SQLite では列の制約を変えられない(テーブルを作り直すことになる)ため、kind は 'choice' のまま、この列で複数選択を表す。
+-- アプリでは kind = 'choice' かつ multiple = 1 を 'multi' として扱う(apps/api/src/services/survey.ts)。
+-- 回答は選んだ選択肢の JSON の配列で入れる(survey_answers.answer、households の列)。
+ALTER TABLE survey_questions ADD COLUMN multiple INTEGER NOT NULL DEFAULT 0 CHECK (multiple IN (0, 1));
+
+-- 固定の質問を足す(要件定義書 7.1)。並び順は「ふだんの来場手段」(50)のすぐあと、管理者が足した質問より前
+INSERT OR IGNORE INTO survey_questions (fixed_key, target, kind, multiple, label, options, required, sort_order, is_fixed, created_at) VALUES
+  ('preferred_times', 'household', 'choice', 1, '来たい時間帯', '["平日の昼","平日の夕方","土日の午前","土日の午後"]', 0, 52, 1, '2026-10-28T00:00:00+09:00'),
+  ('event_interests', 'household', 'choice', 1, '興味のあるイベント', '["しつけ教室","写真撮影会","季節のイベント","犬種別の集まり","健康・ケアの相談"]', 0, 54, 1, '2026-10-28T00:00:00+09:00'),
+  ('uses_other_runs', 'household', 'choice', 0, 'ほかのドッグランも使っていますか', '["はい","いいえ"]', 0, 56, 1, '2026-10-28T00:00:00+09:00'),
+  ('wants_news', 'household', 'choice', 0, 'お知らせをLINEで受け取りますか', '["はい","いいえ"]', 0, 58, 1, '2026-10-28T00:00:00+09:00');
+
+-- ============================================================
 -- A-11 犬種を大まかな分け方にする(docs/changes-2026-10-28.md 6章)
 -- 新しく作るデータベースは 0001_init.sql の時点で新しい一覧になっているので、ここは何もしない。
 -- すでにあるデータベースでは、細かい犬種(トイプードル・カニンヘンダックスフンドなど)を大まかな犬種にまとめる。

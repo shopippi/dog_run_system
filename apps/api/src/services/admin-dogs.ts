@@ -2,6 +2,7 @@ import {
   DOG_FIELD_LABELS,
   DOG_SEX_LABELS,
   DOG_SIZE_LABELS,
+  DOG_SOCIABILITY_LABELS,
   DOG_STATUS_LABELS,
   normalizeForSearch,
   toJstIso,
@@ -9,6 +10,7 @@ import {
   type AdminDogPatch,
   type DogSex,
   type DogSize,
+  type DogSociability,
   type DogStatus,
   type HouseholdStatus,
 } from '@dr/shared';
@@ -30,6 +32,10 @@ type DogRow = {
   size: DogSize;
   sex: DogSex | null;
   birth_ym: string | null;
+  weight_kg: number | null;
+  sociability: DogSociability | null;
+  rabies_vaccine_year: number | null;
+  combo_vaccine_year: number | null;
   status: DogStatus;
   photo_key: string | null;
   thumb_key: string | null;
@@ -41,6 +47,7 @@ async function loadDogRow(db: D1Database, id: number): Promise<DogRow | null> {
   return db
     .prepare(
       `SELECT d.id, d.household_id, d.name, d.breed_id, d.breed_other, b.name AS breed_name, d.size, d.sex, d.birth_ym,
+              d.weight_kg, d.sociability, d.rabies_vaccine_year, d.combo_vaccine_year,
               d.status, d.photo_key, d.thumb_key, h.status AS household_status
          FROM dogs d JOIN breeds b ON b.id = d.breed_id JOIN households h ON h.id = d.household_id
         WHERE d.id = ?`,
@@ -73,6 +80,9 @@ function displayValue(field: string, v: string | null): string | null {
     return m ? `${m[1]}年${Number(m[2])}月` : v;
   }
   if (field === 'photo') return '写真あり';
+  if (field === 'weight_kg') return `${Number(v).toFixed(1)}kg`;
+  if (field === 'sociability') return DOG_SOCIABILITY_LABELS[v as DogSociability] ?? v;
+  if (field === 'rabies_vaccine_year' || field === 'combo_vaccine_year') return `${v}年`;
   return v;
 }
 
@@ -125,8 +135,20 @@ type DogValues = {
   size?: DogSize;
   sex?: DogSex | null;
   birthYm?: string | null;
+  weightKg?: number | null;
+  sociability?: DogSociability | null;
+  rabiesVaccineYear?: number | null;
+  comboVaccineYear?: number | null;
   status?: 'active' | 'retired';
 };
+
+/** 2026-10-28 に足した任意の項目(値の名前 → 列の名前)。担当J */
+const EXTRA_FIELDS = [
+  ['weightKg', 'weight_kg'],
+  ['sociability', 'sociability'],
+  ['rabiesVaccineYear', 'rabies_vaccine_year'],
+  ['comboVaccineYear', 'combo_vaccine_year'],
+] as const;
 
 const currentValues = (d: DogRow): Required<DogValues> => ({
   name: d.name,
@@ -136,6 +158,10 @@ const currentValues = (d: DogRow): Required<DogValues> => ({
   size: d.size,
   sex: d.sex,
   birthYm: d.birth_ym,
+  weightKg: d.weight_kg,
+  sociability: d.sociability,
+  rabiesVaccineYear: d.rabies_vaccine_year,
+  comboVaccineYear: d.combo_vaccine_year,
   status: d.status as 'active' | 'retired',
 });
 
@@ -165,9 +191,25 @@ async function writeDogValues(
     db
       .prepare(
         `UPDATE dogs SET name = ?, name_search = ?, breed_id = ?, breed_other = ?, size = ?, sex = ?, birth_ym = ?, status = ?,
+                weight_kg = ?, sociability = ?, rabies_vaccine_year = ?, combo_vaccine_year = ?,
                 updated_at = ? WHERE id = ?`,
       )
-      .bind(next.name, normalizeForSearch(next.name), next.breedId, next.breedOther, next.size, next.sex, next.birthYm, next.status, nowIso, dog.id),
+      .bind(
+        next.name,
+        normalizeForSearch(next.name),
+        next.breedId,
+        next.breedOther,
+        next.size,
+        next.sex,
+        next.birthYm,
+        next.status,
+        next.weightKg,
+        next.sociability,
+        next.rabiesVaccineYear,
+        next.comboVaccineYear,
+        nowIso,
+        dog.id,
+      ),
   ];
   if ('name' in after) statements.push(dogChangeStatement(db, dog.id, 'name', before.name, after.name, actor, nowIso, args.reason));
   if ('breedId' in after) statements.push(dogChangeStatement(db, dog.id, 'breed', before.breedName, after.breedName, actor, nowIso, args.reason));
@@ -175,6 +217,9 @@ async function writeDogValues(
   if ('sex' in after) statements.push(dogChangeStatement(db, dog.id, 'sex', before.sex, after.sex, actor, nowIso, args.reason));
   if ('birthYm' in after) statements.push(dogChangeStatement(db, dog.id, 'birth_ym', before.birthYm, after.birthYm, actor, nowIso, args.reason));
   if ('status' in after) statements.push(dogChangeStatement(db, dog.id, 'status', before.status, after.status, actor, nowIso, args.reason));
+  for (const [key, col] of EXTRA_FIELDS) {
+    if (key in after) statements.push(dogChangeStatement(db, dog.id, col, before[key], after[key], actor, nowIso, args.reason));
+  }
   statements.push(refreshAutoNameStatement(db, dog.household_id, nowIso), ...(args.extra ?? []));
   await db.batch(statements);
   await syncHouseholdSearchName(db, dog.household_id);
@@ -216,6 +261,12 @@ export async function patchDog(db: D1Database, id: number, patch: AdminDogPatch,
   if (patch.birthYm !== undefined && patch.birthYm !== cur.birthYm) {
     before.birthYm = cur.birthYm;
     after.birthYm = patch.birthYm;
+  }
+  for (const [key] of EXTRA_FIELDS) {
+    if (patch[key] !== undefined && patch[key] !== cur[key]) {
+      (before as Record<string, unknown>)[key] = cur[key];
+      (after as Record<string, unknown>)[key] = patch[key];
+    }
   }
   if (patch.status !== undefined && patch.status !== cur.status) {
     if (patch.status === 'retired' && (await activeDogCount(db, dog.household_id)) <= 1) {

@@ -48,11 +48,15 @@ export function DogEditPage() {
     setBusy(true);
     setError(null);
     try {
-      const { name, sex, birthYm } = r.input;
+      const { name, sex, birthYm, weightKg, sociability, rabiesVaccineYear, comboVaccineYear } = r.input;
       await patchJson<{ dog: DogSummary }>(`/api/dogs/${dog.id}`, {
         name,
         sex: sex ?? null,
         birthYm: birthYm ?? null,
+        weightKg: weightKg ?? null,
+        sociability: sociability ?? null,
+        rabiesVaccineYear: rabiesVaccineYear ?? null,
+        comboVaccineYear: comboVaccineYear ?? null,
       });
       if (draft.photo) await uploadDogPhoto(dog.id, draft.photo);
       navigate('/dogs', { replace: true });

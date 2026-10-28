@@ -765,3 +765,26 @@ input::placeholder { color: var(--text-tertiary); }
 .cfg-howto .plain-list { font-size: var(--fs-13); }
 .cfg-contact { white-space: pre-wrap; overflow-wrap: anywhere; font-size: var(--fs-15); }
 @media (hover: hover) { .cfg-howto h3 a:hover { text-decoration: underline; } }
+
+/* ---- 飼い主とワンちゃんの情報(担当J) ---- */
+/* M-06 おうちのアンケート: 見出しの横に「おうちの回答を変える」 */
+.hp-head { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2); padding-right: var(--sp-3); }
+/* おうちの回答を変えるダイアログ。質問が多いので、中だけをスクロールする */
+.hp-form { display: flex; flex-direction: column; gap: var(--sp-5); max-height: calc(100dvh - 260px); overflow-y: auto; padding: 2px 2px var(--sp-1); }
+/* いくつでも選ぶ質問: チェックボックスを見せたチップ(大きさと選択中の色はチップと同じ) */
+.hp-checks { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
+.hp-checks label {
+  display: inline-flex; align-items: center; gap: var(--sp-2);
+  min-height: var(--control-h); padding: 0 14px 0 var(--sp-3); border: 1px solid var(--border); border-radius: var(--radius);
+  background: var(--surface); font-size: var(--fs-14); color: var(--text); cursor: pointer;
+}
+.hp-checks input { width: 18px; height: 18px; margin: 0; flex: none; accent-color: var(--accent); }
+.hp-checks label:has(input:checked) { background: var(--accent-50); border-color: var(--accent); color: var(--accent-text); }
+.hp-checks label:has(input:focus-visible) { outline: 2px solid var(--focus-color); outline-offset: 2px; }
+.hp-checks input:focus-visible { outline: none; }
+/* M-07 体重の入力が読めないとき */
+.dg-fields .err { font-size: var(--fs-13); color: var(--danger); }
+.dg-weight { max-width: 200px; }
+/* 相性は4つ(得意・ふつう・苦手・未登録)なので、列の幅に合わせて等分する */
+.dg-fields .segment.dg-soc { grid-auto-columns: minmax(0, 1fr); width: 100%; max-width: 360px; }
+.dg-fields .segment.dg-soc button { padding: 0 var(--sp-1); }

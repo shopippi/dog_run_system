@@ -23,17 +23,21 @@ const valueOf = (body: { answers: { questionId: number; value: string | null }[]
   body.answers.find((a) => a.questionId === id)?.value;
 
 describe('C-09 プロフィール', () => {
-  it('自分の年代・性別と、おうちの郵便番号・きっかけ・来場手段を返す', async () => {
+  it('自分の年代・性別と、おうちの郵便番号・きっかけ・来場手段・来たい時間帯などを返す', async () => {
     await registerUser(PAPA, undefined, {});
     const res = await call('/api/me/profile', { user: PAPA });
     expect(res.status).toBe(200);
-    expect(res.body.questions.map((q: { fixedKey: string }) => q.fixedKey)).toEqual(['age_group', 'gender', 'postal_code', 'referral', 'transport']);
+    expect(res.body.questions.map((q: { fixedKey: string }) => q.fixedKey)).toEqual(['age_group', 'gender', 'postal_code', 'referral', 'transport', 'preferred_times', 'event_interests', 'uses_other_runs', 'wants_news']);
     expect(res.body.answers).toEqual([
       { questionId: 1, value: '30代' },
       { questionId: 2, value: '女性' },
       { questionId: 3, value: null },
       { questionId: 4, value: 'Instagram' },
       { questionId: 5, value: null },
+      { questionId: 6, value: null },
+      { questionId: 7, value: null },
+      { questionId: 8, value: null },
+      { questionId: 9, value: null },
     ]);
   });
 
@@ -94,7 +98,7 @@ describe('C-09 プロフィール', () => {
     await call('/api/survey', { user: PAPA, body: { answers: [{ questionId: other, value: null }, { questionId: event, value: 'しつけ教室' }] } });
 
     let res = await call('/api/me/profile', { user: PAPA });
-    expect(res.body.questions.map((q: { id: number }) => q.id)).toEqual([1, 2, 3, 4, 5, other, event]);
+    expect(res.body.questions.map((q: { id: number }) => q.id)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, other, event]);
     expect(valueOf(res.body, other)).toBeNull();
     expect(valueOf(res.body, event)).toBe('しつけ教室');
 

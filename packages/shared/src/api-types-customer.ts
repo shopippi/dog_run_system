@@ -97,7 +97,8 @@ export type ProfileResponse = {
   /** 表示している質問(並び順どおり)。家族一人ひとりへの質問と、おうちへの質問 */
   questions: import('./schemas/survey').SurveyQuestion[];
   /** いまの回答。家族向けは自分の回答、おうち向けはおうちの回答(最初の1人や家族が答えたもの) */
-  answers: { questionId: number; value: string | null }[];
+  /** いくつでも選ぶ質問(multi)は、選んだ選択肢の配列 */
+  answers: { questionId: number; value: import('./schemas/survey').SurveyAnswerValue }[];
 };
 
 // ---------------------------------------------------------------

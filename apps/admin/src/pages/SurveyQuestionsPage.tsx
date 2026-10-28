@@ -1,6 +1,7 @@
 import {
   SURVEY_KIND_LABELS,
   SURVEY_TARGET_LABELS,
+  YES_NO_SURVEY_KEYS,
   type AdminSurveyQuestion,
   type AdminSurveyQuestionsResponse,
   type SurveyKind,
@@ -16,7 +17,11 @@ import { adminApi, adminPatch, adminPost } from '../lib/api';
 import { useAuth } from '../lib/auth';
 
 const TARGET_OPTIONS = (['member', 'household'] as const).map((v) => ({ value: v, label: SURVEY_TARGET_LABELS[v] }));
-const KIND_OPTIONS = (['choice', 'text'] as const).map((v) => ({ value: v, label: SURVEY_KIND_LABELS[v] }));
+const KIND_OPTIONS = (['choice', 'multi', 'text'] as const).map((v) => ({ value: v, label: SURVEY_KIND_LABELS[v] }));
+/** 選択肢を入れる答え方(1つ選ぶ・いくつでも選ぶ) */
+const hasOptions = (kind: SurveyKind) => kind !== 'text';
+/** はい・いいえで答える固定の質問は、選択肢を変えられない(回答を 1 / 0 で保存しているため) */
+const lockedOptions = (q: AdminSurveyQuestion) => (YES_NO_SURVEY_KEYS as readonly string[]).includes(q.fixedKey ?? '');
 const toLines = (options: string[]) => options.join('\n');
 const fromLines = (text: string) => text.split('\n');
 
@@ -89,7 +94,7 @@ export function SurveyQuestionsPage() {
                   <span className="sub-text">
                     {SURVEY_TARGET_LABELS[q.target]}
                     <span aria-hidden="true"> · </span>
-                    {q.kind === 'choice' ? `選ぶ(${q.options.join('・')})` : '自由に書く'}
+                    {q.kind === 'text' ? '自由に書く' : `${SURVEY_KIND_LABELS[q.kind]}(${q.options.join('・')})`}
                     {q.required ? (
                       <>
                         <span aria-hidden="true"> · </span>登録のとき必須
@@ -188,7 +193,7 @@ function AddQuestion({ onAdded }: { onAdded: (r: AdminSurveyQuestionsResponse, l
         target,
         kind,
         label,
-        options: kind === 'choice' ? fromLines(options) : [],
+        options: hasOptions(kind) ? fromLines(options) : [],
         required,
       });
       onAdded(r, label.trim());
@@ -221,7 +226,7 @@ function AddQuestion({ onAdded }: { onAdded: (r: AdminSurveyQuestionsResponse, l
           <label htmlFor={labelId}>質問の文</label>
           <input id={labelId} value={label} maxLength={100} placeholder="例: ほかのドッグランも使っていますか" onChange={(e) => setLabel(e.target.value)} />
         </div>
-        {kind === 'choice' && (
+        {hasOptions(kind) && (
           <div className="field">
             <label htmlFor={optionsId}>選択肢(1行に1つ)</label>
             <textarea id={optionsId} className="cfg-textarea" rows={4} value={options} placeholder={'例:\nよく使う\nときどき使う\n使わない'} onChange={(e) => setOptions(e.target.value)} />
@@ -257,7 +262,7 @@ function EditQuestion({ q, onClose, onDone }: { q: AdminSurveyQuestion; onClose:
     setBusy(true);
     setError(null);
     const body: Record<string, unknown> = { label };
-    if (kind === 'choice') body.options = fromLines(options);
+    if (hasOptions(kind) && !lockedOptions(q)) body.options = fromLines(options);
     if (!q.isFixed) Object.assign(body, { target, kind, required });
     try {
       onDone(await adminPatch<AdminSurveyQuestionsResponse>(`/survey-questions/${q.id}`, body));
@@ -294,7 +299,8 @@ function EditQuestion({ q, onClose, onDone }: { q: AdminSurveyQuestion; onClose:
         <label htmlFor={labelId}>質問の文</label>
         <input id={labelId} value={label} maxLength={100} onChange={(e) => setLabel(e.target.value)} />
       </div>
-      {kind === 'choice' && (
+      {lockedOptions(q) && <p className="hint">「はい・いいえ」で答える質問なので、選択肢は変えられません。</p>}
+      {hasOptions(kind) && !lockedOptions(q) && (
         <div className="field">
           <label htmlFor={optionsId}>選択肢(1行に1つ)</label>
           <textarea id={optionsId} className="cfg-textarea" rows={5} value={options} onChange={(e) => setOptions(e.target.value)} />
@@ -340,7 +346,7 @@ function SummaryDialog({ q, onClose }: { q: AdminSurveyQuestion; onClose: () => 
           <p className="sub-text">
             答えた {data.answered}件<span aria-hidden="true"> · </span>答えない {data.skipped}件
           </p>
-          {q.kind === 'choice' ? (
+          {q.kind !== 'text' ? (
             <ul className="cfg-bars" aria-label="選択肢ごとの数">
               {data.counts.map((c) => (
                 <li key={c.option} aria-label={`${c.option} ${c.count}件`}>

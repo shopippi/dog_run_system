@@ -94,7 +94,7 @@ export const orderSchema = z.object({
 // ============================================================
 
 export const SURVEY_TARGET_LABELS = { member: '家族一人ひとり', household: 'おうちごと' } as const;
-export const SURVEY_KIND_LABELS = { choice: '選ぶ', text: '自由に書く' } as const;
+export const SURVEY_KIND_LABELS = { choice: '選ぶ', text: '自由に書く', multi: 'いくつでも選ぶ' } as const;
 export const SURVEY_LABEL_MAX = 100;
 export const SURVEY_OPTION_MAX = 50;
 export const SURVEY_OPTIONS_MAX = 20;
@@ -112,9 +112,9 @@ const questionOptionsSchema = z
   .refine((xs) => xs.length <= SURVEY_OPTIONS_MAX, { error: `選択肢は${SURVEY_OPTIONS_MAX}個までにしてください。` });
 
 const surveyTargetSchema = z.enum(['member', 'household'], { error: '聞く相手を選んでください。' });
-const surveyKindSchema = z.enum(['choice', 'text'], { error: '答え方(選ぶ・自由に書く)を選んでください。' });
+const surveyKindSchema = z.enum(['choice', 'text', 'multi'], { error: '答え方(選ぶ・いくつでも選ぶ・自由に書く)を選んでください。' });
 
-const NEED_OPTIONS = '「選ぶ」の質問には、選択肢を2つ以上入れてください。';
+const NEED_OPTIONS = '「選ぶ」「いくつでも選ぶ」の質問には、選択肢を2つ以上入れてください。';
 
 /** 質問を追加する(7.2) */
 export const surveyQuestionCreateSchema = z
@@ -126,7 +126,7 @@ export const surveyQuestionCreateSchema = z
     required: z.boolean().default(false),
   })
   .superRefine((v, ctx) => {
-    if (v.kind === 'choice' && v.options.length < 2) ctx.addIssue({ code: 'custom', path: ['options'], message: NEED_OPTIONS });
+    if (v.kind !== 'text' && v.options.length < 2) ctx.addIssue({ code: 'custom', path: ['options'], message: NEED_OPTIONS });
   })
   .transform((v) => ({ ...v, options: v.kind === 'text' ? [] : v.options }));
 export type SurveyQuestionCreate = z.infer<typeof surveyQuestionCreateSchema>;
