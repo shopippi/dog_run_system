@@ -452,7 +452,6 @@ a { color: var(--accent-text); }
   min-height: 56px; padding: var(--sp-3) var(--sp-3) var(--sp-3) var(--sp-4);
 }
 .tk-hist-row .badge { flex: none; }
-=======
 /* ---- L-09 ワンちゃんの登録をおやすみする(担当J) ---- */
 /* 変更画面の一番下に、小さい文字のリンク風ボタンだけを置く。指で押せるよう高さ 44px */
 .dog-rest { display: flex; flex-direction: column; gap: var(--sp-3); margin-top: var(--sp-2); }
