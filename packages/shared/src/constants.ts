@@ -12,6 +12,12 @@ export type MemberStatus = (typeof MEMBER_STATUSES)[number];
 
 export const JOIN_METHODS = ['register', 'invite', 'reception', 'merge'] as const;
 export type JoinMethod = (typeof JOIN_METHODS)[number];
+export const JOIN_METHOD_LABELS: Record<JoinMethod, string> = {
+  register: 'はじめに登録',
+  invite: '招待で参加',
+  reception: '受付で参加',
+  merge: 'おうちをまとめて参加',
+};
 
 export const INVITE_KINDS = ['family', 'reception'] as const;
 export type InviteKind = (typeof INVITE_KINDS)[number];

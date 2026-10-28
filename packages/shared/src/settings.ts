@@ -54,6 +54,8 @@ export const settingsSchema = z.object({
     code: z.string().regex(/^\d{5}$/),
     name: z.string().min(1).max(40),
   }),
+  /** LINE ミニアプリ(LIFF)の ID。受付で出す招待QRの URL に使う(未設定なら、同じドメインの /liff/ の URL) */
+  liff_id: z.string().regex(/^$|^\d+-[A-Za-z0-9]+$/, { error: 'LIFF ID の形(例: 1234567890-AbCdEfGh)で入力してください。' }),
 });
 export type Settings = z.infer<typeof settingsSchema>;
 export type SettingKey = keyof Settings;
@@ -75,4 +77,5 @@ export const DEFAULT_SETTINGS: Omit<Settings, 'checkin_passphrase'> = {
   terms_text: '(利用規約の本文は準備中です。管理画面の設定から差し替えてください)',
   privacy_text: '(プライバシーポリシーの本文は準備中です。管理画面の設定から差し替えてください)',
   weather_station: { code: '44132', name: '東京' },
+  liff_id: '',
 };

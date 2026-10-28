@@ -26,3 +26,4 @@ export * from './schemas/customer';
 export * from './analytics';
 export * from './merge';
 export * from './migration';
+export * from './manual-points';

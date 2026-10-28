@@ -119,10 +119,3 @@ export type FamilyMemberItem = {
 /** GET /api/family の応答 */
 export type FamilyResponse = { members: FamilyMemberItem[] };
 
-/** 参加方法の画面の言葉 */
-export const JOIN_METHOD_LABELS: Record<import('./constants').JoinMethod, string> = {
-  register: 'はじめに登録',
-  invite: '招待で参加',
-  reception: '受付で参加',
-  merge: 'おうちをまとめて参加',
-};
