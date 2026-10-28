@@ -70,3 +70,10 @@ export function checkSurveyAnswers(
   }
   return { ok: true, values };
 }
+
+/** 招待を受けて参加する(POST /api/invites/:code/accept)の入力(C-12) */
+export const inviteAcceptSchema = z.object({
+  /** はじめての人は、利用規約とプライバシーポリシーへの同意が必要(15.2) */
+  consent: z.boolean(),
+  survey: surveyAnswersSchema,
+});

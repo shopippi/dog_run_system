@@ -5,6 +5,7 @@ import { nowMiddleware, requireLineUser } from './lib/middleware';
 import { checkinRoutes } from './routes/customer/checkins';
 import { dogRoutes } from './routes/customer/dogs';
 import { inviteRoutes } from './routes/customer/invites';
+import { joinRoutes } from './routes/customer/join';
 import { meRoutes } from './routes/customer/me';
 import { mediaRoutes } from './routes/customer/media';
 import { surveyRoutes } from './routes/customer/survey';
@@ -40,6 +41,7 @@ export function createApp() {
   customer.route('/', surveyRoutes);
   customer.route('/', checkinRoutes);
   customer.route('/', inviteRoutes);
+  customer.route('/', joinRoutes);
   app.route('/api', customer);
 
   app.all('/api/*', (c) =>

@@ -168,3 +168,4 @@ fieldset { border: 1px solid var(--line); margin: 0; min-width: 0; }
   display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center;
 }
 .qr { background: #fff; border-radius: 8px; padding: 6px; image-rendering: pixelated; }
+.invite-name { font-family: var(--f-display); font-size: 1.2rem; font-weight: 700; }

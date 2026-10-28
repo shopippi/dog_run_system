@@ -116,3 +116,23 @@ export type InviteCreated = {
   code: string;
   expiresAt: string;
 };
+
+/** 招待を開いたときの内容(C-12) */
+export type InviteInfo = {
+  /** valid: 使える / expired: 期限切れ / used: 使用済み */
+  status: 'valid' | 'expired' | 'used';
+  householdName: string;
+  dogs: { id: number; name: string; breedName: string; thumbUrl: string | null }[];
+  expiresAt: string;
+  /** 開いた人の状態。new: まだ会員でない / member: すでにこのおうちの家族 / other: 別のおうちの家族 */
+  viewer: 'new' | 'member' | 'other';
+  /** はじめての人に聞く質問(家族一人ひとりへの質問だけ) */
+  questions: import('./schemas/survey').SurveyQuestion[];
+  terms: { termsText: string; privacyText: string } | null;
+};
+
+export type InviteAcceptResult =
+  /** おうちに参加した */
+  | { result: 'joined'; memberNo: string; householdName: string }
+  /** 別のおうちがあるので、まとめる申請を作った(管理者の確認待ち) */
+  | { result: 'requested' };
