@@ -6,7 +6,7 @@ export function DogPlaceholder({ name, breedName, size }: { name: string; breedN
   const initial = nameInitial(name);
   return (
     <svg
-      className="av"
+      className="av av-ph"
       width={size}
       height={size}
       viewBox="0 0 100 100"
@@ -14,7 +14,7 @@ export function DogPlaceholder({ name, breedName, size }: { name: string; breedN
       aria-label={`${name}(写真なし)`}
     >
       <circle cx="50" cy="50" r="50" fill={placeholderColor(breedName, name)} />
-      <text x="50" y="50" dy=".36em" textAnchor="middle" fontSize="46" fontWeight="700" fill="#fff">
+      <text x="50" y="50" dy=".36em" textAnchor="middle" fontSize="44" fontWeight="600">
         {initial}
       </text>
     </svg>

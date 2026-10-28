@@ -28,16 +28,20 @@ export function SurveyPrompt({ questions, onDone }: { questions: SurveyQuestion[
 
   return (
     <main className="screen">
-      <h2>アンケートにご協力ください</h2>
-      <p className="small muted">答えなくても会員証は使えます。この画面は1回だけ表示します。</p>
+      <div className="page-head">
+        <h2>アンケートにご協力ください</h2>
+        <p className="lead">答えなくても会員証は使えます。この画面は1回だけ表示します。</p>
+      </div>
       <SurveyForm questions={questions} values={values} onChange={setValues} showRequired={false} />
       {error ? <ErrorNotice error={error} /> : null}
-      <button type="button" className="btn" disabled={busy} onClick={() => send(false)}>
-        回答する
-      </button>
-      <button type="button" className="btn sub" disabled={busy} onClick={() => send(true)}>
-        答えずに進む
-      </button>
+      <div className="actions">
+        <button type="button" className="btn" disabled={busy} onClick={() => send(false)}>
+          回答する
+        </button>
+        <button type="button" className="btn ghost" disabled={busy} onClick={() => send(true)}>
+          答えずに進む
+        </button>
+      </div>
     </main>
   );
 }

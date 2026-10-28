@@ -2,12 +2,11 @@ import { DOG_SIZE_LABELS, type DogSummary } from '@dr/shared';
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { DogForm, dogToDraft, draftToInput, type DogDraft } from '../../components/DogForm';
-import { ErrorNotice } from '../../components/ErrorNotice';
+import { ErrorNotice, MessageNotice } from '../../components/ErrorNotice';
 import { useBreeds } from '../../hooks/useBreeds';
 import { useDogs } from '../../hooks/useDogs';
 import { patchJson, postJson } from '../../lib/api';
 import { uploadDogPhoto } from '../../lib/photo';
-import { BackLink } from './DogsPage';
 
 /** ワンちゃんの変更・登録解除(C-08)。犬種とサイズは受付で変える(6.1) */
 export function DogEditPage() {
@@ -20,6 +19,7 @@ export function DogEditPage() {
   const [error, setError] = useState<unknown>(null);
   const [busy, setBusy] = useState(false);
   const [confirmRetire, setConfirmRetire] = useState(false);
+  const [retireError, setRetireError] = useState<unknown>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -30,8 +30,9 @@ export function DogEditPage() {
   if (dogs && !dog) {
     return (
       <main className="screen">
-        <BackLink to="/dogs" label="ワンちゃんの一覧にもどる" />
-        <div className="notice bad"><p>ワンちゃんが見つかりませんでした。一覧から選び直してください。</p></div>
+        <div className="alert danger" role="alert">
+          <p>ワンちゃんが見つかりませんでした。一覧から選び直してください。</p>
+        </div>
       </main>
     );
   }
@@ -63,12 +64,12 @@ export function DogEditPage() {
 
   const retire = async () => {
     setBusy(true);
-    setError(null);
+    setRetireError(null);
     try {
       await postJson(`/api/dogs/${dog.id}/retire`, {});
       navigate('/dogs', { replace: true });
     } catch (e) {
-      setError(e);
+      setRetireError(e);
       setBusy(false);
       setConfirmRetire(false);
     }
@@ -76,11 +77,12 @@ export function DogEditPage() {
 
   return (
     <main className="screen">
-      <BackLink to="/dogs" label="ワンちゃんの一覧にもどる" />
-      <h2>{dog.name}</h2>
-      <p className="small muted">
-        犬種: {dog.breedName}・サイズ: {DOG_SIZE_LABELS[dog.size]}(間違っているときは受付にお知らせください)
-      </p>
+      <div className="page-head">
+        <h2>{dog.name}</h2>
+        <p className="lead">
+          犬種: {dog.breedName}・サイズ: {DOG_SIZE_LABELS[dog.size]}(間違っているときは受付にお知らせください)
+        </p>
+      </div>
       <DogForm
         draft={draft}
         breeds={breeds}
@@ -89,37 +91,38 @@ export function DogEditPage() {
         title="登録している内容"
         currentPhotoUrl={dog.thumbUrl}
       />
-      {message && (
-        <div className="notice bad" role="alert">
-          <p>{message}</p>
-        </div>
-      )}
+      {message && <MessageNotice message={message} />}
       {error ? <ErrorNotice error={error} /> : null}
       <button type="button" className="btn" disabled={busy} onClick={save}>
         {busy ? '保存しています…' : '保存する'}
       </button>
 
-      <div className="panel retire">
-        <b className="small">登録解除</b>
-        <p className="small muted">
+      <section className="section retire">
+        <h3 className="section-label">登録解除</h3>
+        <p className="body-text muted-text">
           亡くなった子や手放した子は、登録解除できます。これまでの来場の記録は残り、チェックインの選択肢に出なくなります。
         </p>
+        {retireError ? <ErrorNotice error={retireError} /> : null}
         {confirmRetire ? (
-          <>
-            <p className="small"><b>{dog.name}</b>を登録解除します。よろしいですか?</p>
-            <button type="button" className="btn danger" disabled={busy} onClick={retire}>
-              登録解除する
-            </button>
-            <button type="button" className="btn sub" disabled={busy} onClick={() => setConfirmRetire(false)}>
-              やめる
-            </button>
-          </>
+          <div className="confirm-inline">
+            <p>
+              <b>{dog.name}</b>を登録解除します。よろしいですか?
+            </p>
+            <div className="actions">
+              <button type="button" className="btn sub danger" disabled={busy} onClick={retire}>
+                登録解除する
+              </button>
+              <button type="button" className="btn ghost" disabled={busy} onClick={() => setConfirmRetire(false)}>
+                やめる
+              </button>
+            </div>
+          </div>
         ) : (
-          <button type="button" className="btn sub" onClick={() => setConfirmRetire(true)}>
+          <button type="button" className="btn sub danger" onClick={() => setConfirmRetire(true)}>
             {dog.name}を登録解除する
           </button>
         )}
-      </div>
+      </section>
     </main>
   );
 }

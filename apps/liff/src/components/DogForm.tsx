@@ -13,6 +13,7 @@ import {
 } from '@dr/shared';
 import { useId, useState } from 'react';
 import { resizePhoto, type ResizedPhoto } from '../lib/photo';
+import { ChoiceGroup } from './ChoiceGroup';
 import { DogAvatar } from './DogAvatar';
 
 export type DogDraft = {
@@ -117,7 +118,7 @@ export function DogForm({ draft, breeds, onChange, breedEditable = true, title, 
       <div className="dog-form-head">
         <legend>{title ?? 'ワンちゃん'}</legend>
         {onRemove && (
-          <button type="button" className="link-btn" onClick={onRemove}>
+          <button type="button" className="btn ghost danger-text" onClick={onRemove}>
             この子を削除
           </button>
         )}
@@ -132,7 +133,7 @@ export function DogForm({ draft, breeds, onChange, breedEditable = true, title, 
           size={72}
         />
         <div className="photo-pick-body">
-          <label className="up" htmlFor={`${id}-photo`}>
+          <label className="up btn sub" htmlFor={`${id}-photo`}>
             {photoBusy ? '写真を準備しています…' : draft.photo || currentPhotoUrl ? '写真を撮り直す・選び直す' : '写真を撮る・選ぶ'}
           </label>
           <input
@@ -144,8 +145,7 @@ export function DogForm({ draft, breeds, onChange, breedEditable = true, title, 
               e.target.value = '';
             }}
           />
-          <span className="hint">写真はあとからでも登録できます</span>
-          {photoError && <span className="err">{photoError}</span>}
+          {photoError ? <span className="err">{photoError}</span> : <span className="hint">写真はあとからでも登録できます</span>}
         </div>
       </div>
 
@@ -204,46 +204,28 @@ export function DogForm({ draft, breeds, onChange, breedEditable = true, title, 
             <span className="label">
               サイズ<span className="req">必須</span>
             </span>
-            <div className="choices" role="radiogroup" aria-label="サイズ">
-              {DOG_SIZES.map((s) => (
-                <label key={s}>
-                  <input
-                    type="radio"
-                    name={`${id}-size`}
-                    checked={draft.size === s}
-                    onChange={() => set({ size: s })}
-                  />
-                  {DOG_SIZE_LABELS[s]}
-                </label>
-              ))}
-            </div>
+            <ChoiceGroup
+              label="サイズ"
+              options={DOG_SIZES.map((s) => ({ value: s, label: DOG_SIZE_LABELS[s] }))}
+              value={draft.size}
+              onChange={(size) => set({ size })}
+            />
           </div>
         </>
       )}
 
       <div className="field">
-        <span className="label">
-          性別<span className="opt">任意</span>
-        </span>
-        <div className="choices" role="radiogroup" aria-label="性別">
-          {DOG_SEXES.map((s) => (
-            <label key={s}>
-              <input
-                type="radio"
-                name={`${id}-sex`}
-                checked={draft.sex === s}
-                onChange={() => set({ sex: s })}
-              />
-              {DOG_SEX_LABELS[s]}
-            </label>
-          ))}
-        </div>
+        <span className="label">性別</span>
+        <ChoiceGroup
+          label="性別"
+          options={DOG_SEXES.map((s) => ({ value: s, label: DOG_SEX_LABELS[s] }))}
+          value={draft.sex}
+          onChange={(sex) => set({ sex })}
+        />
       </div>
 
       <div className="field">
-        <span className="label">
-          生まれた年月<span className="opt">任意・分からなければ空欄</span>
-        </span>
+        <span className="label">生まれた年月</span>
         <div className="row2">
           <select aria-label="生まれた年" value={draft.birthYear} onChange={(e) => set({ birthYear: e.target.value })}>
             <option value="">年</option>
@@ -262,8 +244,8 @@ export function DogForm({ draft, breeds, onChange, breedEditable = true, title, 
             ))}
           </select>
         </div>
+        <span className="hint">分からなければ空欄のままで大丈夫です</span>
       </div>
-
     </fieldset>
   );
 }

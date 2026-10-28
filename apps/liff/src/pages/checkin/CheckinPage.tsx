@@ -5,7 +5,6 @@ import { DogAvatar } from '../../components/DogAvatar';
 import { ErrorNotice } from '../../components/ErrorNotice';
 import { ApiError, api, postJson } from '../../lib/api';
 import { canScan, scanCheckinCode } from '../../lib/liff';
-import { BackLink } from '../dogs/DogsPage';
 
 /** L-05 チェックイン(C-04)。受付のQRコードから開く → 来た犬を選ぶ → 無料券を使うか選ぶ → 確定 */
 export function CheckinPage() {
@@ -95,13 +94,14 @@ export function CheckinPage() {
     // 5.5 家族がすでにチェックインしている日。犬の追加だけができる(ポイントは増えない)
     return (
       <main className="screen">
-        <BackLink />
-        <h2>チェックイン</h2>
-        <div className="notice good">
+        <div className="page-head">
+          <h2>チェックイン</h2>
+        </div>
+        <div className="alert info">
           <p>
             <b>{visit.isMe ? '今日はチェックイン済みです。' : `今日は${visit.checkedInBy || 'ご家族'}さんがチェックイン済みです。`}</b>
           </p>
-          <p className="small">ポイントは1日1回です。一緒に来たワンちゃんを追加できます。</p>
+          <p>ポイントは1日1回です。一緒に来たワンちゃんを追加できます。</p>
         </div>
         {remaining.length > 0 ? (
           <>
@@ -112,9 +112,13 @@ export function CheckinPage() {
             </button>
           </>
         ) : (
-          <p className="small muted">登録しているワンちゃんは、みんな記録されています。</p>
+          <p className="lead">登録しているワンちゃんは、みんな記録されています。</p>
         )}
-        <button type="button" className="btn sub" onClick={() => navigate(`/checkin/done/${visit.id}`)}>
+        <button
+          type="button"
+          className={remaining.length > 0 ? 'btn ghost' : 'btn'}
+          onClick={() => navigate(`/checkin/done/${visit.id}`)}
+        >
           チェックインの画面を見る
         </button>
       </main>
@@ -124,10 +128,9 @@ export function CheckinPage() {
   if (!passphrase) {
     return (
       <main className="screen">
-        <BackLink />
-        <h2>チェックイン</h2>
-        <div className="notice">
-          <p>受付にあるQRコードを、LINEのカメラで読み取ってください。</p>
+        <div className="page-head">
+          <h2>チェックイン</h2>
+          <p className="lead">受付にあるQRコードを、LINEのカメラで読み取ってください。</p>
         </div>
         {canScan() && (
           <button type="button" className="btn" onClick={scan}>
@@ -140,15 +143,17 @@ export function CheckinPage() {
 
   return (
     <main className="screen">
-      <h2>チェックイン</h2>
-      <p className="small muted">今日来たワンちゃんを選んで、「チェックインする」を押してください。</p>
+      <div className="page-head">
+        <h2>チェックイン</h2>
+        <p className="lead">今日来たワンちゃんを選んで、「チェックインする」を押してください。</p>
+      </div>
       <DogChecklist dogs={status.dogs} selected={selected} onToggle={toggle} />
       {status.unusedTickets > 0 && (
-        <label className="ticket-toggle">
+        <label className="pick-row ticket-row">
           <input type="checkbox" checked={useTicket} onChange={(e) => setUseTicket(e.target.checked)} />
-          <span>
+          <span className="pick-body">
             <b>無料券を使う</b>
-            <span className="small">のこり{status.unusedTickets}枚。1回の来場で1枚まで使えます</span>
+            <span className="sub-text">のこり{status.unusedTickets}枚。1回の来場で1枚まで使えます</span>
           </span>
         </label>
       )}
@@ -170,14 +175,14 @@ function DogChecklist({
   onToggle: (id: number) => void;
 }) {
   return (
-    <div className="dogpick" role="group" aria-label="今日来たワンちゃん">
+    <div className="pick-list" role="group" aria-label="今日来たワンちゃん">
       {dogs.map((d) => (
-        <label key={d.id}>
+        <label key={d.id} className="pick-row">
           <input type="checkbox" checked={selected.has(d.id)} onChange={() => onToggle(d.id)} />
-          <DogAvatar name={d.name} breedName={d.breedName} url={d.thumbUrl} size={52} />
-          <span>
+          <DogAvatar name={d.name} breedName={d.breedName} url={d.thumbUrl} size={40} />
+          <span className="pick-body">
             <b>{d.name}</b>
-            <span className="small muted">{d.breedName}</span>
+            <span className="sub-text">{d.breedName}</span>
           </span>
         </label>
       ))}

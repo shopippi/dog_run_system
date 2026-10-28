@@ -2,7 +2,8 @@ import { checkSurveyAnswers, type InviteAcceptResult, type InviteInfo } from '@d
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { DogAvatar } from '../../components/DogAvatar';
-import { ErrorNotice } from '../../components/ErrorNotice';
+import { ErrorNotice, MessageNotice } from '../../components/ErrorNotice';
+import { Terms } from '../../components/Terms';
 import { SurveyForm, toAnswers, type SurveyValues } from '../../components/SurveyForm';
 import { api, postJson } from '../../lib/api';
 
@@ -67,13 +68,19 @@ export function JoinPage({ onJoined }: { onJoined: () => void }) {
   if (done?.result === 'joined') {
     return (
       <main className="screen">
-        <div className="welcome-card">
-          <p>参加しました</p>
-          <p className="name">{done.householdName}</p>
-          <p className="small">会員ID</p>
-          <p className="id mono">{done.memberNo}</p>
+        <div className="page-head">
+          <h2>参加しました</h2>
+          <p className="lead">これからは、このLINEでチェックインしても、同じ会員証にポイントがたまります。</p>
         </div>
-        <p className="small muted">これからは、このLINEでチェックインしても、同じ会員証にポイントがたまります。</p>
+        <div className="welcome-card">
+          <div className="welcome-who">
+            <p className="name">{done.householdName}</p>
+          </div>
+          <div className="welcome-id">
+            <span className="label">会員ID</span>
+            <p className="id mono">{done.memberNo}</p>
+          </div>
+        </div>
         <button type="button" className="btn" onClick={onJoined}>
           会員証を見る
         </button>
@@ -84,15 +91,15 @@ export function JoinPage({ onJoined }: { onJoined: () => void }) {
   if (done?.result === 'requested') {
     return (
       <main className="screen">
-        <div className="notice good" role="status">
+        <div className="alert info" role="status">
           <p>
             <b>おうちをまとめる申請をしました</b>
           </p>
-          <p className="small">
+          <p>
             受付で、ワンちゃんの写真を見ながら2つのおうちを1つにまとめます。まとまるまでは、今の会員証をそのまま使えます。
           </p>
         </div>
-        <Link to="/" className="btn sub as-link" onClick={onJoined}>
+        <Link to="/" className="btn" onClick={onJoined}>
           会員証にもどる
         </Link>
       </main>
@@ -100,13 +107,16 @@ export function JoinPage({ onJoined }: { onJoined: () => void }) {
   }
 
   const header = (
-    <div className="invite-card">
-      <div className="faces">
+    <div className="invite-from">
+      <div className="stack">
         {info.dogs.map((d) => (
-          <DogAvatar key={d.id} name={d.name} breedName={d.breedName} url={d.thumbUrl} size={64} />
+          <DogAvatar key={d.id} name={d.name} breedName={d.breedName} url={d.thumbUrl} size={48} />
         ))}
       </div>
-      <p className="invite-name">{info.householdName}</p>
+      <div>
+        <p className="note">招待したおうち</p>
+        <p className="invite-name">{info.householdName}</p>
+      </div>
     </div>
   );
 
@@ -114,10 +124,8 @@ export function JoinPage({ onJoined }: { onJoined: () => void }) {
     return (
       <main className="screen">
         {header}
-        <div className="notice good">
-          <p>すでにこのおうちの家族です。</p>
-        </div>
-        <Link to="/" className="btn as-link" onClick={onJoined}>
+        <p className="lead">すでにこのおうちの家族です。</p>
+        <Link to="/" className="btn" onClick={onJoined}>
           会員証を見る
         </Link>
       </main>
@@ -128,9 +136,9 @@ export function JoinPage({ onJoined }: { onJoined: () => void }) {
     return (
       <main className="screen">
         {header}
-        <div className="notice bad" role="alert">
+        <div className="alert danger" role="alert">
           <p>{info.status === 'used' ? 'この招待はもう使われています。' : '招待の期限が切れています。'}</p>
-          <p className="small">ご家族に、もう一度招待を送ってもらってください。</p>
+          <p>ご家族に、もう一度招待を送ってもらってください。</p>
         </div>
       </main>
     );
@@ -140,17 +148,21 @@ export function JoinPage({ onJoined }: { onJoined: () => void }) {
     return (
       <main className="screen">
         {header}
-        <h2>{info.householdName}とまとめますか?</h2>
-        <p className="small">
-          このLINEは、すでに別のおうちで会員証を使っています。2つのおうちのポイントは、受付でワンちゃんの写真を確認してから1つにまとめます。
-        </p>
+        <div className="page-head">
+          <h2>{info.householdName}とまとめますか?</h2>
+          <p className="lead">
+            このLINEは、すでに別のおうちで会員証を使っています。2つのおうちのポイントは、受付でワンちゃんの写真を確認してから1つにまとめます。
+          </p>
+        </div>
         {error ? <ErrorNotice error={error} /> : null}
-        <button type="button" className="btn" disabled={busy} onClick={accept}>
-          {busy ? '申請しています…' : 'おうちをまとめる申請をする'}
-        </button>
-        <Link to="/" className="btn sub as-link" onClick={onJoined}>
-          やめる
-        </Link>
+        <div className="actions">
+          <button type="button" className="btn" disabled={busy} onClick={accept}>
+            {busy ? '申請しています…' : 'おうちをまとめる申請をする'}
+          </button>
+          <Link to="/" className="btn ghost" onClick={onJoined}>
+            やめる
+          </Link>
+        </div>
       </main>
     );
   }
@@ -158,38 +170,29 @@ export function JoinPage({ onJoined }: { onJoined: () => void }) {
   return (
     <main className="screen">
       {header}
-      <h2>{info.householdName}に参加しますか?</h2>
-      <p className="small">参加すると、ご家族と同じ会員証でポイントがたまります。ワンちゃんの登録は要りません。</p>
+      <div className="page-head">
+        <h2>{info.householdName}に参加しますか?</h2>
+        <p className="lead">参加すると、ご家族と同じ会員証でポイントがたまります。ワンちゃんの登録は要りません。</p>
+      </div>
       {info.questions.length > 0 && (
-        <>
-          <b className="small">あなたについて教えてください</b>
+        <section className="section">
+          <h3 className="section-title">あなたについて教えてください</h3>
           <SurveyForm questions={info.questions} values={values} onChange={setValues} />
-        </>
+        </section>
       )}
       {info.terms && (
-        <div className="panel">
-          <p className="small">
+        <section className="section">
+          <p className="body-text">
             LINEの表示名とアンケートの回答、来場の記録をお預かりし、会員証とポイントの管理、ドッグランをよくするための集計に使います。
           </p>
-          <details>
-            <summary>利用規約を読む</summary>
-            <p className="terms">{info.terms.termsText}</p>
-          </details>
-          <details>
-            <summary>プライバシーポリシーを読む</summary>
-            <p className="terms">{info.terms.privacyText}</p>
-          </details>
-        </div>
+          <Terms termsText={info.terms.termsText} privacyText={info.terms.privacyText} />
+        </section>
       )}
       <label className="check">
         <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} />
         <span>利用規約とプライバシーポリシーに同意します</span>
       </label>
-      {message && (
-        <div className="notice bad" role="alert">
-          <p>{message}</p>
-        </div>
-      )}
+      {message && <MessageNotice message={message} />}
       {error ? <ErrorNotice error={error} /> : null}
       <button type="button" className="btn" disabled={busy} onClick={accept}>
         {busy ? '参加しています…' : '参加する'}

@@ -16,7 +16,7 @@ function formatDate(ymd: string) {
 
 /**
  * L-06 チェックイン完了(C-05)。受付で見せてもらう画面。
- * 現在時刻(秒まで)と動く背景で、スクリーンショットと見分けられるようにする(2章)。
+ * 現在時刻(秒まで)と流れ続ける細いバーで、スクリーンショットと見分けられるようにする(2章)。
  */
 export function CheckinDonePage() {
   const { id } = useParams();
@@ -37,53 +37,69 @@ export function CheckinDonePage() {
   const clock = toJstIso(now).slice(11, 19);
 
   return (
-    <main className="screen">
+    <main className="screen done-screen">
       {live ? (
         <section className="done live" aria-label="チェックイン完了">
-          <p className="done-date">{formatDate(detail.visitDate)}</p>
-          <p className="clock mono" aria-label="現在時刻">
-            {clock}
-          </p>
-          {detail.usedTicket && <p className="used-ticket">無料券を使用</p>}
-          <div className="faces">
-            {detail.dogs.map((d) => (
-              <DogAvatar key={d.id} name={d.name} breedName={d.breedName} url={d.thumbUrl} size={76} />
-            ))}
+          <div className="done-head">
+            <p className="done-status">
+              <span className="pulse" aria-hidden="true" />
+              チェックイン完了
+            </p>
+            <p className="done-date">{formatDate(detail.visitDate)}</p>
+            <p className="clock" aria-label="現在時刻">
+              {clock}
+            </p>
           </div>
-          <p className="big">{detail.dogs.map((d) => d.name).join('・')}</p>
-          <div className="chips">
-            <span>{detail.dogs.length}頭</span>
-            <span className="mono">{detail.memberNo}</span>
-            {detail.pointsAwarded > 0 ? <span>+{detail.pointsAwarded}ポイント</span> : <span>ポイントは1日1回</span>}
+          <div className="done-body">
+            {detail.usedTicket && <p className="used-ticket">無料券を使用</p>}
+            <div className="stack">
+              {detail.dogs.map((d) => (
+                <DogAvatar key={d.id} name={d.name} breedName={d.breedName} url={d.thumbUrl} size={72} />
+              ))}
+            </div>
+            <p className="done-names">{detail.dogs.map((d) => d.name).join('・')}</p>
+            <p className="done-meta">
+              <span>{detail.dogs.length}頭</span>
+              <span aria-hidden="true"> · </span>
+              <span className="mono">{detail.memberNo}</span>
+              <span aria-hidden="true"> · </span>
+              {detail.pointsAwarded > 0 ? <span>+{detail.pointsAwarded}ポイント</span> : <span>ポイントは1日1回</span>}
+            </p>
+            <p className="note">
+              チェックイン <span className="mono">{detail.checkedInAt.slice(11, 16)}</span>・受付でこの画面を見せてください
+            </p>
           </div>
-          <p className="done-note">チェックイン {detail.checkedInAt.slice(11, 16)}・受付でこの画面を見せてください</p>
         </section>
       ) : (
         <section className="done past">
-          <p className="big">{detail.cancelled ? 'このチェックインは取り消されました' : `${formatDate(detail.visitDate)}のチェックインです`}</p>
-          <p className="small">今日の来場には使えません。受付のQRコードを読み取ってチェックインしてください。</p>
+          <h2>{detail.cancelled ? 'このチェックインは取り消されました' : `${formatDate(detail.visitDate)}のチェックインです`}</h2>
+          <p className="lead">今日の来場には使えません。受付のQRコードを読み取ってチェックインしてください。</p>
         </section>
       )}
 
       {live && detail.ticketsIssued > 0 && (
-        <div className="issued" role="status">
-          ポイントがたまり、無料券が{detail.ticketsIssued}枚発行されました
+        <div className="alert warning" role="status">
+          <p>ポイントがたまり、無料券が{detail.ticketsIssued}枚発行されました</p>
         </div>
       )}
 
-      <div className="panel">
-        <div className="kv">
-          <span>いまのポイント</span>
-          <b>
-            {detail.balance} / {detail.pointsPerTicket}
-          </b>
+      <div className="stats">
+        <div className="stat">
+          <span className="stat-label">いまのポイント</span>
+          <span className="stat-value">
+            {detail.balance}
+            <small> / {detail.pointsPerTicket}</small>
+          </span>
         </div>
-        <div className="kv">
-          <span>使える無料券</span>
-          <b>{detail.unusedTickets}枚</b>
+        <div className="stat">
+          <span className="stat-label">使える無料券</span>
+          <span className="stat-value">
+            {detail.unusedTickets}
+            <small>枚</small>
+          </span>
         </div>
       </div>
-      <Link to="/" className="btn sub as-link">
+      <Link to="/" className="btn ghost">
         会員証にもどる
       </Link>
     </main>

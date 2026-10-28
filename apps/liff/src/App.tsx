@@ -1,5 +1,5 @@
 import { Route, Routes, useLocation, useNavigate } from 'react-router-dom';
-import { AppHeader } from './components/AppHeader';
+import { AppHeader, type HeaderBack } from './components/AppHeader';
 import { ErrorNotice } from './components/ErrorNotice';
 import { useMe } from './hooks/useMe';
 import { usePendingSurvey } from './hooks/usePendingSurvey';
@@ -43,7 +43,7 @@ export function App() {
 
   return (
     <div className="app">
-      <AppHeader />
+      <AppHeader back={me?.registered ? backFor(location.pathname) : null} />
       {loading && !me ? (
         <main className="screen">
           <p className="loading">読み込んでいます…</p>
@@ -59,6 +59,13 @@ export function App() {
       )}
     </div>
   );
+}
+
+/** 下の階層の画面では、ヘッダーに戻り先を出す */
+function backFor(path: string): HeaderBack | null {
+  if (path === '/dogs/new' || /^\/dogs\/\d+$/.test(path)) return { to: '/dogs', label: 'ワンちゃん' };
+  if (path === '/dogs' || path === '/family' || path === '/checkin') return { to: '/', label: '会員証' };
+  return null;
 }
 
 function Registered() {

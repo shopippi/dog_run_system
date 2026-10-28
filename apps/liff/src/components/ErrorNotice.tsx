@@ -7,13 +7,22 @@ export function ErrorNotice({ error, onRetry }: { error: unknown; onRetry?: () =
       ? error.message
       : 'うまく表示できませんでした。画面を閉じて、もう一度開いてください。';
   return (
-    <div className="notice bad" role="alert">
+    <div className="alert danger" role="alert">
       <p>{message}</p>
       {onRetry && (
         <button type="button" className="btn sub" onClick={onRetry}>
           もう一度読み込む
         </button>
       )}
+    </div>
+  );
+}
+
+/** 入力の足りないところを知らせる */
+export function MessageNotice({ message }: { message: string }) {
+  return (
+    <div className="alert danger" role="alert">
+      <p>{message}</p>
     </div>
   );
 }

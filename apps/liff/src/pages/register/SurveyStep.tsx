@@ -1,6 +1,7 @@
 import { checkSurveyAnswers, type SurveyQuestion } from '@dr/shared';
 import { useState } from 'react';
-import { ErrorNotice } from '../../components/ErrorNotice';
+import { ErrorNotice, MessageNotice } from '../../components/ErrorNotice';
+import { Progress } from '../../components/Progress';
 import { SurveyForm, toAnswers, type SurveyValues } from '../../components/SurveyForm';
 
 type Props = {
@@ -27,21 +28,22 @@ export function SurveyStep({ questions, values, onChange, onBack, onNext, busy, 
   };
   return (
     <main className="screen">
-      <h2>かんたんなアンケート</h2>
-      <p className="small muted">ドッグランをよくするために使います。個別の回答は、管理者だけが見られます。</p>
+      <Progress step={3} />
+      <div className="page-head">
+        <h2>かんたんなアンケート</h2>
+        <p className="lead">ドッグランをよくするために使います。個別の回答は、管理者だけが見られます。</p>
+      </div>
       <SurveyForm questions={questions} values={values} onChange={onChange} />
-      {message && (
-        <div className="notice bad" role="alert">
-          <p>{message}</p>
-        </div>
-      )}
+      {message && <MessageNotice message={message} />}
       {error ? <ErrorNotice error={error} /> : null}
-      <button type="button" className="btn" disabled={busy} onClick={next}>
-        {busy ? '登録しています…' : '登録する'}
-      </button>
-      <button type="button" className="btn sub" disabled={busy} onClick={onBack}>
-        ワンちゃんの登録にもどる
-      </button>
+      <div className="actions">
+        <button type="button" className="btn" disabled={busy} onClick={next}>
+          {busy ? '登録しています…' : '登録する'}
+        </button>
+        <button type="button" className="btn ghost" disabled={busy} onClick={onBack}>
+          ワンちゃんの登録にもどる
+        </button>
+      </div>
     </main>
   );
 }

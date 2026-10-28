@@ -1,7 +1,9 @@
 import { MAX_DOGS_AT_REGISTER, type Breed, type DogInput } from '@dr/shared';
 import { useState } from 'react';
 import { DogForm, draftToInput, emptyDogDraft, type DogDraft } from '../../components/DogForm';
-import { ErrorNotice } from '../../components/ErrorNotice';
+import { ErrorNotice, MessageNotice } from '../../components/ErrorNotice';
+import { Icon } from '../../components/Icon';
+import { Progress } from '../../components/Progress';
 
 type Props = {
   breeds: Breed[];
@@ -33,8 +35,11 @@ export function DogsStep({ breeds, drafts, onChange, onNext, nextLabel, error, b
 
   return (
     <main className="screen">
-      <h2>ワンちゃんの登録</h2>
-      <p className="small muted">いっしょに来るワンちゃんを登録してください。受付では、写真と名前でお客さまを確認します。</p>
+      <Progress step={2} />
+      <div className="page-head">
+        <h2>ワンちゃんの登録</h2>
+        <p className="lead">いっしょに来るワンちゃんを登録してください。受付では、写真と名前でお客さまを確認します。</p>
+      </div>
       {drafts.map((d, i) => (
         <DogForm
           key={d.key}
@@ -46,15 +51,17 @@ export function DogsStep({ breeds, drafts, onChange, onNext, nextLabel, error, b
         />
       ))}
       {drafts.length < MAX_DOGS_AT_REGISTER && (
-        <button type="button" className="btn sub" onClick={() => onChange([...drafts, emptyDogDraft()])}>
-          ＋ もう1頭追加する
+        <button
+          type="button"
+          className="btn sub"
+          aria-label="＋ もう1頭追加する"
+          onClick={() => onChange([...drafts, emptyDogDraft()])}
+        >
+          <Icon name="plus" />
+          もう1頭追加する
         </button>
       )}
-      {message && (
-        <div className="notice bad" role="alert">
-          <p>{message}</p>
-        </div>
-      )}
+      {message && <MessageNotice message={message} />}
       {error ? <ErrorNotice error={error} /> : null}
       <button type="button" className="btn" disabled={busy} onClick={next}>
         {busy ? '登録しています…' : nextLabel}
