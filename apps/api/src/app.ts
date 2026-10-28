@@ -7,6 +7,8 @@ import { dogRoutes } from './routes/customer/dogs';
 import { inviteRoutes } from './routes/customer/invites';
 import { joinRoutes } from './routes/customer/join';
 import { meRoutes } from './routes/customer/me';
+import { authRoutes } from './routes/admin/auth';
+import { requireStaff } from './lib/staff-auth';
 import { mediaRoutes } from './routes/customer/media';
 import { surveyRoutes } from './routes/customer/survey';
 
@@ -43,6 +45,12 @@ export function createApp() {
   customer.route('/', inviteRoutes);
   customer.route('/', joinRoutes);
   app.route('/api', customer);
+
+  // 管理画面向け API(ログインのセッションで認証)。ログインだけは認証の前に置く
+  app.route('/admin/api', authRoutes);
+  const admin = new Hono<AppEnv>();
+  admin.use('*', requireStaff);
+  app.route('/admin/api', admin);
 
   app.all('/api/*', (c) =>
     c.json<ErrorBody>({ error: { code: 'not_found', message: 'その操作は見つかりませんでした。画面を読み込み直してください。' } }, 404),

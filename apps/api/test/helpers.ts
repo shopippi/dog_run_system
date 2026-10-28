@@ -100,3 +100,49 @@ export async function addFamily(memberNo: string, lineUserId: string, name: stri
     .bind(lineUserId, name, memberNo)
     .run();
 }
+
+/** 管理画面のアカウントを作る(テスト用) */
+export async function createStaff(email: string, role: 'staff' | 'admin' | 'developer', password = 'password-1234') {
+  const { env } = await import('cloudflare:test');
+  const { hashPassword } = await import('../src/lib/password');
+  await env.DB.prepare(
+    `INSERT INTO staff_users (email, name, password_hash, role, status, created_at, updated_at)
+     VALUES (?, ?, ?, ?, 'active', '2026-01-01T00:00:00+09:00', '2026-01-01T00:00:00+09:00')`,
+  )
+    .bind(email, role === 'admin' ? '管理者' : role === 'staff' ? '受付' : '製作者', await hashPassword(password), role)
+    .run();
+}
+
+/** 管理画面にログインして、クッキーを返す */
+export async function login(email: string, password = 'password-1234', now?: string): Promise<string> {
+  const res = await adminCall('/admin/api/login', { body: { email, password }, now });
+  if (res.status !== 200) throw new Error(`ログインに失敗: ${res.status} ${JSON.stringify(res.body)}`);
+  return res.cookie!;
+}
+
+/** 管理画面向け API を呼ぶ(クッキーと x-dr-admin ヘッダーつき) */
+export async function adminCall<T = any>(
+  path: string,
+  opts: { cookie?: string; method?: string; body?: unknown; now?: string; noAdminHeader?: boolean } = {},
+): Promise<{ status: number; body: T; cookie?: string }> {
+  const headers: Record<string, string> = {};
+  if (!opts.noAdminHeader) headers['x-dr-admin'] = '1';
+  if (opts.cookie) headers.cookie = opts.cookie;
+  if (opts.now) headers['x-debug-now'] = opts.now;
+  if (opts.body !== undefined) headers['content-type'] = 'application/json';
+  const res = await SELF.fetch(`${BASE}${path}`, {
+    method: opts.method ?? (opts.body !== undefined ? 'POST' : 'GET'),
+    headers,
+    body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined,
+  });
+  const setCookie = res.headers.get('set-cookie');
+  const cookie = setCookie?.match(/dr_sid=([^;]*)/)?.[1];
+  const text = await res.text();
+  let json: unknown = null;
+  try {
+    json = text ? JSON.parse(text) : null;
+  } catch {
+    json = text;
+  }
+  return { status: res.status, body: json as T, cookie: cookie ? `dr_sid=${cookie}` : undefined };
+}

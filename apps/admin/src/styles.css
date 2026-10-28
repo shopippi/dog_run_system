@@ -41,3 +41,8 @@ body { font-size: 16px; }
 .pill.r { background: var(--bad-soft); color: var(--bad); }
 .av { border-radius: 50%; object-fit: cover; flex: none; background: var(--sunk); border: 2px solid var(--surface); box-shadow: 0 0 0 1px var(--line); }
 .loading { padding: 40px 0; text-align: center; color: var(--muted); }
+.login { min-height: 100dvh; display: grid; place-items: center; padding: 20px; }
+.login-box { width: 100%; max-width: 420px; }
+.login-box h1 { font-size: 1.3rem; }
+.small { font-size: .85rem; }
+.muted { color: var(--muted); }

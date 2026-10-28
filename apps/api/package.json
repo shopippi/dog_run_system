@@ -9,7 +9,8 @@
     "assets": "node scripts/collect-assets.mjs",
     "db:migrate:local": "wrangler d1 migrations apply DB --local",
     "typecheck": "tsc -p tsconfig.json",
-    "test": "vitest run"
+    "test": "vitest run",
+    "staff:create": "node scripts/create-staff.mjs"
   },
   "dependencies": {
     "@dr/shared": "workspace:*",

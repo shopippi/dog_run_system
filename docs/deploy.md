@@ -27,3 +27,16 @@ pnpm --filter @dr/api exec wrangler deploy --env production
 ## 受付の固定QRコード
 
 チェックイン用のQRコードには、`https://liff.line.me/<LIFF ID>/checkin?k=<合言葉>` を入れる。合言葉は管理画面のルールの設定(settings の `checkin_passphrase`)にあり、変えると古いQRコードは使えなくなる。
+
+## 最初の管理者と、製作者のアカウント
+
+管理画面のアカウントは、最初の1つだけコマンドで作る。受付スタッフのアカウントは、管理画面のスタッフの管理(A-13)から作る。
+
+```sh
+cd apps/api
+STAFF_PASSWORD='<10文字以上>' pnpm staff:create --email owner@example.com --name 管理者 --role admin --remote --env production
+STAFF_PASSWORD='<10文字以上>' pnpm staff:create --email dev@example.com --name 製作者 --role developer --remote --env production
+```
+
+- `--role` は `admin`(管理者)・`staff`(受付スタッフ)・`developer`(製作者・見るだけ)。
+- 同じメールアドレスで実行し直すと、パスワードを再設定し、ロックを解除する(管理者がパスワードを忘れたとき)。

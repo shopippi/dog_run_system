@@ -136,3 +136,11 @@ export type InviteAcceptResult =
   | { result: 'joined'; memberNo: string; householdName: string }
   /** 別のおうちがあるので、まとめる申請を作った(管理者の確認待ち) */
   | { result: 'requested' };
+
+/** ログイン中の管理画面の利用者(S-01) */
+export type StaffMe = {
+  id: number;
+  name: string;
+  email: string;
+  role: import('./constants').StaffRole;
+};

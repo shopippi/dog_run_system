@@ -82,3 +82,12 @@ export function checkinPassphrase(): string {
 export async function openCheckin(page: Page, user: string) {
   await openLiff(page, user, `/checkin?k=${checkinPassphrase()}`);
 }
+
+/** 管理画面にログインする(e2e/start-server.sh で作ったアカウント) */
+export async function adminLogin(page: Page, role: 'admin' | 'staff' | 'developer' = 'admin', path = '/') {
+  await page.goto(`/admin${path}`);
+  await page.getByLabel('メールアドレス').fill(`${role}@example.com`);
+  await page.getByLabel('パスワード').fill('e2e-password-1234');
+  await page.getByRole('button', { name: 'ログイン' }).click();
+  await page.getByRole('button', { name: 'ログアウト' }).waitFor();
+}
