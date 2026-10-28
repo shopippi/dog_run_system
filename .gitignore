@@ -1,0 +1,9 @@
+node_modules/
+dist/
+.wrangler/
+.dev.vars
+apps/api/public/
+test-results/
+playwright-report/
+*.log
+.DS_Store

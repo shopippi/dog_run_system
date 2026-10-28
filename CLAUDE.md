@@ -32,4 +32,19 @@ LINE公式アカウントの標準ショップカードを置き換える、LINE
 
 ## コマンド
 
-(リポジトリを作ったら、開発・テスト・デプロイのコマンドをここに追記する)
+pnpm のワークスペース(apps/api、apps/liff、apps/admin、packages/shared)。リポジトリの直下で実行する。
+
+```sh
+pnpm install                 # 依存関係を入れる
+pnpm db:migrate:local        # ローカルのデータベースにマイグレーションを当てる
+pnpm dev                     # 画面をビルドして http://localhost:8787 で起動(/liff/ と /admin/)
+pnpm typecheck               # 型チェック
+pnpm test                    # Vitest(packages/shared のロジックと apps/api の API)
+pnpm test:e2e                # Playwright(画面の通し操作。空のデータベースで起動し直す)
+pnpm --filter @dr/api exec wrangler d1 migrations create DB <名前>   # マイグレーションを追加する
+```
+
+- 画面は Worker の静的アセット配信で、API と同じドメインから出す(`/liff/`、`/admin/`、`/api/*`、`/admin/api/*`)。
+- `VITE_LIFF_ID` を付けずにビルドした LIFF 画面はモックで動く(`?mockUser=U001:パパ` で LINE ユーザーを切り替えられる)。API 側のモックは `ENVIRONMENT` が local / test で `LINE_LOGIN_MOCK=1` のときだけ有効。
+- テストと開発では `x-debug-now` ヘッダーで現在時刻を指定できる(本番では無視される)。
+- デプロイの手順は `docs/deploy.md` を参照。
