@@ -46,7 +46,7 @@ export function CheckinDonePage() {
               チェックイン完了
             </p>
             <p className="done-date">{formatDate(detail.visitDate)}</p>
-            <p className="clock" aria-label="現在時刻">
+            <p className="clock" role="timer" aria-label="現在時刻">
               {clock}
             </p>
           </div>

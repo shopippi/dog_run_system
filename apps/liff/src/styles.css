@@ -56,12 +56,11 @@ a { color: var(--accent-text); }
   font-size: var(--fs-15); font-weight: var(--fw-strong); text-decoration: none; text-align: center; line-height: 1.3;
   transition: background-color var(--ease), border-color var(--ease), color var(--ease);
 }
-.btn:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--focus-ring); }
-.btn:disabled { background: var(--surface-sunk); color: var(--text-tertiary); border-color: var(--border); }
+.btn:focus-visible { outline: 2px solid var(--focus-color); outline-offset: 2px; }
+/* 押せないときも同じ見た目のまま薄くする(入力欄と見分けがつくように) */
+.btn:disabled { opacity: .45; }
 .btn.sub { background: var(--surface); color: var(--text); border-color: var(--border-strong); }
-.btn.sub:disabled { color: var(--text-tertiary); border-color: var(--border); background: var(--surface); }
 .btn.ghost { background: transparent; color: var(--text-secondary); font-weight: var(--fw-regular); }
-.btn.ghost:disabled { color: var(--text-tertiary); border-color: transparent; }
 .btn.danger { color: var(--danger); border-color: var(--danger); }
 .btn.danger-text { width: auto; min-height: 44px; padding: 0 var(--sp-2); color: var(--danger); font-size: var(--fs-14); }
 
@@ -167,7 +166,7 @@ a { color: var(--accent-text); }
 }
 .segment label {
   position: relative; isolation: isolate; display: flex; align-items: center; justify-content: center; text-align: center;
-  min-height: 42px; padding: 0 var(--sp-1); font-size: var(--fs-14); color: var(--text-secondary); line-height: 1.3;
+  min-height: 44px; padding: 0 var(--sp-1); font-size: var(--fs-14); color: var(--text-secondary); line-height: 1.3;
   transition: color var(--ease);
 }
 .segment label::before {
@@ -187,8 +186,8 @@ a { color: var(--accent-text); }
 .chips label:has(input:checked) { background: var(--accent-50); border-color: var(--accent); color: var(--accent-text); }
 /* ラジオの丸は見せず、押す場所いっぱいに重ねる */
 .segment input, .chips input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
-.chips label:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 1px; }
-.segment label:has(input:focus-visible)::before { box-shadow: 0 0 0 2px var(--accent); }
+.chips label:has(input:focus-visible) { outline: 2px solid var(--focus-color); outline-offset: 2px; }
+.segment label:has(input:focus-visible)::before { box-shadow: 0 0 0 2px var(--focus-color); }
 
 .check { display: flex; align-items: center; gap: var(--sp-3); min-height: 44px; font-size: var(--fs-15); cursor: pointer; }
 .check input { width: 20px; height: 20px; margin: 0; flex: none; accent-color: var(--accent); }
@@ -199,7 +198,7 @@ a { color: var(--accent-text); }
 .photo-pick { display: flex; align-items: center; gap: var(--sp-4); }
 .photo-pick-body { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; min-width: 0; }
 .photo-pick label.up { width: auto; min-height: 44px; font-size: var(--fs-14); cursor: pointer; }
-.photo-pick label.up:has(+ input:focus-visible) { box-shadow: 0 0 0 3px var(--focus-ring); }
+.photo-pick label.up:has(+ input:focus-visible) { outline: 2px solid var(--focus-color); outline-offset: 2px; }
 .photo-pick input[type="file"] { position: absolute; opacity: 0; width: 1px; height: 1px; pointer-events: none; }
 
 /* ---- 犬の写真 ---- */
@@ -223,20 +222,24 @@ a { color: var(--accent-text); }
   padding: var(--sp-5); border-radius: var(--radius-lg);
   background: var(--accent-hover); color: var(--on-accent);
 }
-.mc-head { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--sp-3); }
-.mc-who { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.mc-name { font-size: var(--fs-17); font-weight: var(--fw-strong); font-feature-settings: "palt"; line-height: 1.35; }
-.mc-id { font-size: var(--fs-13); color: var(--on-accent-80); }
-.member-card .stack > .av { box-shadow: 0 0 0 2px var(--accent-hover); }
+.mc-dogs { display: flex; }
+.mc-dogs > .av { box-shadow: 0 0 0 2px var(--accent-hover); }
+.mc-dogs > .av + .av { margin-left: -8px; }
+.mc-who { display: flex; flex-direction: column; gap: 2px; min-width: 0; margin-top: calc(-1 * var(--sp-2)); }
+.mc-name {
+  font-size: var(--fs-17); font-weight: var(--fw-strong); font-feature-settings: "palt"; line-height: 1.4;
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden;
+}
+.mc-id { font-size: var(--fs-13); color: var(--on-accent-85); }
 .stamps { display: grid; grid-template-columns: repeat(10, 22px); justify-content: space-between; row-gap: var(--sp-2); }
 .stamps span { width: 22px; height: 22px; border-radius: 50%; border: 1.5px solid var(--on-accent-50); }
 .stamps span.on { background: var(--on-accent); border-color: var(--on-accent); }
 .mc-foot {
   display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--sp-1) var(--sp-3);
   padding-top: var(--sp-4); border-top: 1px solid var(--on-accent-15);
-  font-size: var(--fs-14); color: var(--on-accent-80);
+  font-size: var(--fs-13); color: var(--on-accent-85);
 }
-.mc-foot b { font-size: var(--fs-20); color: var(--on-accent); margin-left: 2px; }
+.mc-foot b { font-size: var(--fs-24); line-height: 1.2; color: var(--on-accent); margin-left: var(--sp-1); }
 .ticket-exp { margin-left: var(--sp-2); font-size: var(--fs-13); color: var(--text-secondary); }
 
 /* ---- L-05 チェックイン ---- */

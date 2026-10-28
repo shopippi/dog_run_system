@@ -40,7 +40,7 @@ a { color: var(--accent-text); }
   transition: background-color var(--ease), color var(--ease);
 }
 .nav a.active { background: var(--surface-sunk); color: var(--text); font-weight: var(--fw-strong); }
-.nav a:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--focus-ring); }
+.nav a:focus-visible { outline: 2px solid var(--focus-color); outline-offset: 2px; }
 
 @media (min-width: 960px) {
   .shell { display: grid; grid-template-columns: 232px minmax(0, 1fr); }
@@ -83,13 +83,12 @@ a { color: var(--accent-text); }
   font-size: var(--fs-14); font-weight: var(--fw-strong); white-space: nowrap; text-decoration: none;
   transition: background-color var(--ease), border-color var(--ease), color var(--ease);
 }
-.btn:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--focus-ring); }
-.btn:disabled { background: var(--surface-sunk); color: var(--text-tertiary); border-color: var(--border); }
+.btn:focus-visible { outline: 2px solid var(--focus-color); outline-offset: 2px; }
+/* 押せないときも同じ見た目のまま薄くする */
+.btn:disabled { opacity: .45; }
 .btn.sub { background: var(--surface); color: var(--text); border-color: var(--border-strong); }
-.btn.sub:disabled { background: var(--surface); color: var(--text-tertiary); border-color: var(--border); }
 .btn.ghost { background: transparent; color: var(--text-secondary); font-weight: var(--fw-regular); padding: 0 var(--sp-3); }
-.btn.danger-fill { background: var(--danger); color: var(--on-accent); }
-.btn.danger-fill:disabled { background: var(--surface-sunk); color: var(--text-tertiary); filter: none; }
+.btn.danger-fill { background: var(--danger-fill); color: var(--on-accent); }
 .icon-btn { width: var(--control-h); padding: 0; }
 
 /* ---- 案内・バッジ ---- */
@@ -149,7 +148,7 @@ input::placeholder { color: var(--text-tertiary); }
 .segment button[aria-selected="true"] { color: var(--text); font-weight: var(--fw-strong); }
 .segment button[aria-selected="true"]::before { background: var(--surface); box-shadow: var(--shadow-seg); }
 .segment button:focus-visible { outline: none; }
-.segment button:focus-visible::before { box-shadow: 0 0 0 2px var(--accent); }
+.segment button:focus-visible::before { box-shadow: 0 0 0 2px var(--focus-color); }
 
 /* チップ(5択以上・理由) */
 .chips { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
@@ -161,7 +160,7 @@ input::placeholder { color: var(--text-tertiary); }
 }
 .chips label:has(input:checked) { background: var(--accent-50); border-color: var(--accent); color: var(--accent-text); }
 .chips input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
-.chips label:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 1px; }
+.chips label:has(input:focus-visible) { outline: 2px solid var(--focus-color); outline-offset: 2px; }
 
 /* 選べる行(犬を選ぶ) */
 .pick-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: var(--sp-2); }
@@ -229,7 +228,8 @@ input::placeholder { color: var(--text-tertiary); }
 .badges { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
 .visit-acts { display: flex; justify-content: flex-end; }
 .visit.cancelled .t, .visit.cancelled .visit-body b, .visit.cancelled .sub-text { color: var(--text-tertiary); }
-.visit.cancelled .av { opacity: .45; }
+.visit.cancelled .av, .visit.cancelled .walkin-mark { opacity: .6; }
+.visit:focus-visible { outline: 2px solid var(--focus-color); outline-offset: -2px; }
 @media (max-width: 720px) {
   .visit { grid-template-columns: 44px auto minmax(0, 1fr) auto; row-gap: var(--sp-2); }
   .badges { grid-column: 3 / 4; grid-row: 2; justify-content: flex-start; }
@@ -304,7 +304,7 @@ input::placeholder { color: var(--text-tertiary); }
   .btn:hover:not(:disabled) { background: var(--accent-hover); }
   .btn.sub:hover:not(:disabled) { background: var(--surface-sunk); }
   .btn.ghost:hover:not(:disabled) { background: var(--surface-sunk); color: var(--text); }
-  .btn.danger-fill:hover:not(:disabled) { background: var(--danger); filter: brightness(.92); }
+  .btn.danger-fill:hover:not(:disabled) { background: var(--danger-fill); filter: brightness(.92); }
   .segment button:hover { color: var(--text); }
   .visit:hover { background: var(--surface-sunk); }
   .result-row:hover { background: var(--surface-sunk); }

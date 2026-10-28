@@ -145,7 +145,7 @@ export function DogForm({ draft, breeds, onChange, breedEditable = true, title, 
               e.target.value = '';
             }}
           />
-          {photoError ? <span className="err">{photoError}</span> : <span className="hint">写真はあとからでも登録できます</span>}
+          {photoError ? <span className="err" role="alert">{photoError}</span> : <span className="hint">写真はあとからでも登録できます</span>}
         </div>
       </div>
 
@@ -201,11 +201,11 @@ export function DogForm({ draft, breeds, onChange, breedEditable = true, title, 
             </div>
           )}
           <div className="field">
-            <span className="label">
+            <span className="label" id={`${id}-size`}>
               サイズ<span className="req">必須</span>
             </span>
             <ChoiceGroup
-              label="サイズ"
+              labelledBy={`${id}-size`}
               options={DOG_SIZES.map((s) => ({ value: s, label: DOG_SIZE_LABELS[s] }))}
               value={draft.size}
               onChange={(size) => set({ size })}
@@ -215,9 +215,11 @@ export function DogForm({ draft, breeds, onChange, breedEditable = true, title, 
       )}
 
       <div className="field">
-        <span className="label">性別</span>
+        <span className="label" id={`${id}-sex`}>
+          性別
+        </span>
         <ChoiceGroup
-          label="性別"
+          labelledBy={`${id}-sex`}
           options={DOG_SEXES.map((s) => ({ value: s, label: DOG_SEX_LABELS[s] }))}
           value={draft.sex}
           onChange={(sex) => set({ sex })}

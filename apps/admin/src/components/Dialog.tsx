@@ -3,7 +3,8 @@ import { createPortal } from 'react-dom';
 
 /**
  * 確認のダイアログ(docs/design.md 4章)。ブラウザの dialog を使い、開いている間はほかを押せない。
- * Esc キーで閉じる。
+ * Esc キーで閉じる。開いたときは data-autofocus を付けたボタン(安全な方)にフォーカスを置き、
+ * 閉じたら開く前にフォーカスがあった要素へ戻す。
  */
 export function Dialog({
   title,
@@ -20,8 +21,14 @@ export function Dialog({
   const titleId = useId();
   useEffect(() => {
     const d = ref.current;
-    if (d && !d.open) d.showModal();
-    return () => d?.close();
+    if (!d) return;
+    const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    if (!d.open) d.showModal();
+    d.querySelector<HTMLElement>('[data-autofocus]')?.focus();
+    return () => {
+      d.close();
+      if (opener?.isConnected) opener.focus();
+    };
   }, []);
   return createPortal(
     <dialog

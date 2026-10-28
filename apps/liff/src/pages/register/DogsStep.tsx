@@ -51,12 +51,7 @@ export function DogsStep({ breeds, drafts, onChange, onNext, nextLabel, error, b
         />
       ))}
       {drafts.length < MAX_DOGS_AT_REGISTER && (
-        <button
-          type="button"
-          className="btn sub"
-          aria-label="＋ もう1頭追加する"
-          onClick={() => onChange([...drafts, emptyDogDraft()])}
-        >
+        <button type="button" className="btn sub" onClick={() => onChange([...drafts, emptyDogDraft()])}>
           <Icon name="plus" />
           もう1頭追加する
         </button>

@@ -36,16 +36,14 @@ function Card({ me }: { me: MeRegistered }) {
   return (
     <main className="screen">
       <section className="member-card" aria-label="会員証">
-        <div className="mc-head">
-          <div className="mc-who">
-            <p className="mc-name">{household.displayName}</p>
-            <p className="mc-id mono">{household.memberNo}</p>
-          </div>
-          <div className="stack">
-            {card.dogs.map((d) => (
-              <DogAvatar key={d.id} name={d.name} breedName={d.breedName} url={d.thumbUrl} size={44} />
-            ))}
-          </div>
+        <div className="mc-dogs">
+          {card.dogs.map((d) => (
+            <DogAvatar key={d.id} name={d.name} breedName={d.breedName} url={d.thumbUrl} size={32} />
+          ))}
+        </div>
+        <div className="mc-who">
+          <p className="mc-name">{household.displayName}</p>
+          <p className="mc-id mono">{household.memberNo}</p>
         </div>
         <div className="stamps" role="img" aria-label={`ポイント ${filled} / ${card.pointsPerTicket}`}>
           {Array.from({ length: stamps }, (_, i) => (

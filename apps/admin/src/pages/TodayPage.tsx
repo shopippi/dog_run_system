@@ -99,9 +99,23 @@ function VisitRow({
 }) {
   const walkin = v.method === 'walkin';
   const [confirming, setConfirming] = useState(false);
+  const rowRef = useRef<HTMLLIElement>(null);
+  // 取り消すと行のボタンが消えるので、フォーカスは行そのものに移す
+  const focusRowWhenCancelled = useRef(false);
+  useEffect(() => {
+    if (v.cancelled && focusRowWhenCancelled.current) {
+      focusRowWhenCancelled.current = false;
+      rowRef.current?.focus();
+    }
+  }, [v.cancelled]);
   const label = walkin ? `会員以外 ${v.dogCount}頭` : v.dogs.map((d) => d.name).join('・');
   return (
-    <li className={`visit${v.cancelled ? ' cancelled' : ''}${fresh ? ' new' : ''}`} aria-label={`${v.time} ${label}`}>
+    <li
+      ref={rowRef}
+      tabIndex={-1}
+      className={`visit${v.cancelled ? ' cancelled' : ''}${fresh ? ' new' : ''}`}
+      aria-label={`${v.time} ${label}`}
+    >
       <span className="t mono">{v.time}</span>
       <span className="stack">
         {walkin ? (
@@ -153,6 +167,7 @@ function VisitRow({
           label={label}
           onClose={() => setConfirming(false)}
           onDone={() => {
+            focusRowWhenCancelled.current = true;
             setConfirming(false);
             onChanged();
           }}
@@ -194,7 +209,7 @@ function CancelConfirm({
       onClose={() => !busy && onClose()}
       footer={
         <>
-          <button type="button" className="btn sub" disabled={busy} onClick={onClose}>
+          <button type="button" className="btn sub" data-autofocus disabled={busy} onClick={onClose}>
             やめる
           </button>
           <button type="button" className="btn danger-fill" disabled={busy} onClick={submit}>

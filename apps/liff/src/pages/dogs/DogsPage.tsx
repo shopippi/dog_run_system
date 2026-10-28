@@ -35,7 +35,7 @@ export function DogsPage() {
           </li>
         ))}
       </ul>
-      <Link to="/dogs/new" className="btn sub" aria-label="＋ ワンちゃんを追加する">
+      <Link to="/dogs/new" className="btn sub">
         <Icon name="plus" />
         ワンちゃんを追加する
       </Link>
