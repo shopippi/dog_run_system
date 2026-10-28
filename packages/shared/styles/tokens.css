@@ -12,11 +12,16 @@
   --text: #16191D;
   --text-secondary: #5B6470;
   --text-tertiary: #667080;
-  --accent: #1E6E46;
-  --accent-hover: #175737;
-  --accent-text: #175737;
-  --accent-50: #EEF6F1;
-  --accent-100: #D5E9DC;
+  /* 主ボタンの塗り(墨)。色ではなく濃さで主な操作を示す */
+  --ink: #16191D;
+  --ink-hover: #2B3037;
+  --on-ink: #FFFFFF;
+  /* accent は「リンク・フォーカス・選択中の印」だけに使う落ち着いた青。緑は使わない */
+  --accent: #2F5FA8;
+  --accent-hover: #244B87;
+  --accent-text: #2F5FA8;
+  --accent-50: #EBF1FA;
+  --accent-100: #C9D9F1;
   --danger: #C2341F;
   --danger-50: #FCEEEB;
   /* 確定ボタンの塗り(ダークモードでも同じ色に白文字) */
@@ -25,14 +30,31 @@
   --warning-50: #FBF3E2;
   --info: #2F5FA8;
   --info-50: #EBF1FA;
-  --on-accent: #FFFFFF;
   /* QR コードの下地。読み取れるよう、ダークモードでも白のまま */
   --paper: #FFFFFF;
 
-  /* 会員証のカードの上の文字と線(on-accent を薄めたもの) */
-  --on-accent-85: rgba(255, 255, 255, .85);
-  --on-accent-50: color-mix(in srgb, var(--on-accent) 50%, transparent);
-  --on-accent-15: color-mix(in srgb, var(--on-accent) 15%, transparent);
+  /* 会員証の写真や濃い単色の上の文字と線(ライト・ダークとも同じ)。85% は会員IDなどの補助 */
+  --on-card: #FFFFFF;
+  --on-card-85: rgba(255, 255, 255, .85);
+  --on-card-50: rgba(255, 255, 255, .5);
+  --on-card-15: rgba(255, 255, 255, .15);
+  /* 会員証の背景の単色(お客さんが選ぶ。ライト・ダークとも同じ。docs/design.md 5章) */
+  --card-ink: #1F2328;
+  --card-navy: #1F3A5F;
+  --card-forest: #1E4D3A;
+  --card-brown: #5A3E2B;
+  --card-wine: #6B2737;
+  --card-gray: #6B7280;
+  --card-sand: #E9E2D3;
+  --card-white: #F6F6F4;
+  /* 写真の上に重ねる影(下に向かって濃くなる)と、文字の薄い影 */
+  --card-scrim: linear-gradient(to top, rgba(0, 0, 0, .62) 0%, rgba(0, 0, 0, .28) 45%, rgba(0, 0, 0, 0) 100%);
+  --card-text-shadow: 0 1px 2px rgba(0, 0, 0, .45);
+  /* 互換のための別名(あとで消す)。新しく使わない */
+  --on-accent: var(--on-card);
+  --on-accent-85: var(--on-card-85);
+  --on-accent-50: var(--on-card-50);
+  --on-accent-15: var(--on-card-15);
   --focus-ring: color-mix(in srgb, var(--accent) 20%, transparent);
   /* ボタンとメニューのフォーカスの線 */
   --focus-color: var(--accent);
@@ -89,19 +111,21 @@
     --text: #ECEEF0;
     --text-secondary: #A7AFB8;
     --text-tertiary: #8B95A1;
-    --accent: #257349;
-    --accent-hover: #1E6140;
-    --accent-text: #6CC594;
-    --accent-50: #15261C;
-    --accent-100: #214530;
+    --ink: #ECEEF0;
+    --ink-hover: #D5D9DE;
+    --on-ink: #16191D;
+    --accent: #7FA8E6;
+    --accent-hover: #9BBCEE;
+    --accent-text: #7FA8E6;
+    --accent-50: #16233A;
+    --accent-100: #22365A;
     --danger: #E4675A;
     --danger-50: #3A1C18;
     --warning: #E3A64A;
     --warning-50: #332812;
     --info: #7FA8E6;
     --info-50: #16233A;
-    --on-accent: #FFFFFF;
-    --focus-color: var(--accent-text);
+    --focus-color: var(--accent);
     --shadow-float: 0 8px 24px rgba(0, 0, 0, .45);
     --shadow-seg: 0 1px 2px rgba(0, 0, 0, .35);
     --backdrop: rgba(0, 0, 0, .55);
@@ -118,19 +142,21 @@
   --text: #ECEEF0;
   --text-secondary: #A7AFB8;
   --text-tertiary: #8B95A1;
-  --accent: #257349;
-  --accent-hover: #1E6140;
-  --accent-text: #6CC594;
-  --accent-50: #15261C;
-  --accent-100: #214530;
+  --ink: #ECEEF0;
+  --ink-hover: #D5D9DE;
+  --on-ink: #16191D;
+  --accent: #7FA8E6;
+  --accent-hover: #9BBCEE;
+  --accent-text: #7FA8E6;
+  --accent-50: #16233A;
+  --accent-100: #22365A;
   --danger: #E4675A;
   --danger-50: #3A1C18;
   --warning: #E3A64A;
   --warning-50: #332812;
   --info: #7FA8E6;
   --info-50: #16233A;
-  --on-accent: #FFFFFF;
-  --focus-color: var(--accent-text);
+  --focus-color: var(--accent);
   --shadow-float: 0 8px 24px rgba(0, 0, 0, .45);
   --shadow-seg: 0 1px 2px rgba(0, 0, 0, .35);
   --backdrop: rgba(0, 0, 0, .55);

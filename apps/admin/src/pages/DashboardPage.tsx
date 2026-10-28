@@ -381,7 +381,7 @@ function Trend({ data }: { data: DashboardResponse }) {
           type: 'line',
           data: {
             labels,
-            datasets: [line('来場頭数', dogs, c.accent, labels.length), line('来場組数', groups, c.tertiary, labels.length)],
+            datasets: [line('来場頭数', dogs, c.ink, labels.length), line('来場組数', groups, c.tertiary, labels.length)],
           },
           options: {
             interaction: { mode: 'index', intersect: false },
@@ -415,7 +415,7 @@ function RepeatChart({ data }: { data: DashboardResponse }) {
             line(
               'リピート率',
               months.map((m) => (m.rate === null ? null : Math.round(m.rate * 100))),
-              c.accent,
+              c.ink,
               labels.length,
             ),
           ],
@@ -459,9 +459,9 @@ function MonthlyChart({ data }: { data: DashboardResponse }) {
         data: {
           labels,
           datasets: [
-            line('新しいおうち', data.months.map((m) => m.newHouseholds), c.accent, labels.length),
+            line('新しいおうち', data.months.map((m) => m.newHouseholds), c.ink, labels.length),
             line('無料券の発行', data.months.map((m) => m.ticketsIssued), c.secondary, labels.length),
-            line('無料券の利用', data.months.map((m) => m.ticketsUsed), c.secondary, labels.length, true),
+            line('無料券の利用', data.months.map((m) => m.ticketsUsed), c.blue, labels.length),
           ],
         },
         options: {
@@ -508,7 +508,7 @@ function BarChart({
         type: 'bar',
         data: {
           labels: shown.map((b) => b.label),
-          datasets: [{ label, data: shown.map((b) => b.count), backgroundColor: c.accent, borderRadius: 3, barThickness: 16 }],
+          datasets: [{ label, data: shown.map((b) => b.count), backgroundColor: c.ink, borderRadius: 3, barThickness: 16 }],
         },
         options: {
           indexAxis: 'y',
@@ -543,8 +543,8 @@ function ScatterChart({ data }: { data: DashboardResponse }) {
             {
               label: '1日',
               data: points.map((p) => ({ x: p.tempMax, y: p.dogs })),
-              backgroundColor: c.accent,
-              borderColor: c.accent,
+              backgroundColor: c.ink,
+              borderColor: c.ink,
               pointRadius: 4,
               pointHoverRadius: 5,
             },

@@ -42,7 +42,7 @@ export async function registerWithPhoto(page: Page, user: string, names: [string
     if (i > 0) await page.getByRole('button', { name: 'もう1頭追加する' }).click();
     const form = page.locator('fieldset.dog-form').nth(i);
     await form.getByLabel('名前').fill(name);
-    await form.getByRole('combobox', { name: /犬種/ }).selectOption({ label: i === 0 ? '柴犬' : 'トイプードル' });
+    await form.getByRole('combobox', { name: /犬種/ }).selectOption({ label: i === 0 ? '柴犬' : 'プードル' });
     if (i === 0) {
       await form.locator('input[type=file]').setInputFiles({ name: 'a.jpg', mimeType: 'image/jpeg', buffer: await makePhoto(page) });
       await form.locator('img.av').waitFor();
