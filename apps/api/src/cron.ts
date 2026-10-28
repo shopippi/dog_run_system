@@ -7,6 +7,7 @@ import { loadSettings } from './lib/settings';
 import { fetchWeather, type WeatherSource } from './services/weather';
 import { backupDatabase } from './services/backup';
 import { expirePointsAndTickets } from './services/expiry';
+import { deleteMigrationImages } from './services/migration-images';
 
 /** 日本時間 3:10(UTC 18:10)。日別集計の再計算、有効期限の処理、バックアップ、移行期間終了後の画像削除 */
 export const CRON_NIGHTLY = '10 18 * * *';
@@ -35,6 +36,7 @@ export async function runNightly(env: Bindings, now: Date): Promise<void> {
   await runDailyStatsJob(env, now);
   await runExpiryJob(env, now);
   await runBackupJob(env, now);
+  await runMigrationImagesJob(env, now);
   if (await shouldImportHolidays(env.DB, now)) await runHolidaysJob(env, now);
 }
 
@@ -71,4 +73,11 @@ export function runBackupJob(env: Bindings, now: Date) {
 /** B-05 有効期限の処理(毎晩 3:10) */
 export function runExpiryJob(env: Bindings, now: Date) {
   return runJob(env.DB, 'expiry', now, async () => expirePointsAndTickets(env.DB, now, await loadSettings(env.DB)));
+}
+
+/** B-06 移行用の画像の削除(毎晩 3:10) */
+export function runMigrationImagesJob(env: Bindings, now: Date) {
+  return runJob(env.DB, 'migration_images', now, async () =>
+    deleteMigrationImages(env.DB, env.MEDIA, now, await loadSettings(env.DB)),
+  );
 }
