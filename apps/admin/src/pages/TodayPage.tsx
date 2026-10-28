@@ -1,5 +1,6 @@
 import { CANCEL_REASONS, type AdminVisit, type TodayResponse } from '@dr/shared';
 import { useEffect, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Dialog } from '../components/Dialog';
 import { DogFace } from '../components/DogFace';
 import { ErrorNotice } from '../components/ErrorNotice';
@@ -38,7 +39,9 @@ export function TodayPage() {
         aside={
           data?.pendingRequests ? (
             <p className="pending" role="status">
-              確認待ちが <b>{data.pendingRequests}件</b> あります(旧カードの引き継ぎ・おうちをまとめる申請)
+              <Link to="/requests">
+                確認待ちが <b>{data.pendingRequests}件</b> あります(旧カードの引き継ぎ・おうちをまとめる申請)
+              </Link>
             </p>
           ) : null
         }
