@@ -375,3 +375,11 @@ input::placeholder { color: var(--text-tertiary); }
 .rq-photo img { display: block; width: 72px; height: 72px; object-fit: cover; background: var(--surface-sunk); }
 .rq-photo:focus-visible { outline: 2px solid var(--focus-color); outline-offset: 2px; }
 .rq-actions { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
+.rq-chip-off { color: var(--text-tertiary); background: var(--surface-sunk); }
+.chips label.rq-chip-off { color: var(--text-tertiary); background: var(--surface-sunk); }
+.rq-points input { width: 160px; max-width: 100%; }
+.rq-preview { font-size: var(--fs-14); color: var(--text-secondary); }
+.rq-preview b { color: var(--text); }
+.rq-photo-large { display: block; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; background: var(--surface-sunk); }
+.rq-photo-large img { display: block; width: 100%; max-height: 260px; object-fit: contain; }
+.rq-photo-large:focus-visible { outline: 2px solid var(--focus-color); outline-offset: 2px; }

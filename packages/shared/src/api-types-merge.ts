@@ -84,14 +84,14 @@ export type MergeRecord = {
 };
 
 /**
- * 旧カードの引き継ぎ申請(C-10)で requests.payload に入れる内容(kind = 'migration')。
- * 旧カードの写真は requests.attachment_key(R2 の requests/... のキー)。
- * C-10 の画面と API(担当E)はこの形で作り、承認(A-05)はこの形を読む。
+ * 確認待ちの一覧に出す、旧カードの引き継ぎ申請(C-10)の内容。requests.payload を読んだもの。
+ * payload の型そのものは C-10 の担当(E)が api-types-customer.ts の MigrationRequestPayload で定義する
+ * (同じ名前の型を二重に作らないよう、ここでは別の名前にしている)。
  */
-export type MigrationRequestPayload = {
+export type RequestMigrationView = {
   source: import('./constants').MigrationSource;
-  /** お客さんが申請したポイント数(管理者が写真を見て確認・修正する) */
-  claimedPoints: number;
+  /** お客さんが申請したポイント数(管理者が写真を見て確認・修正する)。読めなければ null */
+  claimedPoints: number | null;
   note?: string;
 };
 
@@ -104,6 +104,8 @@ export type RequestHousehold = {
   /** 統合済みのとき、統合先の会員ID */
   mergedIntoMemberNo: string | null;
   dogs: { id: number; name: string; breedName: string; thumbUrl: string | null }[];
+  /** ポイント残高 */
+  points: number;
 };
 
 /** 確認待ちの1件(GET /admin/api/requests) */
@@ -119,7 +121,7 @@ export type RequestItem = {
   /** 申請した家族の LINE の表示名 */
   requester: string | null;
   /** 旧カードの引き継ぎ申請の内容 */
-  migration: MigrationRequestPayload | null;
+  migration: RequestMigrationView | null;
   /** 添付画像(旧カードの写真)。削除済みなら null */
   attachmentUrl: string | null;
   handledAt: string | null;
@@ -129,6 +131,33 @@ export type RequestItem = {
 
 export type RequestListResponse = {
   requests: RequestItem[];
+  /** 無料券1枚に必要なポイント数(承認の前に、引き継ぎ後のポイントを計算するため) */
+  pointsPerTicket: number;
   /** 確認待ちの件数(タブの印) */
   pending: number;
+};
+
+/** 旧カードの移行の状態(GET /admin/api/households/:id/migration) */
+export type MigrationStatus = {
+  householdId: number;
+  memberNo: string;
+  displayName: string;
+  points: number;
+  pointsPerTicket: number;
+  /** 移行元ごとの、引き継ぎ済みの記録(統合でまとめたおうちの分を含む)。まだなら null */
+  migrated: Record<import('./constants').MigrationSource, { date: string; points: number } | null>;
+  period: { start: string | null; end: string | null };
+  /** 今日が移行期間の中か(期間が未設定なら true) */
+  inPeriod: boolean;
+};
+
+/** 旧カードの移行の結果(直接入力・申請の承認) */
+export type MigrationResult = {
+  householdId: number;
+  memberNo: string;
+  source: import('./constants').MigrationSource;
+  points: number;
+  ticketsIssued: number;
+  /** 引き継ぎ後のポイント残高 */
+  balance: number;
 };

@@ -1,8 +1,11 @@
 import {
   MIGRATION_SOURCES,
+  approveMigrationSchema,
+  migrationInputSchema,
   rejectRequestSchema,
+  toJstDate,
   toJstIso,
-  type MigrationRequestPayload,
+  type RequestMigrationView,
   type RequestHousehold,
   type RequestItem,
   type RequestListResponse,
@@ -10,10 +13,12 @@ import {
 import { Hono } from 'hono';
 import type { AppEnv } from '../../env';
 import { errors } from '../../lib/errors';
+import { loadSettings } from '../../lib/settings';
 import { requireRole } from '../../lib/staff-auth';
 import { parseJson } from '../../lib/validate';
 import { ADMIN_MEDIA_BASE } from '../../services/admin-visits';
 import { auditStatement } from '../../services/audit';
+import { migrationStatus, recordMigration, resolveActiveHousehold, undoMigration } from '../../services/migration';
 import { registerUndo } from '../../services/undo';
 
 // A-05 旧カードの移行の承認・却下、A-08 まとめる申請の確認
@@ -41,16 +46,19 @@ type RequestRow = {
   handled_by: string | null;
 };
 
-/** 旧カードの引き継ぎ申請の内容を読む。形が崩れていても一覧は出す */
-export function parseMigrationPayload(raw: string): MigrationRequestPayload | null {
+/**
+ * 旧カードの引き継ぎ申請(C-10)の payload を読む。形は { source: 'line_card' | 'paper_card', claimedPoints, note? }
+ * (型は C-10 の担当の MigrationRequestPayload)。形が崩れていても一覧は出す
+ */
+export function parseMigrationPayload(raw: string): RequestMigrationView | null {
   try {
-    const v = JSON.parse(raw) as Partial<MigrationRequestPayload>;
+    const v = JSON.parse(raw) as { source?: unknown; claimedPoints?: unknown; note?: unknown };
     const source = MIGRATION_SOURCES.find((s) => s === v.source);
     if (!source) return null;
-    const claimed = Number(v.claimedPoints);
+    const claimed = v.claimedPoints === null || v.claimedPoints === undefined ? NaN : Number(v.claimedPoints);
     return {
       source,
-      claimedPoints: Number.isInteger(claimed) && claimed >= 0 ? claimed : 0,
+      claimedPoints: Number.isInteger(claimed) && claimed >= 0 ? claimed : null,
       ...(typeof v.note === 'string' && v.note ? { note: v.note.slice(0, 500) } : {}),
     };
   } catch {
@@ -64,7 +72,7 @@ async function loadHouseholds(db: D1Database, ids: number[]): Promise<Map<number
   for (let i = 0; i < unique.length; i += 80) {
     const chunk = unique.slice(i, i + 80);
     const marks = chunk.map(() => '?').join(',');
-    const [{ results: hs }, { results: dogs }] = await Promise.all([
+    const [{ results: hs }, { results: dogs }, { results: balances }] = await Promise.all([
       db
         .prepare(
           `SELECT h.id, h.member_no, h.display_name, h.status, m.member_no AS merged_into
@@ -80,6 +88,13 @@ async function loadHouseholds(db: D1Database, ids: number[]): Promise<Map<number
         )
         .bind(...chunk)
         .all<{ household_id: number; id: number; name: string; breed_name: string; thumb_key: string | null }>(),
+      db
+        .prepare(
+          `SELECT household_id, COALESCE(SUM(delta), 0) AS balance FROM point_ledger
+            WHERE household_id IN (${marks}) GROUP BY household_id`,
+        )
+        .bind(...chunk)
+        .all<{ household_id: number; balance: number }>(),
     ]);
     for (const h of hs) {
       map.set(h.id, {
@@ -96,6 +111,7 @@ async function loadHouseholds(db: D1Database, ids: number[]): Promise<Map<number
             breedName: d.breed_name,
             thumbUrl: d.thumb_key ? `${ADMIN_MEDIA_BASE}/${d.thumb_key}` : null,
           })),
+        points: balances.find((b) => b.household_id === h.id)?.balance ?? 0,
       });
     }
   }
@@ -126,6 +142,7 @@ requestsRoutes.get('/requests', requireRole('admin'), async (c) => {
   const pending = await db.prepare("SELECT COUNT(*) AS n FROM requests WHERE status = 'pending'").first<{ n: number }>();
   const body: RequestListResponse = {
     pending: pending?.n ?? 0,
+    pointsPerTicket: (await loadSettings(db)).points_per_ticket,
     requests: results.map((r) => ({
       id: r.id,
       kind: r.kind,
@@ -204,6 +221,7 @@ requestsRoutes.post('/requests/:id/reject', requireRole('admin'), async (c) => {
   return c.json({ ok: true });
 });
 
+// 申請の承認。旧カードの引き継ぎ申請は、管理者が写真を見てポイント数を確認・修正して承認する(A-05)。
 // まとめる申請は、統合の画面(M-08)で統合すると承認になる。ここでは承認しない
 requestsRoutes.post('/requests/:id/approve', requireRole('admin'), async (c) => {
   const db = c.env.DB;
@@ -215,8 +233,54 @@ requestsRoutes.post('/requests/:id/approve', requireRole('admin'), async (c) => 
       'まとめる申請は、「統合の画面に進む」から、同じワンちゃんを組み合わせてまとめてください。まとめると承認になります。',
     );
   }
-  throw errors.badRequest('この申請は、ここでは承認できません。画面を読み込み直してください。');
+  const input = await parseJson(c, approveMigrationSchema);
+  const payload = parseMigrationPayload(r.payload);
+  const source = input.source ?? payload?.source;
+  if (!source) throw errors.badRequest('旧カードの種類(LINEのショップカード・紙のスタンプカード)を選んでください。');
+  // 申請のあとにおうちが統合されていれば、統合先に付ける
+  const h = await resolveActiveHousehold(db, r.household_id);
+  if (!h || h.status !== 'active') {
+    throw errors.conflict('not_active', '申請したおうちは退会しているため、引き継げません。「却下する」で処理してください。');
+  }
+  const result = await recordMigration(db, {
+    householdId: h.id,
+    source,
+    points: input.points,
+    staffId: c.get('staff').id,
+    now: c.get('now'),
+    settings: await loadSettings(db),
+    // 移行期間は、申請した日で判定する(期間の終わりの前に申請された分は、あとから承認できる)
+    periodDate: toJstDate(new Date(r.created_at)),
+    request: { id: r.id, claimedPoints: payload?.claimedPoints ?? null },
+  });
+  return c.json(result);
 });
+
+// 旧カードの移行の状態(引き継ぎ済みの移行元、いまのポイント、移行期間)
+requestsRoutes.get('/households/:id/migration', requireRole('admin'), async (c) => {
+  const db = c.env.DB;
+  return c.json(await migrationStatus(db, Number(c.req.param('id')) || 0, c.get('now'), await loadSettings(db)));
+});
+
+// 旧カードの移行の直接入力(受付で旧カードを見せてもらったとき。16.1)
+requestsRoutes.post('/households/:id/migrate', requireRole('admin'), async (c) => {
+  const input = await parseJson(c, migrationInputSchema);
+  const db = c.env.DB;
+  const now = c.get('now');
+  const result = await recordMigration(db, {
+    householdId: Number(c.req.param('id')) || 0,
+    source: input.source,
+    points: input.points,
+    staffId: c.get('staff').id,
+    now,
+    settings: await loadSettings(db),
+    periodDate: toJstDate(now),
+  });
+  return c.json(result, 201);
+});
+
+// 移行を元に戻す(操作ログ A-15 から)。発行した無料券が使われていれば戻せない
+registerUndo('household.migrate', undoMigration);
 
 // 却下を元に戻す(操作ログ A-15 から)。まだ却下のままなら、確認待ちに戻す
 registerUndo('request.reject', async (db, log) => {

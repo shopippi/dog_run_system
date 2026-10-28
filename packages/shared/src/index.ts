@@ -24,3 +24,4 @@ export * from './schemas/analytics';
 export * from './api-types-customer';
 export * from './schemas/customer';
 export * from './merge';
+export * from './migration';

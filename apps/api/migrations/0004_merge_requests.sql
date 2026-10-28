@@ -3,3 +3,7 @@
 
 -- 統合を元に戻すとき・統合後の変更を調べるときに、統合の台帳の行を探す
 CREATE INDEX IF NOT EXISTS idx_point_ledger_b_merge ON point_ledger(merge_id);
+
+-- 旧カードの移行(A-05): 同じおうちの同じ移行元への2回目を探す・元に戻した記録を探す
+CREATE INDEX IF NOT EXISTS idx_point_ledger_b_migration ON point_ledger(household_id, kind, migration_source);
+CREATE INDEX IF NOT EXISTS idx_point_ledger_b_reverses ON point_ledger(reverses_id);

@@ -1,4 +1,6 @@
 import { z } from 'zod';
+import { MIGRATION_SOURCES } from '../constants';
+import { MIGRATION_POINTS_LIMIT } from '../migration';
 
 // 入力チェック(merge)。おうちの統合(A-07)・確認待ち(A-08)・旧カードの移行(A-05)
 
@@ -40,4 +42,25 @@ export const rejectRequestSchema = z.object({
     .trim()
     .min(1, { error: '却下する理由を選んでください。' })
     .max(200, { error: '理由は200文字までで入力してください。' }),
+});
+
+const migrationSourceSchema = z.enum(MIGRATION_SOURCES, { error: '旧カードの種類(LINEのショップカード・紙のスタンプカード)を選んでください。' });
+const migrationPointsSchema = z
+  .number({ error: 'ポイント数を数字で入れてください。' })
+  .int({ error: 'ポイント数は整数で入れてください。' })
+  .min(0, { error: 'ポイント数は0〜99で入れてください。' })
+  .max(MIGRATION_POINTS_LIMIT, { error: 'ポイント数は0〜99で入れてください。' });
+
+/** 旧カードの移行の直接入力(POST /admin/api/households/:id/migrate、A-05) */
+export const migrationInputSchema = z.object({
+  source: migrationSourceSchema,
+  points: migrationPointsSchema,
+});
+export type MigrationInput = z.infer<typeof migrationInputSchema>;
+
+/** 旧カードの引き継ぎ申請の承認(POST /admin/api/requests/:id/approve)。ポイント数は写真を見て確認・修正する */
+export const approveMigrationSchema = z.object({
+  points: migrationPointsSchema,
+  /** 申請と違う種類だったときだけ直す */
+  source: migrationSourceSchema.optional(),
 });
