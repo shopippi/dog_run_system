@@ -14,3 +14,6 @@ export const SYSTEM_JOB_LABELS: Record<SystemJobName, string> = {
 
 /** 1回の実行の結果。warning は「一部だけできた」 */
 export type SystemJobStatus = 'running' | 'ok' | 'warning' | 'failed';
+
+/** 自動処理を手動で動かしたときの結果(POST /admin/api/holidays/import など) */
+export type JobRunResult = { status: 'ok' | 'warning' | 'failed'; message: string };

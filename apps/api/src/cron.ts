@@ -1,6 +1,7 @@
 import { toJstIso } from '@dr/shared';
 import type { Bindings } from './env';
 import { recheckDailyStats } from './services/daily-stats';
+import { importHolidays, shouldImportHolidays } from './services/holidays';
 import { runJob } from './services/jobs';
 
 /** 日本時間 3:10(UTC 18:10)。日別集計の再計算、有効期限の処理、バックアップ、移行期間終了後の画像削除 */
@@ -28,6 +29,7 @@ function guessKind(now: Date): 'nightly' | 'morning' {
 
 export async function runNightly(env: Bindings, now: Date): Promise<void> {
   await runDailyStatsJob(env, now);
+  if (await shouldImportHolidays(env.DB, now)) await runHolidaysJob(env, now);
 }
 
 export async function runMorning(_env: Bindings, _now: Date): Promise<void> {
@@ -40,4 +42,9 @@ export function runDailyStatsJob(env: Bindings, now: Date) {
     const { from, to } = await recheckDailyStats(env.DB, now);
     return { message: `${from}〜${to} の日別の集計を作り直しました。` };
   });
+}
+
+/** B-02 祝日の取り込み(毎年2月1日と、管理画面の手動の取り込みから呼ぶ) */
+export function runHolidaysJob(env: Bindings, now: Date) {
+  return runJob(env.DB, 'holidays', now, () => importHolidays(env.DB, now));
 }
