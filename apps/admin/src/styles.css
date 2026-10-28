@@ -403,3 +403,20 @@ input::placeholder { color: var(--text-tertiary); }
 .result-item { display: flex; align-items: center; }
 .result-item > .result-row { flex: 1; min-width: 0; }
 .result-open { margin-right: var(--sp-3); }
+
+/* ---- M-06 ポイント・無料券の手動登録(A-03) ---- */
+.hh-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2); }
+.req { margin-left: 6px; font-size: var(--fs-12); font-weight: var(--fw-regular); color: var(--text-tertiary); }
+.mp-stepper { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2); }
+.mp-stepper input {
+  width: 88px; min-height: 44px; padding: 0 var(--sp-3); text-align: center;
+  border: 1px solid var(--border-strong); border-radius: var(--radius); background: var(--surface);
+  font-size: var(--fs-input); font-variant-numeric: tabular-nums;
+}
+.mp-stepper input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--focus-ring); }
+.mp-stepper .sub-text { margin-left: var(--sp-1); }
+.mp-result { margin: 0; display: flex; flex-direction: column; border: 1px solid var(--border); border-radius: var(--radius); }
+.mp-result > div { display: grid; grid-template-columns: 120px minmax(0, 1fr); gap: var(--sp-3); padding: var(--sp-2) var(--sp-3); }
+.mp-result > div + div { border-top: 1px solid var(--border); }
+.mp-result dt { color: var(--text-secondary); font-size: var(--fs-13); }
+.mp-result dd { margin: 0; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }

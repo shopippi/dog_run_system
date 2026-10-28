@@ -14,6 +14,7 @@ export const AUDIT_ACTION_LABELS: Record<string, string> = {
   'visit.walkin': '会員以外の記録',
   'audit.undo': '元に戻す',
   'household.rename': 'おうちの呼び名の変更',
+  'points.manual': 'ポイント・無料券の手動登録',
 };
 
 export function auditActionLabel(action: string): string {
@@ -176,4 +177,19 @@ export type HouseholdDetail = {
     household: SurveyAnswerView[];
     members: { memberId: number; name: string | null; answers: SurveyAnswerView[] }[];
   } | null;
+};
+
+// ============================================================
+// A-03 ポイントの手動登録
+// ============================================================
+
+/** 手動の登録の結果(確定の前に見せるプレビューと、確定した結果) */
+export type ManualPointsPreview = {
+  balanceBefore: number;
+  balanceAfter: number;
+  ticketsBefore: number;
+  ticketsAfter: number;
+  /** ポイントがたまって発行する無料券 */
+  ticketsIssued: number;
+  pointsPerTicket: number;
 };

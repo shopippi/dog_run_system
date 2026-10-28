@@ -45,6 +45,21 @@ for (const scheme of ['light', 'dark'] as const) {
       await check(page, 'M-06 おうちの詳細');
       await head.getByRole('button', { name: '呼び名を変える' }).click();
       await check(page, 'M-06 呼び名の変更');
+      await head.getByRole('button', { name: 'やめる' }).click();
+
+      // ポイント・無料券の手動登録(入力 → 確認 → 登録後)
+      await page.getByRole('button', { name: 'ポイント・無料券を登録' }).click();
+      const mp = page.getByRole('dialog', { name: 'ポイント・無料券の手動登録' });
+      await mp.getByRole('button', { name: 'ポイントを1ふやす' }).click();
+      await mp.getByRole('radio', { name: 'お詫び' }).check();
+      await check(page, 'M-06 ポイントの手動登録');
+      await mp.getByRole('button', { name: '内容を確かめる' }).click();
+      const confirm = page.getByRole('dialog', { name: 'この内容で登録しますか' });
+      await confirm.waitFor();
+      await check(page, 'M-06 ポイントの手動登録(確認)');
+      await confirm.getByRole('button', { name: '登録する' }).click();
+      await page.getByRole('status').waitFor();
+      await check(page, 'M-06 おうちの詳細(登録後)');
       await page.close();
     });
   });

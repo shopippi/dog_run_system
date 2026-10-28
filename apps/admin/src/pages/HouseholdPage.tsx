@@ -8,6 +8,7 @@ import {
 import { useState, type ReactNode } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { DogFace } from '../components/DogFace';
+import { ManualPointsDialog } from '../components/ManualPointsDialog';
 import { ErrorNotice } from '../components/ErrorNotice';
 import { Icon } from '../components/Icon';
 import { PageHead } from '../components/PageHead';
@@ -86,6 +87,8 @@ function Detail({
           <Kpi label="来場" value={d.visitCount} unit="回" />
         </div>
       </section>
+
+      {canEdit && <Actions d={d} onChanged={onChanged} />}
 
       {d.mergedInto && (
         <div className="alert info">
@@ -387,6 +390,35 @@ function NameBlock({
         <button type="button" className="btn ghost hh-rename-open" onClick={() => setEditing(true)}>
           呼び名を変える
         </button>
+      )}
+    </div>
+  );
+}
+
+/** おうちに対する操作。主なボタンは「ポイント・無料券を登録」 */
+function Actions({ d, onChanged }: { d: HouseholdDetail; onChanged: (reload: boolean, message: ReactNode) => void }) {
+  const [open, setOpen] = useState<'points' | null>(null);
+  return (
+    <div className="hh-actions">
+      <button type="button" className="btn" onClick={() => setOpen('points')}>
+        <Icon name="plus" />
+        ポイント・無料券を登録
+      </button>
+      {open === 'points' && (
+        <ManualPointsDialog
+          d={d}
+          onClose={() => setOpen(null)}
+          onDone={(r) => {
+            setOpen(null);
+            onChanged(
+              true,
+              <p>
+                登録しました。いまは {r.balanceAfter}ポイント・使える無料券 {r.ticketsAfter}枚 です。間違えたときは、
+                <Link to="/audit">操作ログ</Link>から元に戻せます。
+              </p>,
+            );
+          }}
+        />
       )}
     </div>
   );

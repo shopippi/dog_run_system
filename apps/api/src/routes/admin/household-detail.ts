@@ -1,4 +1,11 @@
-import { householdRenameSchema, normalizeForSearch, toJstIso, type HouseholdDetail } from '@dr/shared';
+import {
+  householdRenameSchema,
+  manualPointsSchema,
+  normalizeForSearch,
+  toJstIso,
+  type HouseholdDetail,
+  type ManualPointsPreview,
+} from '@dr/shared';
 import { Hono } from 'hono';
 import type { AppEnv } from '../../env';
 import { errors } from '../../lib/errors';
@@ -9,6 +16,7 @@ import { auditStatement } from '../../services/audit';
 import { registerAuditDetail } from '../../services/audit-view';
 import { refreshAutoNameStatement, syncHouseholdSearchName } from '../../services/dogs';
 import { getHouseholdRow, householdNotFound, loadHouseholdDetail } from '../../services/household-detail';
+import { applyManualPoints, previewManualPoints, undoManualPoints } from '../../services/manual-points';
 import { registerUndo } from '../../services/undo';
 
 // A-02 おうちの詳細・呼び名の変更、A-03 ポイントの手動登録、A-04 犬の情報の変更、A-06 家族の追加・解除
@@ -119,3 +127,43 @@ registerUndo('household.rename', async (db, log, ctx) => {
   );
   await syncHouseholdSearchName(db, id);
 });
+
+// ------------------------------------------------------------
+// A-03 ポイント・無料券の手動登録(管理者)
+// ------------------------------------------------------------
+
+// 確定の前に、変更後の残高と無料券を見せる
+householdDetailRoutes.post('/households/:id/points/preview', requireRole('admin'), async (c) => {
+  const db = c.env.DB;
+  const id = Number(c.req.param('id'));
+  const input = await parseJson(c, manualPointsSchema);
+  await requireActiveHousehold(db, id);
+  const body: ManualPointsPreview = await previewManualPoints(db, id, input, await loadSettings(db), c.get('now'));
+  return c.json(body);
+});
+
+householdDetailRoutes.post('/households/:id/points', requireRole('admin'), async (c) => {
+  const db = c.env.DB;
+  const id = Number(c.req.param('id'));
+  const input = await parseJson(c, manualPointsSchema);
+  await requireActiveHousehold(db, id);
+  const body: ManualPointsPreview = await applyManualPoints(db, {
+    householdId: id,
+    input,
+    staffId: c.get('staff').id,
+    settings: await loadSettings(db),
+    now: c.get('now'),
+  });
+  return c.json(body, 201);
+});
+
+registerAuditDetail('points.manual', (_b, a) => {
+  if (!a) return null;
+  const parts: string[] = [];
+  if (a.points) parts.push(`ポイント ${a.points > 0 ? '+' : '−'}${Math.abs(a.points)}`);
+  if (a.ticketDelta) parts.push(`無料券 ${a.ticketDelta > 0 ? '+' : '−'}${Math.abs(a.ticketDelta)}枚`);
+  if (a.ticketsIssued) parts.push(`ポイントがたまって無料券を${a.ticketsIssued}枚発行`);
+  return parts.join('、') || null;
+});
+
+registerUndo('points.manual', async (db, log, ctx) => undoManualPoints(db, log, ctx, await loadSettings(db)));

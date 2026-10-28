@@ -61,6 +61,19 @@ test.describe('おうちの詳細と記録の見え方', () => {
       await checkScreen(page, v.name, 'M-06 呼び名の変更', v.touch);
       await head.getByRole('button', { name: 'やめる' }).click();
 
+      // ポイント・無料券の手動登録(入力 → 確認)
+      await page.getByRole('button', { name: 'ポイント・無料券を登録' }).click();
+      const mp = page.getByRole('dialog', { name: 'ポイント・無料券の手動登録' });
+      await mp.getByRole('button', { name: 'ポイントを1ふやす' }).click();
+      await mp.getByRole('radio', { name: 'お詫び' }).check();
+      await checkScreen(page, v.name, 'M-06 ポイントの手動登録', v.touch);
+      await mp.getByRole('button', { name: '内容を確かめる' }).click();
+      const confirm = page.getByRole('dialog', { name: 'この内容で登録しますか' });
+      await expect(confirm).toBeVisible();
+      await checkScreen(page, v.name, 'M-06 ポイントの手動登録(確認)', v.touch);
+      await confirm.getByRole('button', { name: '戻る' }).click();
+      await page.getByRole('dialog', { name: 'ポイント・無料券の手動登録' }).getByRole('button', { name: 'やめる' }).click();
+
       await page.close();
     });
   }
