@@ -28,7 +28,7 @@ describe('C-02 犬の登録', () => {
 
   it('複数の犬を登録でき、犬IDは「会員ID-連番」、おうちの呼び名は犬の名前から作る', async () => {
     const r = await registerUser(PAPA, [
-      dog('アル', { breedId: 5, size: 'medium', sex: 'male', birthYm: '2020-04', neutered: 'yes' }),
+      dog('アル', { breedId: 5, size: 'medium', sex: 'male', birthYm: '2020-04' }),
       dog('ニコ'),
     ]);
     expect(r.householdName).toBe('アル・ニコのおうち');
@@ -39,7 +39,6 @@ describe('C-02 犬の登録', () => {
       size: 'medium',
       sex: 'male',
       birthYm: '2020-04',
-      neutered: 'yes',
       photoUrl: null,
     });
   });

@@ -62,9 +62,9 @@ export function insertDogStatements(
     db
       .prepare(
         `INSERT INTO dogs
-           (dog_no, household_id, name, name_search, breed_id, breed_other, size, sex, birth_ym, neutered,
+           (dog_no, household_id, name, name_search, breed_id, breed_other, size, sex, birth_ym,
             status, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?)`,
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?)`,
       )
       .bind(
         formatDogNo(memberNo, seqStart + i),
@@ -76,7 +76,6 @@ export function insertDogStatements(
         d.size,
         d.sex ?? null,
         d.birthYm ?? null,
-        d.neutered ?? null,
         nowIso,
         nowIso,
       ),
@@ -105,7 +104,6 @@ type DogRow = {
   size: DogSummary['size'];
   sex: DogSummary['sex'];
   birth_ym: string | null;
-  neutered: DogSummary['neutered'];
   status: DogSummary['status'];
   photo_key: string | null;
   thumb_key: string | null;
@@ -113,7 +111,7 @@ type DogRow = {
 
 const DOG_SELECT = `
   SELECT d.id, d.dog_no, d.name, d.breed_id, b.name AS breed_name, d.breed_other, d.size, d.sex, d.birth_ym,
-         d.neutered, d.status, d.photo_key, d.thumb_key
+         d.status, d.photo_key, d.thumb_key
     FROM dogs d JOIN breeds b ON b.id = d.breed_id`;
 
 export function toDogSummary(r: DogRow, mediaBase: string): DogSummary {
@@ -127,7 +125,6 @@ export function toDogSummary(r: DogRow, mediaBase: string): DogSummary {
     size: r.size,
     sex: r.sex,
     birthYm: r.birth_ym,
-    neutered: r.neutered,
     status: r.status,
     photoUrl: r.photo_key ? `${mediaBase}/${r.photo_key}` : null,
     thumbUrl: r.thumb_key ? `${mediaBase}/${r.thumb_key}` : null,

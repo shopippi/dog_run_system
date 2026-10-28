@@ -33,15 +33,15 @@ describe('S-06 おうちの検索', () => {
     expect((await search(staff, '000001')).map((h) => h.memberNo)).toEqual([r.memberNo]);
   });
 
-  it('LINE の表示名で探せるのは管理者だけ。受付スタッフには表示名を返さない', async () => {
+  it('家族の LINE の表示名でも探せる(受付スタッフも管理者も)', async () => {
     const { staff, admin } = await cookies();
     const r = await registerUser('U001:山田パパ', [dog('アル')]);
     await addFamily(r.memberNo, 'U002', '山田ママ');
-    expect(await search(staff, '山田')).toEqual([]);
-    const hits = await search(admin, '山田');
-    expect(hits).toHaveLength(1);
-    expect(hits[0].familyNames).toEqual(['山田パパ', '山田ママ']);
-    expect((await search(staff, 'アル'))[0].familyNames).toBeNull();
+    for (const cookie of [staff, admin]) {
+      const hits = await search(cookie, '山田');
+      expect(hits).toHaveLength(1);
+      expect(hits[0].familyNames).toEqual(['山田パパ', '山田ママ']);
+    }
   });
 
   it('統合済みの会員IDを探すと、統合先を返す', async () => {

@@ -1,4 +1,4 @@
-import type { DogSex, DogSize, DogStatus, Neutered } from './constants';
+import type { DogSex, DogSize, DogStatus } from './constants';
 
 // API の応答の型。画面と API で共有する。
 
@@ -49,7 +49,6 @@ export type DogSummary = {
   size: DogSize;
   sex: DogSex | null;
   birthYm: string | null;
-  neutered: Neutered | null;
   status: DogStatus;
   /** 写真(認証つき API の URL)。写真がなければ null */
   photoUrl: string | null;
@@ -161,7 +160,7 @@ export type AdminVisit = {
   method: import('./constants').VisitMethod;
   cancelled: boolean;
   cancelReason: string | null;
-  /** チェックインした家族の LINE の表示名。管理者と製作者だけに返す(15.2) */
+  /** チェックインした家族の LINE の表示名 */
   checkedInBy: string | null;
 };
 
@@ -185,8 +184,8 @@ export type HouseholdHit = {
   dogs: { id: number; name: string; breedName: string; thumbUrl: string | null }[];
   /** 最後に来場した日 */
   lastVisit: string | null;
-  /** 家族の LINE の表示名。管理者と製作者だけに返す(15.2) */
-  familyNames: string[] | null;
+  /** 家族の LINE の表示名 */
+  familyNames: string[];
 };
 
 export type HouseholdSearchResponse = {

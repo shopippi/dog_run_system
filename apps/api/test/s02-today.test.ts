@@ -42,12 +42,12 @@ describe('S-02 今日の来場', () => {
     expect(res.body.totals).toEqual({ groups: 2, memberDogs: 3, walkinDogs: 0, ticketsUsed: 1 });
   });
 
-  it('受付スタッフには LINE の表示名と確認待ちの件数を返さない。管理者には返す', async () => {
+  it('確認待ちの件数は管理者だけに返す。チェックインした家族の名前は受付スタッフにも返す', async () => {
     const { admin, staff } = await setup();
     const a = await registerUser(PAPA);
     await checkin(PAPA, [a.dogs[0]!.id], { now: DAY1 });
     const s = await adminCall('/admin/api/today', { cookie: staff, now: DAY1 });
-    expect(s.body.visits[0].checkedInBy).toBeNull();
+    expect(s.body.visits[0].checkedInBy).toBe('パパ');
     expect(s.body.pendingRequests).toBeNull();
     const m = await adminCall('/admin/api/today', { cookie: admin, now: DAY1 });
     expect(m.body.visits[0].checkedInBy).toBe('パパ');

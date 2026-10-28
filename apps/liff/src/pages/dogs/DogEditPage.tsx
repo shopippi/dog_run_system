@@ -47,12 +47,11 @@ export function DogEditPage() {
     setBusy(true);
     setError(null);
     try {
-      const { name, sex, birthYm, neutered } = r.input;
+      const { name, sex, birthYm } = r.input;
       await patchJson<{ dog: DogSummary }>(`/api/dogs/${dog.id}`, {
         name,
         sex: sex ?? null,
         birthYm: birthYm ?? null,
-        neutered: neutered ?? null,
       });
       if (draft.photo) await uploadDogPhoto(dog.id, draft.photo);
       navigate('/dogs', { replace: true });

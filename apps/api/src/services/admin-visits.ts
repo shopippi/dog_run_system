@@ -3,7 +3,7 @@ import type { AdminVisit, StaffRole } from '@dr/shared';
 /** 管理画面向けの写真の URL の頭(ログインのセッションで認証) */
 export const ADMIN_MEDIA_BASE = '/admin/api/media';
 
-/** LINE の表示名やアンケートの個別の回答を見られる役割(15.2) */
+/** アンケートの個別の回答と、確認待ちの一覧を見られる役割(3.2) */
 export const canSeePersonal = (role: StaffRole) => role === 'admin' || role === 'developer';
 
 type VisitRow = {
@@ -57,7 +57,7 @@ export async function listVisitsOn(db: D1Database, date: string, role: StaffRole
     dogsByVisit.set(d.visit_id, list);
   }
 
-  const personal = canSeePersonal(role);
+  void role;
   return results.map((v) => ({
     id: v.id,
     date: v.visit_date,
@@ -71,7 +71,7 @@ export async function listVisitsOn(db: D1Database, date: string, role: StaffRole
     method: v.method,
     cancelled: v.cancelled_at !== null,
     cancelReason: v.cancel_reason,
-    checkedInBy: personal ? v.checked_in_by : null,
+    checkedInBy: v.checked_in_by,
   }));
 }
 

@@ -64,9 +64,9 @@ dogRoutes.patch('/dogs/:id', async (c) => {
   const patch = await parseJson(c, dogPatchSchema);
   const db = c.env.DB;
   const current = await db
-    .prepare("SELECT name, sex, birth_ym, neutered, status FROM dogs WHERE id = ?")
+    .prepare("SELECT name, sex, birth_ym, status FROM dogs WHERE id = ?")
     .bind(id)
-    .first<{ name: string; sex: string | null; birth_ym: string | null; neutered: string | null; status: string }>();
+    .first<{ name: string; sex: string | null; birth_ym: string | null; status: string }>();
   if (!current || current.status !== 'active') {
     throw errors.conflict('dog_retired', 'このワンちゃんは登録解除されています。変更が必要なときは受付にお知らせください。');
   }
@@ -76,7 +76,6 @@ dogRoutes.patch('/dogs/:id', async (c) => {
     ['name', 'name'],
     ['sex', 'sex'],
     ['birthYm', 'birth_ym'],
-    ['neutered', 'neutered'],
   ];
   const statements: D1PreparedStatement[] = [];
   for (const [key, col] of columns) {
@@ -91,14 +90,13 @@ dogRoutes.patch('/dogs/:id', async (c) => {
     statements.unshift(
       db
         .prepare(
-          `UPDATE dogs SET name = ?, name_search = ?, sex = ?, birth_ym = ?, neutered = ?, updated_at = ? WHERE id = ?`,
+          `UPDATE dogs SET name = ?, name_search = ?, sex = ?, birth_ym = ?, updated_at = ? WHERE id = ?`,
         )
         .bind(
           name,
           normalizeForSearch(name),
           'sex' in patch ? (patch.sex ?? null) : current.sex,
           'birthYm' in patch ? (patch.birthYm ?? null) : current.birth_ym,
-          'neutered' in patch ? (patch.neutered ?? null) : current.neutered,
           nowIso,
           id,
         ),

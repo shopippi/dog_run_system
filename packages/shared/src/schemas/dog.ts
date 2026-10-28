@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { DOG_NAME_MAX, DOG_SEXES, DOG_SIZES, NEUTERED_VALUES } from '../constants';
+import { DOG_NAME_MAX, DOG_SEXES, DOG_SIZES } from '../constants';
 
 // 犬の登録項目(要件定義書 6.1)。画面と API で同じ定義を使う。
 
@@ -25,7 +25,6 @@ export const dogInputSchema = z.object({
   size: z.enum(DOG_SIZES, { error: 'サイズ(小型・中型・大型)を選んでください。' }),
   sex: z.enum(DOG_SEXES).nullish(),
   birthYm: birthYmSchema.nullish(),
-  neutered: z.enum(NEUTERED_VALUES).nullish(),
 });
 export type DogInput = z.infer<typeof dogInputSchema>;
 
@@ -43,7 +42,6 @@ export const dogPatchSchema = z
     name: dogNameSchema,
     sex: z.enum(DOG_SEXES).nullable(),
     birthYm: birthYmSchema.nullable(),
-    neutered: z.enum(NEUTERED_VALUES).nullable(),
   })
   .partial();
 export type DogPatch = z.infer<typeof dogPatchSchema>;
