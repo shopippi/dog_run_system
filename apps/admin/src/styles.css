@@ -322,3 +322,30 @@ input::placeholder { color: var(--text-tertiary); }
   .nav-group { flex-direction: column; gap: 2px; padding-bottom: var(--sp-3); }
   .nav-label { display: block; margin: 0; padding: var(--sp-2) var(--sp-3) var(--sp-1); font-size: var(--fs-12); color: var(--text-tertiary); font-weight: var(--fw-strong); letter-spacing: .04em; }
 }
+
+/* ---- M-15 操作ログ(A-15) ---- */
+.audit-filter { display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--sp-3) var(--sp-4); }
+.audit-filter .field { width: 200px; max-width: 100%; }
+.audit-filter .field:last-child { width: 260px; }
+.audit-filter select { appearance: auto; }
+.audit-list { list-style: none; margin: 0; padding: 0; }
+.audit-list > li + li { border-top: 1px solid var(--border); }
+.audit-row {
+  display: grid; grid-template-columns: 96px minmax(0, 1fr) minmax(80px, auto) minmax(112px, auto); align-items: center;
+  gap: var(--sp-4); min-height: 64px; padding: var(--sp-3) var(--sp-3) var(--sp-3) var(--sp-5);
+}
+.audit-at { display: flex; flex-direction: column; font-size: var(--fs-13); color: var(--text-secondary); line-height: 1.4; }
+.audit-body { display: flex; flex-direction: column; min-width: 0; gap: 2px; }
+.audit-body b { font-size: var(--fs-15); }
+.audit-target { font-size: var(--fs-14); overflow-wrap: anywhere; }
+.audit-target .mono { font-size: var(--fs-13); color: var(--text-secondary); white-space: nowrap; }
+.audit-target a { display: inline-flex; align-items: center; min-height: var(--control-h); }
+.audit-who { overflow-wrap: anywhere; }
+.audit-acts { display: flex; justify-content: flex-end; }
+.audit-row.undone .audit-body b, .audit-row.undone .audit-target, .audit-row.undone .sub-text, .audit-row.undone .audit-at { color: var(--text-tertiary); }
+.audit-pager { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--sp-3); padding: var(--sp-3) var(--sp-5); border-top: 1px solid var(--border); }
+@media (max-width: 720px) {
+  .audit-row { grid-template-columns: 88px minmax(0, 1fr); row-gap: var(--sp-1); }
+  .audit-who { grid-column: 2; }
+  .audit-acts { grid-column: 2; justify-content: flex-start; }
+}
