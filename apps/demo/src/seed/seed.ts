@@ -67,25 +67,35 @@ export const HOLIDAYS: Record<string, string> = {
   '2027-01-11': '成人の日',
 };
 
-/** migrations/0001_init.sql の犬種(id は入れた順) */
+/** migrations/0001_init.sql の犬種(id は入れた番号。大まかな分け方で、w は出やすさ) */
 const BREEDS = [
-  { id: 1, size: 'small', w: 18 }, // トイプードル
+  { id: 1, size: 'small', w: 18 }, // プードル
   { id: 2, size: 'small', w: 10 }, // チワワ
-  { id: 3, size: 'small', w: 10 }, // ミニチュアダックスフンド
+  { id: 3, size: 'small', w: 10 }, // ダックスフンド
   { id: 4, size: 'small', w: 6 }, // ポメラニアン
   { id: 5, size: 'medium', w: 12 }, // 柴犬
   { id: 6, size: 'medium', w: 6 }, // フレンチブルドッグ
-  { id: 7, size: 'medium', w: 4 }, // ボーダーコリー
-  { id: 8, size: 'large', w: 4 }, // ゴールデンレトリバー
-  { id: 9, size: 'large', w: 4 }, // ラブラドールレトリバー
+  { id: 7, size: 'medium', w: 3 }, // ボーダーコリー
+  { id: 8, size: 'large', w: 3 }, // ゴールデンレトリバー
+  { id: 9, size: 'large', w: 2 }, // ラブラドールレトリバー
   { id: 10, size: 'small', w: 8 }, // ミックス
-  { id: 11, size: 'small', w: 4 }, // その他
+  { id: 11, size: 'small', w: 2 }, // その他
+  { id: 12, size: 'small', w: 4 }, // ミニチュアシュナウザー
+  { id: 13, size: 'small', w: 3 }, // ヨークシャーテリア
+  { id: 14, size: 'small', w: 3 }, // マルチーズ
+  { id: 15, size: 'small', w: 3 }, // シーズー
+  { id: 16, size: 'small', w: 2 }, // パピヨン
+  { id: 17, size: 'medium', w: 3 }, // コーギー
+  { id: 18, size: 'small', w: 2 }, // ジャックラッセルテリア
+  { id: 22, size: 'medium', w: 2 }, // ビーグル
+  { id: 21, size: 'small', w: 1 }, // パグ
 ] as const;
+/** 「その他」を選んだ犬の自由入力 */
 const OTHER_BREEDS: [string, 'small' | 'medium'][] = [
-  ['ジャックラッセルテリア', 'small'],
-  ['ビーグル', 'medium'],
-  ['ウェルシュコーギー', 'medium'],
-  ['シーズー', 'small'],
+  ['甲斐犬', 'medium'],
+  ['ポメプー', 'small'],
+  ['チワプー', 'small'],
+  ['紀州犬', 'medium'],
 ];
 
 const DOG_NAMES = [

@@ -66,14 +66,14 @@ describe('A-04 犬の情報の変更', () => {
     expect(res.body.dog).toMatchObject({ breedName: '柴犬', size: 'medium' });
     expect(res.body.changes.slice(0, 2)).toEqual([
       expect.objectContaining({ fieldLabel: 'サイズ', before: '小型', after: '中型', reason: '登録のまちがい', actorName: '管理者' }),
-      expect.objectContaining({ fieldLabel: '犬種', before: 'トイプードル', after: '柴犬', reason: '登録のまちがい' }),
+      expect.objectContaining({ fieldLabel: '犬種', before: 'プードル', after: '柴犬', reason: '登録のまちがい' }),
     ]);
     const row = await env.DB.prepare("SELECT before_value, after_value, reason, actor_type FROM dog_changes WHERE field = 'breed'").first();
-    expect(row).toEqual({ before_value: 'トイプードル', after_value: '柴犬', reason: '登録のまちがい', actor_type: 'staff' });
+    expect(row).toEqual({ before_value: 'プードル', after_value: '柴犬', reason: '登録のまちがい', actor_type: 'staff' });
 
     const log = await adminCall('/admin/api/audit?action=dog.update', { cookie: s.admin });
     expect(log.body.entries.map((e: any) => e.detail)).toEqual([
-      '犬種: トイプードル → 柴犬、サイズ: 小型 → 中型',
+      '犬種: プードル → 柴犬、サイズ: 小型 → 中型',
       '名前: アル → アルル',
     ]);
     expect(log.body.entries[0].target).toMatchObject({ label: 'アルル(アルル・ニコのおうち)', code: `${s.r.memberNo}-1` });
@@ -112,7 +112,7 @@ describe('A-04 犬の情報の変更', () => {
     await patch(s.admin, id, { name: 'アルル', breedId: 5, size: 'medium', reason: 'まちがい' });
     expect((await undo(s.admin, await lastLog('dog.update'))).status).toBe(200);
     const back = await adminCall(`/admin/api/dogs/${id}`, { cookie: s.admin });
-    expect(back.body.dog).toMatchObject({ name: 'アル', breedName: 'トイプードル', size: 'small' });
+    expect(back.body.dog).toMatchObject({ name: 'アル', breedName: 'プードル', size: 'small' });
     expect(back.body.changes[0]).toMatchObject({ reason: '操作ログから元に戻した' });
     expect(back.body.household.displayName).toBe('アル・ニコのおうち');
 

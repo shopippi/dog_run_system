@@ -27,3 +27,4 @@ export * from './analytics';
 export * from './merge';
 export * from './migration';
 export * from './manual-points';
+export * from './api-types-profile';

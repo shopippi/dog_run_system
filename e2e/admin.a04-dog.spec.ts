@@ -32,7 +32,7 @@ test('A-04 管理者が写真(回して)・名前・犬種を変えると、会�
   await expect(page.getByRole('status')).toContainText('保存しました');
 
   const history = page.getByRole('list', { name: '変更の履歴' });
-  await expect(history).toContainText('犬種: トイプードル → 柴犬');
+  await expect(history).toContainText('犬種: プードル → 柴犬');
   await expect(history).toContainText('理由: 登録のときの選びまちがい');
   await expect(history).toContainText('名前: マメスケ → マメタロウ');
   const photo = page.getByRole('img', { name: 'マメタロウの写真' });

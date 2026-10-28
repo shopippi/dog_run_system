@@ -75,7 +75,7 @@ test('A-10 固定の質問の文を変えると、登録のアンケートに出
     await customer.getByRole('button', { name: '同意して次へ' }).click();
     const form = customer.locator('fieldset.dog-form').first();
     await form.getByLabel('名前').fill('モモ');
-    await form.getByRole('combobox', { name: /犬種/ }).selectOption({ label: 'トイプードル' });
+    await form.getByRole('combobox', { name: /犬種/ }).selectOption({ label: 'プードル' });
     await customer.getByRole('button', { name: '次へ' }).click();
     await expect(customer.getByRole('radiogroup', { name: /ふだん何で来ますか/ })).toBeVisible();
     await customer.close();

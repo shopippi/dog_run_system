@@ -69,7 +69,7 @@ for (const d of DEVICES) {
       await page.getByRole('button', { name: '同意して次へ' }).click();
       const first = page.locator('fieldset.dog-form').nth(0);
       await first.getByLabel('名前').fill('アルフォンス');
-      await first.getByRole('combobox', { name: /犬種/ }).selectOption({ label: 'ミニチュアダックスフンド' });
+      await first.getByRole('combobox', { name: /犬種/ }).selectOption({ label: 'ダックスフンド' });
       await first.locator('input[type=file]').setInputFiles({ name: 'a.jpg', mimeType: 'image/jpeg', buffer: await makePhoto(page) });
       await first.locator('img.av').waitFor();
       await page.getByRole('button', { name: 'もう1頭追加する' }).click();

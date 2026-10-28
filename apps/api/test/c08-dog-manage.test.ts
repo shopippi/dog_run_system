@@ -51,7 +51,7 @@ describe('C-08 犬の管理', () => {
       body: { breedId: 5, size: 'large' },
     });
     expect(res.status).toBe(200);
-    expect(res.body.dog).toMatchObject({ breedName: 'トイプードル', size: 'small' });
+    expect(res.body.dog).toMatchObject({ breedName: 'プードル', size: 'small' });
   });
 
   it('管理者が呼び名を変えたおうちは、犬の名前を変えても呼び名は変わらない', async () => {

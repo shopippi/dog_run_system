@@ -45,7 +45,7 @@ export async function registerViaUi(page: Page, user: string, dogNames: string[]
     if (i > 0) await page.getByRole('button', { name: 'もう1頭追加する' }).click();
     const form = page.locator('fieldset.dog-form').nth(i);
     await form.getByLabel('名前').fill(name);
-    await form.getByRole('combobox', { name: /犬種/ }).selectOption({ label: 'トイプードル' });
+    await form.getByRole('combobox', { name: /犬種/ }).selectOption({ label: 'プードル' });
   }
   await page.getByRole('button', { name: '次へ' }).click();
   await answerSurvey(page);

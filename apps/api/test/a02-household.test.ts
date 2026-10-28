@@ -64,7 +64,7 @@ describe('A-02 おうちの詳細', () => {
       expect.objectContaining({ name: 'パパ', ageGroup: '30代', gender: '女性', joinMethodLabel: 'はじめに登録', statusLabel: '参加中' }),
     ]);
     expect(d.dogs.map((x: any) => [x.name, x.breedName, x.size, x.sex, x.birthYm])).toEqual([
-      ['アル', 'トイプードル', 'small', null, null],
+      ['アル', 'プードル', 'small', null, null],
       ['ニコ', '柴犬', 'medium', 'female', '2020-04'],
     ]);
     expect(d.visits).toEqual([

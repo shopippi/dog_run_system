@@ -44,7 +44,7 @@ describe('A-14 CSV出力', () => {
     expect(m.lines[1]).toMatch(/^DR-000001,アル・ニコのおうち,パパ,30代,女性,.*,初回登録,参加中,$/);
 
     const d = await csv(cookie, 'dogs');
-    expect(d.lines[1]).toMatch(/^DR-000001-1,DR-000001,アル・ニコのおうち,アル,トイプードル,小型,,,登録中,なし,.*,1$/);
+    expect(d.lines[1]).toMatch(/^DR-000001-1,DR-000001,アル・ニコのおうち,アル,プードル,小型,,,登録中,なし,.*,1$/);
     expect(d.lines[2]).toMatch(/^DR-000001-2,.*,ニコ,ポメプー,小型,.*,0$/);
   });
 
