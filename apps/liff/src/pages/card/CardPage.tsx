@@ -4,10 +4,9 @@ import { ErrorNotice } from '../../components/ErrorNotice';
 import { Icon } from '../../components/Icon';
 import { MemberCard } from '../../components/MemberCard';
 
-/** 施設名(あとで設定から読む) */
-const FACILITY_NAME = 'グリーンドーム';
 import { ProfileNudge } from '../../components/ProfileNudge';
 import { useMe } from '../../hooks/useMe';
+import { useFacilityName } from '../../hooks/useFacilityName';
 import { canScan, scanCheckinCode } from '../../lib/liff';
 import { StampPanel } from './StampPanel';
 import { TicketPanel } from './TicketPanel';
@@ -23,6 +22,7 @@ export function CardPage() {
 function Card({ me, reload }: { me: MeRegistered; reload: () => Promise<void> }) {
   const { card, household } = me;
   const navigate = useNavigate();
+  const facilityName = useFacilityName();
   const canExchange = card.balance >= card.pointsPerTicket;
 
   const startCheckin = async () => {
@@ -43,7 +43,7 @@ function Card({ me, reload }: { me: MeRegistered; reload: () => Promise<void> })
       <MemberCard
         displayName={household.displayName}
         memberNo={household.memberNo}
-        facilityName={FACILITY_NAME}
+        facilityName={facilityName}
         dogs={card.dogs}
         balance={card.balance}
         background={me.cardBackground}

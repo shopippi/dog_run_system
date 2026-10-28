@@ -270,7 +270,7 @@ export type MergeSnapshot = {
   balances: { kept: number; absorbed: number };
   /** 残す側に移した家族 */
   memberIds: number[];
-  /** 残す側に移した犬(組み合わせなかった犬と、登録解除の犬) */
+  /** 残す側に移した犬(組み合わせなかった犬と、おやすみ中の犬) */
   movedDogIds: number[];
   pairs: { keep: DogRow; absorb: DogRow; take: MergeDogPair['take']; photo?: MergeDogPair['photo']; visitDogIds: number[] }[];
   /** 残す側に移した来場 */

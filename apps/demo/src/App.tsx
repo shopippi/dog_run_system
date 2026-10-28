@@ -108,7 +108,7 @@ export function App() {
 function Header() {
   return (
     <header className="head">
-      <h1>ドッグラン会員証デモ</h1>
+      <h1>グリーンドーム 会員証デモ</h1>
       <p className="lede">
         左がお客さんの LINE の画面、右が受付・管理画面です。どちらも本物の画面と本物の処理が、このブラウザの中だけで動いています(データは架空です)。
         ポイントは「おうち」ごとにたまり、家族の LINE アカウントをつなげられます。

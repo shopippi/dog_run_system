@@ -1,10 +1,12 @@
 import { useState, type FormEvent } from 'react';
 import { ErrorNotice } from '../components/ErrorNotice';
 import { useAuth } from '../lib/auth';
+import { useFacilityName } from '../hooks/useFacilityName';
 
 /** M-01 ログイン(S-01) */
 export function LoginPage() {
   const { login } = useAuth();
+  const facilityName = useFacilityName();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
@@ -26,7 +28,7 @@ export function LoginPage() {
     <main className="login">
       <form className="panel login-box" onSubmit={submit}>
         <div className="login-head">
-          <h1>ドッグラン 受付・管理</h1>
+          <h1>{facilityName} 受付・管理</h1>
           <p className="howto">メールアドレスとパスワードを入れて「ログイン」を押してください。一度ログインすると、30日間はそのまま使えます。</p>
         </div>
         <div className="field">

@@ -27,6 +27,7 @@ export const SETTING_FIELDS: Record<SettingKey, { label: string; hint: string }>
   privacy_text: { label: 'プライバシーポリシー', hint: '20,000文字までで入れてください。' },
   liff_id: { label: 'LINEミニアプリの番号', hint: LIFF_ID_MESSAGE },
   merge_keep_same_day_points: { label: 'おうちをまとめたとき、同じ日の来場のポイント', hint: '残すか残さないかを選んでください。' },
+  facility_name: { label: '施設の名前', hint: '1〜30文字で入れてください。' },
   weather_station: { label: '天気の観測地点', hint: '気象庁の地点番号(5桁)と名前を入れてください。' },
 };
 

@@ -678,7 +678,7 @@ export async function seedDemo(sql: Database, opts: SeedOptions): Promise<SeedSu
       nowIso,
     ]);
 
-    // 自動処理の実行の履歴(システムの状態の画面が緑になるように、直近3日分の成功を入れる)
+    // 自動処理の実行の履歴(システムの状態の画面がすべて正常になるように、直近3日分の成功を入れる)
     const job = (name: string, startedAt: string, message: string) =>
       run(`INSERT INTO system_jobs (name, started_at, finished_at, status, message) VALUES (?, ?, ?, 'ok', ?)`, [
         name,

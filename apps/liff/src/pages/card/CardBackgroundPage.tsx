@@ -12,11 +12,10 @@ import { ErrorNotice } from '../../components/ErrorNotice';
 import { Icon } from '../../components/Icon';
 import { MemberCard } from '../../components/MemberCard';
 import { useMe } from '../../hooks/useMe';
+import { useFacilityName } from '../../hooks/useFacilityName';
 import { ApiError, api } from '../../lib/api';
 import { resizePhoto } from '../../lib/photo';
 
-/** 施設名(あとで設定から読む) */
-const FACILITY_NAME = 'グリーンドーム';
 
 type Saved = { cardBackground: CardBackgroundView };
 
@@ -29,6 +28,7 @@ export function CardBackgroundPage() {
 }
 
 function Editor({ me }: { me: MeRegistered }) {
+  const facilityName = useFacilityName();
   const [bg, setBg] = useState<CardBackgroundView>(me.cardBackground);
   const [preview, setPreview] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -106,7 +106,7 @@ function Editor({ me }: { me: MeRegistered }) {
       <MemberCard
         displayName={me.household.displayName}
         memberNo={me.household.memberNo}
-        facilityName={FACILITY_NAME}
+        facilityName={facilityName}
         dogs={me.card.dogs}
         balance={me.card.balance}
         background={bg}

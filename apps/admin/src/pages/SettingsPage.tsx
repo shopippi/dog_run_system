@@ -12,6 +12,7 @@ import { PageHead } from '../components/PageHead';
 import { QrCode, SaveFoot, Section, useLoaded } from '../components/SettingsKit';
 import { ApiError, adminApi, adminPatch, adminPost } from '../lib/api';
 import { useAuth } from '../lib/auth';
+import { publishFacilityName } from '../hooks/useFacilityName';
 
 type Draft = Record<string, unknown>;
 type OnSaved = (r: SettingsResponse) => void;
@@ -33,6 +34,13 @@ export function SettingsPage() {
         !error && <p className="loading">読み込んでいます…</p>
       ) : (
         <>
+          <FacilitySection
+            settings={data.settings}
+            onSaved={(r) => {
+              setData(r);
+              publishFacilityName(r.settings.facility_name);
+            }}
+          />
           <PointsSection settings={data.settings} onSaved={setData} />
           <AnalysisSection settings={data.settings} onSaved={setData} />
           <InviteSection settings={data.settings} onSaved={setData} />
@@ -562,6 +570,36 @@ function ContactSection({ settings, onSaved }: { settings: Settings; onSaved: On
           placeholder="例: 山田(製作者) 090-0000-0000 / 平日 10時〜18時"
           onChange={(e) => s.set('developer_contact', e.target.value)}
         />
+      </div>
+    </SettingsForm>
+  );
+}
+
+/** 施設の名前(担当I)。お客さんの会員証と、受付・管理画面の見出しに出す */
+function FacilitySection({ settings, onSaved }: { settings: Settings; onSaved: OnSaved }) {
+  const s = useSettingsDraft(settings, ['facility_name'], onSaved);
+  const id = useId();
+  const hintId = useId();
+  return (
+    <SettingsForm
+      title="施設の名前"
+      desc="お客さんの会員証の上(「グリーンドーム 会員証」など)と、この画面の左上に出す名前です。"
+      state={s}
+    >
+      <div className="field">
+        <label htmlFor={id}>施設の名前</label>
+        <input
+          id={id}
+          type="text"
+          className="cfg-wide"
+          maxLength={30}
+          aria-describedby={hintId}
+          value={String(s.draft.facility_name ?? '')}
+          onChange={(e) => s.set('facility_name', e.target.value)}
+        />
+        <p className="hint" id={hintId}>
+          30文字まで
+        </p>
       </div>
     </SettingsForm>
   );

@@ -1,3 +1,4 @@
+import { useFacilityName } from '../hooks/useFacilityName';
 import { STAFF_ROLE_LABELS } from '@dr/shared';
 import type { ReactNode } from 'react';
 import { NavLink } from 'react-router-dom';
@@ -52,6 +53,7 @@ const GROUPS: Group[] = [
 export function Layout({ children }: { children: ReactNode }) {
   const { staff, logout, readOnly } = useAuth();
   const role = staff?.role ?? 'staff';
+  const facilityName = useFacilityName();
   const canSee = (it: Item) => {
     if (it.adminOnly && role === 'staff') return false;
     if (it.writeOnly && readOnly) return false;
@@ -60,7 +62,7 @@ export function Layout({ children }: { children: ReactNode }) {
   return (
     <div className="shell">
       <aside className="side">
-        <p className="side-brand">ドッグラン 受付・管理</p>
+        <p className="side-brand">{facilityName} 受付・管理</p>
         <nav className="nav" aria-label="メニュー">
           {GROUPS.map((g) => {
             const items = g.items.filter(canSee);

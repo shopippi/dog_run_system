@@ -146,7 +146,7 @@ for (const scheme of ['light', 'dark'] as const) {
       test.setTimeout(90_000);
       const customer = await browser.newPage();
       // ライトとダークで別のおうちにする(データベースはテスト全体で共有するため)
-      const dogName = scheme === 'light' ? 'ダイフク' : 'サクラモチ';
+      const dogName = scheme === 'light' ? 'クズモチ' : 'サクラモチ';
       await registerViaUi(customer, newLineUser('パパ'), [dogName]);
       await customer.close();
       const page = await browser.newPage({ viewport: { width: 1280, height: 800 }, colorScheme: scheme });

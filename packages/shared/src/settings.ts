@@ -60,6 +60,8 @@ export const settingsSchema = z.object({
     code: z.string().regex(/^\d{5}$/),
     name: z.string().min(1).max(40),
   }),
+  /** 施設の名前(画面の「○○ 会員証」「○○ 受付・管理」に出す。docs/changes-2026-10-28.md 1章) */
+  facility_name: z.string().trim().min(1).max(30),
   /** LINE ミニアプリ(LIFF)の ID。受付で出す招待QRの URL に使う(未設定なら、同じドメインの /liff/ の URL) */
   liff_id: z.string().regex(/^$|^\d+-[A-Za-z0-9]+$/, { error: LIFF_ID_MESSAGE }),
 });
@@ -85,4 +87,8 @@ export const DEFAULT_SETTINGS: Omit<Settings, 'checkin_passphrase'> = {
   privacy_text: '(プライバシーポリシーの本文は準備中です。管理画面の設定から差し替えてください)',
   weather_station: { code: '44132', name: '東京' },
   liff_id: '',
+  facility_name: 'グリーンドーム',
 };
+
+/** ログインの前でも読める、施設の名前だけ(GET /api/public-settings・GET /admin/api/public-settings) */
+export type FacilityResponse = { facilityName: string };

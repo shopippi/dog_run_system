@@ -137,7 +137,7 @@ test.describe('ダークモード', () => {
 
   test('会員証の色はダークモードでも変わらない(白の背景でも文字は墨)', async ({ page }) => {
     const user = newLineUser('ママ');
-    await registerViaUi(page, user, ['モカ']);
+    await registerViaUi(page, user, ['ミルクティー']);
     await openLiff(page, user, '/card/background');
     await page.getByRole('radio', { name: '白' }).check({ force: true });
     await expect(page.getByRole('status')).toHaveText('保存しました');
