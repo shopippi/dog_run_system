@@ -40,6 +40,7 @@ describe('マイグレーション', () => {
         'staff_users',
         'survey_answers',
         'survey_questions',
+        'system_jobs',
         'tickets',
         'visit_dogs',
         'visits',
