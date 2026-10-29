@@ -1,4 +1,4 @@
-import richmenu from './assets/richmenu.png';
+import richmenu from './assets/richmenu.jpg';
 
 /** リッチメニューの押せる場所(画像 2500×1686 の割合)と、開く画面。docs/line/richmenu.md と同じ */
 export const RICH_MENU_AREAS = [
