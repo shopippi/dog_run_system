@@ -15,6 +15,7 @@ import {
   type HouseholdDetail,
   type HouseholdProfileResponse,
   type ManualPointsPreview,
+  type WithAuditId,
   type ReceptionInvite,
 } from '@dr/shared';
 import { Hono } from 'hono';
@@ -23,7 +24,7 @@ import { errors } from '../../lib/errors';
 import { loadSettings } from '../../lib/settings';
 import { requireRole } from '../../lib/staff-auth';
 import { parseJson } from '../../lib/validate';
-import { auditStatement } from '../../services/audit';
+import { auditStatement, latestAuditId } from '../../services/audit';
 import { registerAuditDetail } from '../../services/audit-view';
 import { ADMIN_MEDIA_BASE } from '../../services/admin-visits';
 import {
@@ -196,13 +197,19 @@ householdDetailRoutes.post('/households/:id/points', requireRole('admin'), async
   const id = Number(c.req.param('id'));
   const input = await parseJson(c, manualPointsSchema);
   await requireActiveHousehold(db, id);
-  const body: ManualPointsPreview = await applyManualPoints(db, {
+  const staffId = c.get('staff').id;
+  const result: ManualPointsPreview = await applyManualPoints(db, {
     householdId: id,
     input,
-    staffId: c.get('staff').id,
+    staffId,
     settings: await loadSettings(db),
     now: c.get('now'),
   });
+  // 画面のトーストの「元に戻す」のために、操作ログの番号を返す
+  const body: ManualPointsPreview & WithAuditId = {
+    ...result,
+    auditId: await latestAuditId(db, { action: 'points.manual', targetType: 'household', targetId: id, staffId }),
+  };
   return c.json(body, 201);
 });
 
@@ -331,8 +338,11 @@ householdDetailRoutes.delete('/households/:id/family/:fid', requireRole('admin')
   const db = c.env.DB;
   const id = Number(c.req.param('id'));
   await requireActiveHousehold(db, id);
-  await removeFamilyMember(db, { householdId: id, memberId: Number(c.req.param('fid')) || 0, staffId: c.get('staff').id, now: c.get('now') });
-  return c.json({ ok: true });
+  const memberId = Number(c.req.param('fid')) || 0;
+  const staffId = c.get('staff').id;
+  await removeFamilyMember(db, { householdId: id, memberId, staffId, now: c.get('now') });
+  const auditId = await latestAuditId(db, { action: 'family.remove', targetType: 'family_member', targetId: memberId, staffId });
+  return c.json({ ok: true, auditId });
 });
 
 registerAuditDetail('family.invite', () => '受付で招待のQRコードを表示');

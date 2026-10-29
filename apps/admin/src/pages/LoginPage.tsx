@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react';
+import { BusyLabel } from '../components/BusyLabel';
 import { ErrorNotice } from '../components/ErrorNotice';
 import { useAuth } from '../lib/auth';
 import { useFacilityName } from '../hooks/useFacilityName';
@@ -48,7 +49,9 @@ export function LoginPage() {
         </div>
         {error ? <ErrorNotice error={error} /> : null}
         <button type="submit" className="btn" disabled={busy}>
-          {busy ? 'ログインしています…' : 'ログイン'}
+          <BusyLabel busy={busy} pending="ログインしています…">
+            ログイン
+          </BusyLabel>
         </button>
         <p className="note">パスワードを忘れたときは、管理者にパスワードの再発行を頼んでください。</p>
       </form>

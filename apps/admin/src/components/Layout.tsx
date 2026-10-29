@@ -1,7 +1,7 @@
 import { useFacilityName } from '../hooks/useFacilityName';
 import { STAFF_ROLE_LABELS } from '@dr/shared';
-import type { ReactNode } from 'react';
-import { NavLink } from 'react-router-dom';
+import { useEffect, type ReactNode } from 'react';
+import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '../lib/auth';
 import { Icon, type IconName } from './Icon';
 
@@ -60,6 +60,8 @@ export function Layout({ children }: { children: ReactNode }) {
     if (it.writeOnly && readOnly) return false;
     return true;
   };
+  useSlashToSearch();
+  useActiveNavInView();
   return (
     <div className="shell">
       <aside className="side">
@@ -102,4 +104,45 @@ export function Layout({ children }: { children: ReactNode }) {
       </main>
     </div>
   );
+}
+
+/**
+ * メニューが画面に収まらず、メニューの中だけが動くとき、選んでいる画面のメニューが隠れないようにする。
+ */
+function useActiveNavInView() {
+  const { pathname } = useLocation();
+  useEffect(() => {
+    const nav = document.querySelector<HTMLElement>('.side .nav');
+    const active = nav?.querySelector<HTMLElement>('a.active');
+    if (!nav || !active) return;
+    // ページ全体は動かさず、メニューの中だけを動かす
+    const n = nav.getBoundingClientRect();
+    const a = active.getBoundingClientRect();
+    if (a.top < n.top) nav.scrollTop -= n.top - a.top + 8;
+    else if (a.bottom > n.bottom) nav.scrollTop += a.bottom - n.bottom + 8;
+    if (a.left < n.left) nav.scrollLeft -= n.left - a.left + 8;
+    else if (a.right > n.right) nav.scrollLeft += a.right - n.right + 8;
+  }, [pathname]);
+}
+
+/**
+ * キーボードの「/」で、その画面の検索欄(data-search-input を付けた入力欄)にフォーカスする(docs/design.md 11.4)。
+ * 入力欄にいるとき・ダイアログを開いているとき・ほかのキーと一緒に押したときは何もしない。
+ */
+function useSlashToSearch() {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== '/' || e.ctrlKey || e.metaKey || e.altKey || e.isComposing) return;
+      const t = e.target;
+      if (t instanceof HTMLElement && (t.isContentEditable || t.closest('input, textarea, select, [contenteditable="true"]'))) return;
+      if (document.querySelector('dialog[open]')) return;
+      const input = [...document.querySelectorAll<HTMLInputElement>('input[data-search-input]')].find((el) => el.offsetParent !== null);
+      if (!input) return;
+      e.preventDefault();
+      input.focus();
+      input.select();
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, []);
 }

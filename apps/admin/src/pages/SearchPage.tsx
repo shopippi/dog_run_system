@@ -2,6 +2,7 @@ import type { HouseholdHit, HouseholdSearchResponse } from '@dr/shared';
 import { useEffect, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { DogFace } from '../components/DogFace';
+import { ResultLoading } from '../components/HouseholdPicker';
 import { ErrorNotice } from '../components/ErrorNotice';
 import { Icon } from '../components/Icon';
 import { PageHead } from '../components/PageHead';
@@ -34,6 +35,7 @@ export function SearchPage({
   const [hits, setHits] = useState<HouseholdHit[] | null>(null);
   const [error, setError] = useState<unknown>(null);
   const [selected, setSelected] = useState<HouseholdHit | null>(null);
+  const [pending, setPending] = useState(false);
   // おうちの詳細(A-02)は管理者と製作者だけが開ける
   const { staff } = useAuth();
   const canOpenDetail = staff?.role === 'admin' || staff?.role === 'developer';
@@ -42,9 +44,11 @@ export function SearchPage({
     const query = mode === 'photo' ? '' : q.trim();
     if (mode === 'name' && !query) {
       setHits(null);
+      setPending(false);
       return;
     }
     let alive = true;
+    setPending(true);
     const t = setTimeout(() => {
       adminApi<HouseholdSearchResponse>(`/households?q=${encodeURIComponent(query)}`)
         .then((r) => {
@@ -52,7 +56,8 @@ export function SearchPage({
           setHits(r.households);
           setError(null);
         })
-        .catch((e) => alive && setError(e));
+        .catch((e) => alive && setError(e))
+        .finally(() => alive && setPending(false));
     }, 250);
     return () => {
       alive = false;
@@ -72,7 +77,15 @@ export function SearchPage({
       />
       <div className="search-bar">
         <div className="segment" role="tablist" aria-label="探し方">
-          <button type="button" role="tab" aria-selected={mode === 'name'} onClick={() => setMode('name')}>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={mode === 'name'}
+            onClick={() => {
+              if (mode !== 'name') setHits(null);
+              setMode('name');
+            }}
+          >
             名前で探す
           </button>
           <button
@@ -80,6 +93,7 @@ export function SearchPage({
             role="tab"
             aria-selected={mode === 'photo'}
             onClick={() => {
+              if (mode !== 'photo') setHits(null);
               setMode('photo');
               setSelected(null);
             }}
@@ -94,6 +108,8 @@ export function SearchPage({
               type="search"
               aria-label="探す言葉"
               placeholder="例: アル、DR-000123"
+              data-search-input
+              aria-keyshortcuts="/"
               value={q}
               autoFocus
               onChange={(e) => {
@@ -101,12 +117,17 @@ export function SearchPage({
                 setSelected(null);
               }}
             />
+            <kbd className="search-kbd" aria-hidden="true">
+              /
+            </kbd>
           </div>
         )}
       </div>
       {error ? <ErrorNotice error={error} /> : null}
       {selected && <HouseholdCard key={selected.id} h={selected} onClose={() => setSelected(null)} actions={actions} />}
-      {hits === null ? null : hits.length === 0 ? (
+      {hits === null ? (
+        pending && !error ? <ResultLoading mode={mode} panel /> : null
+      ) : hits.length === 0 ? (
         <div className="panel">
           <p className="empty">
             {mode === 'photo' ? 'まだ来場したおうちがありません。' : '見つかりませんでした。別の言葉や、会員IDで探してみてください。'}

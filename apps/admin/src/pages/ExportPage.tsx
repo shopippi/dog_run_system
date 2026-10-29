@@ -2,7 +2,9 @@ import { EXPORTS, EXPORT_NAMES, exportQuerySchema, type ExportName } from '@dr/s
 import { useId, useState } from 'react';
 import { ErrorNotice } from '../components/ErrorNotice';
 import { Icon } from '../components/Icon';
+import { BusyLabel } from '../components/BusyLabel';
 import { PageHead } from '../components/PageHead';
+import { useToast } from '../components/Toast';
 import { ApiError } from '../lib/api';
 
 /** CSV を受け取る(エラーのときは、API のエラーの文を出す) */
@@ -55,7 +57,7 @@ export function ExportPage() {
   const [to, setTo] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
-  const [done, setDone] = useState('');
+  const toast = useToast();
   const labelId = useId();
   const fromId = useId();
   const toId = useId();
@@ -63,7 +65,6 @@ export function ExportPage() {
 
   const submit = async () => {
     setError(null);
-    setDone('');
     if (info.period) {
       const checked = exportQuerySchema.safeParse({ from: from || undefined, to: to || undefined });
       if (!checked.success) {
@@ -74,7 +75,7 @@ export function ExportPage() {
     setBusy(true);
     try {
       const file = await download(name, from, to);
-      setDone(`「${file}」をダウンロードしました。`);
+      toast(`「${file}」をダウンロードしました。`);
     } catch (e) {
       setError(e);
     } finally {
@@ -121,13 +122,12 @@ export function ExportPage() {
         {error ? <ErrorNotice error={error} /> : null}
         <div className="cfg-acts">
           <button type="button" className="btn" disabled={busy} onClick={() => void submit()}>
-            <Icon name="download" />
-            {busy ? '作っています…' : 'ダウンロード'}
+            <BusyLabel busy={busy} pending="作っています…">
+              <Icon name="download" />
+              ダウンロード
+            </BusyLabel>
           </button>
         </div>
-        <p className="sub-text" role="status">
-          {done}
-        </p>
       </section>
     </div>
   );

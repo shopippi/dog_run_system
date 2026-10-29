@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { adminLogin, newLineUser, openCheckin, registerViaUi } from './helpers';
+import { adminLogin, adminToast, newLineUser, openCheckin, registerViaUi } from './helpers';
 
 // 担当D(分析と自動処理)の画面の、文字と背景のコントラスト(e2e/contrast.spec.ts と同じ確かめ方。4.5:1)。
 
@@ -117,7 +117,7 @@ for (const scheme of ['light', 'dark'] as const) {
       await adminLogin(page, 'admin', '/status');
       const stats = page.getByRole('listitem', { name: /日別の集計/ });
       await stats.getByRole('button', { name: '今すぐ実行' }).click();
-      await stats.getByRole('status').waitFor();
+      await adminToast(page, '日別の集計').waitFor();
       await check(page, 'M-17 システムの状態');
       await page.close();
 

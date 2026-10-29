@@ -17,13 +17,15 @@ import {
   type DogSize,
   type DogSociability,
 } from '@dr/shared';
-import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { useEffect, useRef, useState } from 'react';
+import { useParams } from 'react-router-dom';
 import { Dialog } from '../components/Dialog';
 import { DogFace } from '../components/DogFace';
 import { ErrorNotice } from '../components/ErrorNotice';
-import { Icon } from '../components/Icon';
+import { BusyLabel } from '../components/BusyLabel';
 import { PageHead } from '../components/PageHead';
+import { Loading, Skeleton, SkeletonText } from '../components/Skeleton';
+import { useToast } from '../components/Toast';
 import { useLoad } from '../hooks/useLoad';
 import { usePhotoSrc } from '../hooks/usePhotoSrc';
 import { ApiError, adminApi, adminPatch } from '../lib/api';
@@ -76,36 +78,30 @@ export function DogEditPage() {
   const { id } = useParams();
   const { readOnly } = useAuth();
   const { data, error, reload } = useLoad(() => adminApi<AdminDogDetail>(`/dogs/${id}`), [id]);
-  const [notice, setNotice] = useState<ReactNode>(null);
+  const toast = useToast();
+  const current = data && String(data.dog.id) === id ? data : null;
+  const loadingCrumb = <Skeleton w={120} h={12} r={4} style={{ display: 'inline-block' }} />;
   return (
     <div className="page">
-      {data && (
-        <div className="hh-back">
-          <Link to={`/households/${data.household.id}`} className="btn ghost">
-            <Icon name="chevron-left" />
-            {data.household.displayName}に戻る
-          </Link>
-        </div>
-      )}
       <PageHead
         title="ワンちゃんの情報の変更"
+        crumbs={[
+          { label: 'おうちを探す', to: '/search' },
+          current ? { label: current.household.displayName, to: `/households/${current.household.id}` } : { label: loadingCrumb },
+          { label: current ? current.dog.name : loadingCrumb },
+        ]}
         howto="写真と登録の内容を変えて「保存する」を押してください。お客さんの会員証と今日の来場に、すぐ反映されます。犬種とサイズを変えるときは、理由を入れてください(履歴に残ります)。"
       />
       {error ? <ErrorNotice error={error} onRetry={reload} /> : null}
-      {notice ? (
-        <div className="alert info" role="status">
-          {notice}
-        </div>
-      ) : null}
       {!data ? (
-        error ? null : <p className="loading">読み込んでいます…</p>
+        error ? null : <DogEditSkeleton />
       ) : (
         <Editor
           key={`${data.dog.id}-${data.changes[0]?.id ?? 0}-${data.dog.photoUrl ?? ''}-${data.dog.status}`}
           d={data}
           canEdit={!readOnly && data.dog.status !== 'merged' && data.household.status === 'active'}
           onSaved={(message) => {
-            setNotice(message);
+            toast(message);
             void reload();
           }}
         />
@@ -114,7 +110,42 @@ export function DogEditPage() {
   );
 }
 
-function Editor({ d, canEdit, onSaved }: { d: AdminDogDetail; canEdit: boolean; onSaved: (message: ReactNode) => void }) {
+/** 読み込み中: 写真のまとまり(176 の正方形)と、登録の内容の欄 */
+function DogEditSkeleton() {
+  return (
+    <Loading>
+      <section className="panel dg-photo">
+        <div className="hh-section-title">
+          <SkeletonText size={17} lh={1.35} w={40} />
+        </div>
+        <div className="dg-photo-body">
+          <Skeleton w={176} h={176} r={12} />
+          <div className="dg-photo-side">
+            <SkeletonText size={13} w={260} />
+            <div className="dg-photo-acts">
+              <Skeleton w={104} h="var(--control-h)" r={8} />
+            </div>
+          </div>
+        </div>
+      </section>
+      <section className="panel dg-form">
+        <div className="hh-section-title">
+          <SkeletonText size={17} lh={1.35} w={120} />
+        </div>
+        <div className="dg-fields">
+          {Array.from({ length: 6 }, (_, i) => (
+            <div key={i} className="field">
+              <SkeletonText size={13} w={[40, 40, 56, 40, 88, 64][i]} />
+              <Skeleton h={44} r={8} />
+            </div>
+          ))}
+        </div>
+      </section>
+    </Loading>
+  );
+}
+
+function Editor({ d, canEdit, onSaved }: { d: AdminDogDetail; canEdit: boolean; onSaved: (message: string) => void }) {
   const [form, setForm] = useState<Form>(() => formOf(d));
   const [photo, setPhoto] = useState<PhotoDraft | null>(null);
   const [busy, setBusy] = useState(false);
@@ -196,11 +227,7 @@ function Editor({ d, canEdit, onSaved }: { d: AdminDogDetail; canEdit: boolean; 
         const rendered = photo.rendered ?? (await renderPhoto(photo.source, photo.rotation));
         await uploadAdminDogPhoto(d.dog.id, rendered, photo.kind);
       }
-      onSaved(
-        <p>
-          保存しました。お客さんの会員証と今日の来場にも反映されています。間違えたときは、<Link to="/audit">操作ログ</Link>から元に戻せます。
-        </p>,
-      );
+      onSaved('保存しました。お客さんの会員証と今日の来場にも反映されています。');
     } catch (e) {
       setError(e);
       setBusy(false);
@@ -419,7 +446,9 @@ function Editor({ d, canEdit, onSaved }: { d: AdminDogDetail; canEdit: boolean; 
             {error ? <ErrorNotice error={error} /> : null}
             <div className="dg-foot-row">
               <button type="button" className="btn" disabled={!ready || busy} onClick={save}>
-                {busy ? '保存しています…' : '保存する'}
+                <BusyLabel busy={busy} pending="保存しています…">
+                  保存する
+                </BusyLabel>
               </button>
               <button type="button" className="btn ghost" disabled={busy} onClick={() => setRetireOpen(true)}>
                 {d.dog.status === 'active' ? '登録をおやすみする' : '登録に戻す'}
@@ -474,7 +503,7 @@ function Editor({ d, canEdit, onSaved }: { d: AdminDogDetail; canEdit: boolean; 
 }
 
 /** 登録をおやすみする(内部の値は retired)・登録に戻す の確認(6.1。過去の来場記録は残り、チェックインの選択肢に出なくなる) */
-function RetireDialog({ d, onClose, onDone }: { d: AdminDogDetail; onClose: () => void; onDone: (m: ReactNode) => void }) {
+function RetireDialog({ d, onClose, onDone }: { d: AdminDogDetail; onClose: () => void; onDone: (m: string) => void }) {
   const retire = d.dog.status === 'active';
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
@@ -483,7 +512,7 @@ function RetireDialog({ d, onClose, onDone }: { d: AdminDogDetail; onClose: () =
     setError(null);
     try {
       await adminPatch(`/dogs/${d.dog.id}`, { status: retire ? 'retired' : 'active' });
-      onDone(<p>{retire ? `${d.dog.name}の登録をおやすみしました。` : `${d.dog.name}を登録に戻しました。`}間違えたときは、操作ログから元に戻せます。</p>);
+      onDone(retire ? `${d.dog.name}の登録をおやすみしました。` : `${d.dog.name}を登録に戻しました。`);
     } catch (e) {
       setError(e);
       setBusy(false);
@@ -499,7 +528,9 @@ function RetireDialog({ d, onClose, onDone }: { d: AdminDogDetail; onClose: () =
             やめる
           </button>
           <button type="button" className="btn" disabled={busy} onClick={submit}>
-            {busy ? '変えています…' : retire ? 'おやすみする' : '登録に戻す'}
+            <BusyLabel busy={busy} pending="変えています…">
+              {retire ? 'おやすみする' : '登録に戻す'}
+            </BusyLabel>
           </button>
         </>
       }

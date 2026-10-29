@@ -91,3 +91,9 @@ export async function adminLogin(page: Page, role: 'admin' | 'staff' | 'develope
   await page.getByRole('button', { name: 'ログイン' }).click();
   await page.getByRole('button', { name: 'ログアウト' }).waitFor();
 }
+
+/** 管理画面の右下のトースト(完了のお知らせ。docs/design.md 11.4)。text を渡すと、その文を含むものだけ */
+export function adminToast(page: Page, text?: string | RegExp) {
+  const toasts = page.locator('.toasts [role="status"]');
+  return text === undefined ? toasts : toasts.filter({ hasText: text });
+}

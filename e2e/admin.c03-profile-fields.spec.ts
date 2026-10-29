@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { adminLogin, newLineUser, registerViaUi } from './helpers';
+import { adminLogin, adminToast, newLineUser, registerViaUi } from './helpers';
 
 // C-03 飼い主とワンちゃんの情報(管理画面: M-06 おうちの詳細・M-07 ワンちゃん・M-11 アンケート・M-05 ダッシュボード。担当J)
 
@@ -30,12 +30,12 @@ test('C-03 管理者が、おうちの回答(来たい時間帯など)とワン�
   await dialog.getByRole('radiogroup', { name: /お知らせ/ }).getByRole('radio', { name: 'はい' }).check();
   await dialog.getByRole('button', { name: '保存する' }).click();
   await expect(dialog).toHaveCount(0);
-  await expect(page.getByRole('status')).toContainText('おうちの回答を変えました');
+  await expect(adminToast(page, 'おうちの回答を変えました')).toBeVisible();
   await expect(survey).toContainText('平日の昼・土日の午後');
   await expect(survey).toContainText('犬種別の集まり');
 
   // 操作ログに残る
-  await page.getByRole('navigation').getByRole('link', { name: '操作ログ' }).click();
+  await page.getByRole('navigation', { name: 'メニュー' }).getByRole('link', { name: '操作ログ' }).click();
   await expect(page.getByText('来たい時間帯: 未回答 → 平日の昼・土日の午後').first()).toBeVisible();
 
   // M-07 ワンちゃんの体重・相性・予防注射
@@ -49,7 +49,7 @@ test('C-03 管理者が、おうちの回答(来たい時間帯など)とワン�
   await page.getByLabel('狂犬病の予防注射(最近の年)').selectOption({ label: '2026年' });
   await page.getByLabel('混合ワクチン(最近の年)').selectOption({ label: '2025年' });
   await page.getByRole('button', { name: '保存する' }).click();
-  await expect(page.getByRole('status')).toContainText('保存しました');
+  await expect(adminToast(page, '保存しました')).toBeVisible();
   const history = page.getByRole('list', { name: '変更の履歴' });
   await expect(history).toContainText('体重: 未登録 → 7.4kg');
   await expect(history).toContainText('ほかの犬との相性: 未登録 → 得意');
@@ -57,7 +57,7 @@ test('C-03 管理者が、おうちの回答(来たい時間帯など)とワン�
   await expect(page.getByLabel('体重(kg)')).toHaveValue('7.4');
 
   // おうちの詳細のワンちゃんの行にも出る
-  await page.getByRole('link', { name: /ミツマメのおうちに戻る/ }).click();
+  await page.getByRole('navigation', { name: 'いまいる場所' }).getByRole('link', { name: 'ミツマメのおうち' }).click();
   await expect(page.getByRole('list', { name: 'ワンちゃん' })).toContainText('7.4kg');
   await expect(page.getByRole('list', { name: 'ワンちゃん' })).toContainText('ほかの犬: 得意');
 });

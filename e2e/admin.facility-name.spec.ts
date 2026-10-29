@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { adminLogin, newLineUser, openLiff } from './helpers';
+import { adminLogin, adminToast, newLineUser, openLiff } from './helpers';
 
 // 担当I: 施設の名前(設定 facility_name。docs/changes-2026-10-28.md 1章、docs/design.md 5章・6章)。
 // 画面の名前は「グリーンドーム 会員証」「グリーンドーム 受付・管理」。ルールの設定で変えられる。
@@ -24,7 +24,7 @@ test('A-12 管理者が施設の名前を変えると、管理画面とお客さ
   try {
     await input.fill('みどりの森');
     await section.getByRole('button', { name: '保存する' }).click();
-    await expect(section.getByText('保存しました')).toBeVisible();
+    await expect(adminToast(page, '保存しました')).toBeVisible();
     // 保存したら、左上の名前もすぐ変わる
     await expect(page.locator('.side-brand')).toHaveText('みどりの森 受付・管理');
 
@@ -37,7 +37,7 @@ test('A-12 管理者が施設の名前を変えると、管理画面とお客さ
     await page.reload();
     await section.getByLabel('施設の名前').fill('グリーンドーム');
     await section.getByRole('button', { name: '保存する' }).click();
-    await expect(section.getByText('保存しました')).toBeVisible();
+    await expect(adminToast(page, '保存しました')).toBeVisible();
   }
 });
 

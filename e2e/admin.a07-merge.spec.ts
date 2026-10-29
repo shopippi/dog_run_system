@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { adminLogin, newLineUser, openLiff, registerViaUi } from './helpers';
+import { adminLogin, adminToast, newLineUser, openLiff, registerViaUi } from './helpers';
 import { visitYesterday } from './merge-helpers';
 
 test('A-07 2つのおうちを選び、同じワンちゃんを組み合わせてまとめる。まとめた後は元に戻せる', async ({ browser }) => {
@@ -48,7 +48,7 @@ test('A-07 2つのおうちを選び、同じワンちゃんを組み合わせ�
   await expect(dialog.getByRole('button', { name: 'やめる' })).toBeFocused();
   await expect(dialog).toContainText(`${mamaNo})を、`);
   await dialog.getByRole('button', { name: 'まとめる' }).click();
-  await expect(page.getByRole('status')).toContainText(`ごまちゃん・キナコのおうち(${papaNo})にまとめました`);
+  await expect(adminToast(page, `ごまちゃん・キナコのおうち(${papaNo})にまとめました`)).toBeVisible();
 
   // ママの会員証も、パパの会員IDになる
   await openLiff(customer, mama);
@@ -65,7 +65,7 @@ test('A-07 2つのおうちを選び、同じワンちゃんを組み合わせ�
   await page.getByRole('button', { name: '元に戻す' }).click();
   const undo = page.getByRole('dialog', { name: '統合を元に戻す' });
   await undo.getByRole('button', { name: '元に戻す' }).click();
-  await expect(page.getByRole('status')).toContainText('元に戻しました');
+  await expect(adminToast(page, '元に戻しました')).toBeVisible();
   await openLiff(customer, mama);
   await expect(customer.getByText(mamaNo)).toBeVisible();
   await customer.close();

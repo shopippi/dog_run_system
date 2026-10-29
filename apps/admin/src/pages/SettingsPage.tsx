@@ -9,7 +9,10 @@ import { useEffect, useId, useState, type ReactNode } from 'react';
 import { Dialog } from '../components/Dialog';
 import { ErrorNotice } from '../components/ErrorNotice';
 import { PageHead } from '../components/PageHead';
-import { QrCode, SaveFoot, Section, useLoaded } from '../components/SettingsKit';
+import { BusyLabel } from '../components/BusyLabel';
+import { CfgSectionSkeleton, QrCode, SaveFoot, Section, useLoaded } from '../components/SettingsKit';
+import { Loading } from '../components/Skeleton';
+import { useToast } from '../components/Toast';
 import { ApiError, adminApi, adminPatch, adminPost } from '../lib/api';
 import { useAuth } from '../lib/auth';
 import { publishFacilityName } from '../hooks/useFacilityName';
@@ -31,7 +34,13 @@ export function SettingsPage() {
       />
       {error ? <ErrorNotice error={error} onRetry={reload} /> : null}
       {!data ? (
-        !error && <p className="loading">読み込んでいます…</p>
+        !error && (
+          <Loading>
+            <CfgSectionSkeleton fields={1} title={88} fieldW="min(420px, 100%)" hint />
+            <CfgSectionSkeleton fields={3} title={160} />
+            <CfgSectionSkeleton fields={2} title={120} />
+          </Loading>
+        )
       ) : (
         <>
           <FacilitySection
@@ -65,6 +74,7 @@ function useSettingsDraft(settings: Settings, keys: SettingKey[], onSaved: OnSav
   const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<unknown>(null);
+  const toast = useToast();
   useEffect(() => {
     setDraft(JSON.parse(base) as Draft);
   }, [base]);
@@ -106,6 +116,7 @@ function useSettingsDraft(settings: Settings, keys: SettingKey[], onSaved: OnSav
     try {
       onSaved(await adminPatch<SettingsResponse>('/settings', checked.data));
       setSaved(true);
+      toast('保存しました。');
     } catch (e) {
       setError(e);
     } finally {
@@ -459,7 +470,9 @@ function RegenerateDialog({ onClose, onDone }: { onClose: () => void; onDone: On
             やめる
           </button>
           <button type="button" className="btn" disabled={busy} onClick={submit}>
-            {busy ? '作り直しています…' : '作り直す'}
+            <BusyLabel busy={busy} pending="作り直しています…">
+              作り直す
+            </BusyLabel>
           </button>
         </>
       }

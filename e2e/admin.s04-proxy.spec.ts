@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { adminLogin, newLineUser, openLiff, registerViaUi } from './helpers';
+import { adminLogin, adminToast, newLineUser, openLiff, registerViaUi } from './helpers';
 
 test('S-04 犬の名前で探して代理でチェックインすると、お客さんの会員証にポイントが付く', async ({ browser }) => {
   const customer = await browser.newPage();
@@ -15,7 +15,7 @@ test('S-04 犬の名前で探して代理でチェックインすると、お客
   const panel = page.getByRole('group', { name: '代理チェックイン' });
   await expect(panel.getByRole('checkbox', { name: /ゴン/ })).toBeChecked();
   await panel.getByRole('button', { name: '代理でチェックインする' }).click();
-  await expect(panel.getByRole('status')).toContainText('チェックインしました。1ポイントを付けました。');
+  await expect(adminToast(page, 'ゴンのおうちを代理でチェックインしました。1ポイントを付けました。')).toBeVisible();
   await expect(panel.getByRole('button', { name: '代理でチェックインする' })).toHaveCount(0);
 
   await page.getByRole('link', { name: '今日の来場' }).click();

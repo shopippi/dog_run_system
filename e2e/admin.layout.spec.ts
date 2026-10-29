@@ -1,5 +1,6 @@
 import { expect, test, type Browser, type Page } from '@playwright/test';
-import { adminLogin, answerSurvey, makePhoto, newLineUser, openCheckin, openLiff, registerViaUi } from './helpers';
+import { restoreTouch } from './households-helpers';
+import { adminLogin, adminToast, answerSurvey, makePhoto, newLineUser, openCheckin, openLiff, registerViaUi } from './helpers';
 
 // 受付・管理画面の見え方を確かめる(e2e/liff.layout.spec.ts と同じ考え方)。
 // PC(1280)・タブレット横(1024)・タブレット縦(768)の3つの幅で、主な画面を通しで操作する。
@@ -54,6 +55,8 @@ async function checkScreen(page: Page, folder: string, screen: string, touch: bo
   expect(problems, `${folder} / ${screen}`).toEqual([]);
   if (process.env.SHOT_DIR) {
     await page.screenshot({ path: `${process.env.SHOT_DIR}/${folder}/${screen}.png`, fullPage: true });
+    // 全体の写真を撮ると、指の操作のエミュレーション(pointer: coarse)が外れることがあるので、かけ直す
+    if (touch) await restoreTouch(page);
   }
 }
 
@@ -107,7 +110,7 @@ async function seed(browser: Browser) {
   await staff.getByRole('list', { name: '見つかったおうち' }).getByRole('button', { name: /ハナのおうち/ }).click();
   const proxy = staff.getByRole('group', { name: '代理チェックイン' });
   await proxy.getByRole('button', { name: '代理でチェックインする' }).click();
-  await proxy.getByRole('status').waitFor();
+  await adminToast(staff, '代理でチェックインしました').waitFor();
 
   await staff.getByRole('link', { name: '今日の来場' }).click();
   const row = staff.getByRole('listitem', { name: /レオ/ });
@@ -143,7 +146,7 @@ test.describe('受付・管理画面の見え方', () => {
       const walkin = page.getByRole('region', { name: '会員以外のお客さん' });
       await walkin.getByRole('button', { name: '1頭ふやす' }).click();
       await walkin.getByRole('button', { name: '記録する' }).click();
-      await walkin.getByRole('status').waitFor();
+      await adminToast(page, 'を記録しました').waitFor();
       await expect(list.getByText('会員以外 2頭').first()).toBeVisible();
       await checkScreen(page, v.name, 'M-02 今日の来場', v.touch);
 

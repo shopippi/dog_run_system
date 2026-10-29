@@ -5,6 +5,7 @@ import { DashChart, valueLabels, type ChartColors } from '../components/DashChar
 import { DogFace } from '../components/DogFace';
 import { ErrorNotice } from '../components/ErrorNotice';
 import { PageHead } from '../components/PageHead';
+import { Loading, Skeleton, SkeletonKpis, SkeletonText, useDelayedFlag } from '../components/Skeleton';
 import { adminApi } from '../lib/api';
 
 // M-05 ダッシュボード(A-01)。指標の定義は要件定義書 13章。
@@ -75,6 +76,8 @@ export function DashboardPage() {
   const [error, setError] = useState<unknown>(null);
   const [busy, setBusy] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
+  // 期間を変えて読み直しているあいだ(120ms を過ぎたら)は、前の期間の数字ではなくスケルトンを出す
+  const periodLate = useDelayedFlag(busy && !!data && (data.from !== from || data.to !== to), 120);
 
   useEffect(() => {
     if (!from || !to || from > to) return;
@@ -135,12 +138,52 @@ export function DashboardPage() {
         <p className="sub-text dash-period-label" role="status">
           {periodLabel(from, to)}
           {data && data.from === from && data.to === to ? `(営業日 ${data.totals.openDays}日)` : ''}
-          {busy ? ' 読み込んでいます…' : ''}
         </p>
       </section>
       {error ? <ErrorNotice error={error} onRetry={() => setReloadKey((k) => k + 1)} /> : null}
-      {!data ? !error && <p className="loading">読み込んでいます…</p> : <Body data={data} busy={busy} />}
+      {!data ? (
+        !error && <DashSkeleton />
+      ) : periodLate && !error ? (
+        <DashSkeleton delay={0} />
+      ) : (
+        <Body data={data} busy={busy} />
+      )}
     </div>
+  );
+}
+
+/** 読み込み中: 数値ブロック 6 つ・来場の推移(260)・グラフのまとまり 4 つ(220) */
+function DashSkeleton({ delay }: { delay?: number }) {
+  const head = (w: number, note = true) => (
+    <div className="dash-panel-head">
+      <SkeletonText size={15} lh={1.35} w={w} />
+      {note && <SkeletonText size={13} w="70%" />}
+    </div>
+  );
+  return (
+    <Loading delay={delay}>
+      <section className="panel">
+        <SkeletonKpis n={6} className="dash-kpis" note />
+      </section>
+      <section className="panel dash-panel">
+        <div className="dash-panel-head dash-panel-head-row">
+          <div>
+            <SkeletonText size={15} lh={1.35} w={88} />
+            <SkeletonText size={13} w={320} />
+          </div>
+          <Skeleton w={176} h="var(--control-h)" r={8} />
+        </div>
+        <Skeleton h={260} r={8} />
+      </section>
+      <div className="dash-grid">
+        {[160, 200, 96, 180].map((w, i) => (
+          <section key={i} className="panel dash-panel">
+            {head(w)}
+            <Skeleton h={220} r={8} />
+          </section>
+        ))}
+      </div>
+    </Loading>
   );
 }
 

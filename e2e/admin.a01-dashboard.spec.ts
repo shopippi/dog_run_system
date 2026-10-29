@@ -35,7 +35,7 @@ test.describe('A-01 ダッシュボード', () => {
 
     // 期間を切り替える
     await page.getByRole('radiogroup', { name: '期間' }).getByRole('radio', { name: '過去12か月' }).check();
-    await expect(page.locator('p.dash-period-label')).not.toContainText('読み込んでいます');
+    await expect(page.locator('[aria-busy="true"]')).toHaveCount(0);
     // 期間の見出しには年を入れる(年をまたぐ期間でも分かるように)
     await expect(page.locator('p.dash-period-label')).toContainText(/^\d{4}年\d{1,2}月1日\(.\)〜(\d{4}年)?\d{1,2}月\d{1,2}日\(.\)/);
     const dormant = page.getByRole('list', { name: 'しばらく来ていない常連さん' });

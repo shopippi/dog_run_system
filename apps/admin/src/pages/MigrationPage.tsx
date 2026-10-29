@@ -6,6 +6,7 @@ import {
   type MigrationListResponse,
   type MigrationRecord,
   type MigrationResult,
+  type WithAuditId,
   type MigrationSource,
   type MigrationStatus,
 } from '@dr/shared';
@@ -14,7 +15,10 @@ import { Dialog } from '../components/Dialog';
 import { DogFace } from '../components/DogFace';
 import { ErrorNotice } from '../components/ErrorNotice';
 import { HouseholdPicker } from '../components/HouseholdPicker';
+import { BusyLabel } from '../components/BusyLabel';
 import { PageHead } from '../components/PageHead';
+import { Loading, Skeleton, SkeletonGhost, SkeletonText } from '../components/Skeleton';
+import { useToast } from '../components/Toast';
 import { adminApi, adminPost } from '../lib/api';
 import { useAuth } from '../lib/auth';
 import { formatDateTime } from '../lib/jst-format';
@@ -87,7 +91,7 @@ function DirectMigration({ onDone }: { onDone: () => void }) {
   const [collectedCard, setCollectedCard] = useState(false);
   const [error, setError] = useState<unknown>(null);
   const [confirming, setConfirming] = useState(false);
-  const [done, setDone] = useState<MigrationResult | null>(null);
+  const toast = useToast();
 
   const load = useCallback(async (id: number) => {
     setError(null);
@@ -131,7 +135,6 @@ function DirectMigration({ onDone }: { onDone: () => void }) {
           label="引き継ぐおうちを探す"
           onPick={(h) => {
             setPicked(h);
-            setDone(null);
             reset();
           }}
         />
@@ -156,7 +159,6 @@ function DirectMigration({ onDone }: { onDone: () => void }) {
               onClick={() => {
                 setPicked(null);
                 setStatus(null);
-                setDone(null);
                 setError(null);
                 reset();
               }}
@@ -164,17 +166,27 @@ function DirectMigration({ onDone }: { onDone: () => void }) {
               選び直す
             </button>
           </div>
-          {done && (
-            <p className="mg-done" role="status">
-              {MIGRATION_SOURCE_LABELS[done.source]}の{done.points}ポイントを引き継ぎました。いまのポイントは{done.balance}ポイントです。
-            </p>
-          )}
           {status && !status.inPeriod && (
             <div className="alert warning">
               <p>
                 いまは旧カードの引き継ぎを受け付ける期間の外です({status.period.start ?? ''}〜{status.period.end ?? ''})。期間を変えるときは、ルールの設定で移行期間を直してください。
               </p>
             </div>
+          )}
+          {!status && !error && (
+            <Loading>
+              <div className="field">
+                <SkeletonText size={13} w={96} />
+                <div className="chips">
+                  <Skeleton w={176} h="var(--control-h)" r={8} />
+                  <Skeleton w={160} h="var(--control-h)" r={8} />
+                </div>
+              </div>
+              <div className="field rq-points">
+                <SkeletonText size={13} w={136} />
+                <Skeleton w={160} h={44} r={8} />
+              </div>
+            </Loading>
           )}
           {status && allDone ? (
             <p className="sub-text">このおうちは、両方の旧カードの引き継ぎが済んでいます。同じカードは1回だけ引き継げます。</p>
@@ -232,10 +244,20 @@ function DirectMigration({ onDone }: { onDone: () => void }) {
           onClose={() => setConfirming(false)}
           onDone={(r) => {
             setConfirming(false);
-            setDone(r);
             reset();
             void load(picked.id);
             onDone();
+            toast({
+              message: `${MIGRATION_SOURCE_LABELS[r.source]}の${r.points}ポイントを引き継ぎました。いまのポイントは${r.balance}ポイントです。`,
+              undo: {
+                auditId: r.auditId ?? null,
+                doneMessage: `${MIGRATION_SOURCE_LABELS[r.source]}の引き継ぎを元に戻しました。`,
+                onUndone: () => {
+                  void load(picked.id);
+                  onDone();
+                },
+              },
+            });
           }}
         />
       )}
@@ -256,7 +278,7 @@ function DirectConfirm({
   points: number;
   balance: number;
   onClose: () => void;
-  onDone: (r: MigrationResult) => void;
+  onDone: (r: MigrationResult & Partial<WithAuditId>) => void;
 }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
@@ -266,7 +288,7 @@ function DirectConfirm({
     setError(null);
     try {
       onDone(
-        await adminPost<MigrationResult>(`/households/${household.id}/migrate`, {
+        await adminPost<MigrationResult & WithAuditId>(`/households/${household.id}/migrate`, {
           source,
           points,
           confirmed_card: true,
@@ -288,7 +310,9 @@ function DirectConfirm({
             やめる
           </button>
           <button type="button" className="btn" disabled={busy} onClick={submit}>
-            {busy ? '引き継いでいます…' : '引き継ぐ'}
+            <BusyLabel busy={busy} pending="引き継いでいます…">
+              引き継ぐ
+            </BusyLabel>
           </button>
         </>
       }
@@ -302,7 +326,7 @@ function DirectConfirm({
           ポイントは {balance} → {plan.balanceAfter}ポイントになります
         </li>
         <li>{MIGRATION_SOURCE_LABELS[source]}の引き継ぎは、このおうちではこの1回だけです</li>
-        <li>間違えたときは、下の「引き継ぎ済みの一覧」から元に戻せます</li>
+        <li>間違えたときは、お知らせの「元に戻す」か、下の「引き継ぎ済みの一覧」から元に戻せます</li>
       </ul>
       {error ? <ErrorNotice error={error} /> : null}
     </Dialog>
@@ -315,7 +339,7 @@ function MigratedList() {
   const [data, setData] = useState<MigrationListResponse | null>(null);
   const [error, setError] = useState<unknown>(null);
   const [undoing, setUndoing] = useState<MigrationRecord | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
+  const toast = useToast();
   const reload = useCallback(async () => {
     try {
       setData(await adminApi<MigrationListResponse>('/migrations'));
@@ -331,18 +355,38 @@ function MigratedList() {
   return (
     <section className="panel mg-section" aria-label="引き継ぎ済みの一覧">
       <h2 className="mg-title">引き継ぎ済みの一覧</h2>
-      {notice && (
-        <p className="mg-done" role="status">
-          {notice}
-        </p>
-      )}
       {error ? <ErrorNotice error={error} onRetry={reload} /> : null}
       {!data ? (
-        error ? null : <p className="loading">読み込んでいます…</p>
+        error ? null : (
+          <Loading>
+            <ul className="mi-list">
+              <MigratedHead />
+              {Array.from({ length: 3 }, (_, i) => (
+                <li key={i} className="mi-row">
+                  <span className="mi-when">
+                    <SkeletonText size={14} w={120} />
+                    <SkeletonText size={13} w={56} />
+                  </span>
+                  <span className="mi-main">
+                    <SkeletonText size={14} w={[150, 120, 170][i]} />
+                    <SkeletonText size={13} w={200} />
+                  </span>
+                  <span className="mi-points">
+                    <Skeleton w={56} h={20} r={4} />
+                  </span>
+                  <span className="mi-end">
+                    <SkeletonGhost w={56} />
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </Loading>
+        )
       ) : data.records.length === 0 ? (
         <p className="empty">まだ引き継いだ旧カードはありません。</p>
       ) : (
         <ul className="mi-list" aria-label="引き継ぎ済みの旧カード">
+          <MigratedHead />
           {data.records.map((r) => (
             <li
               key={r.auditId}
@@ -381,7 +425,7 @@ function MigratedList() {
           r={undoing}
           onClose={() => setUndoing(null)}
           onDone={() => {
-            setNotice(`${undoing.householdName}の${MIGRATION_SOURCE_LABELS[undoing.source]}の引き継ぎを元に戻しました。`);
+            toast(`${undoing.householdName}の${MIGRATION_SOURCE_LABELS[undoing.source]}の引き継ぎを元に戻しました。`);
             setUndoing(null);
             void reload();
           }}
@@ -415,7 +459,9 @@ function UndoDialog({ r, onClose, onDone }: { r: MigrationRecord; onClose: () =>
             やめる
           </button>
           <button type="button" className="btn danger-fill" disabled={busy} onClick={submit}>
-            {busy ? '元に戻しています…' : '元に戻す'}
+            <BusyLabel busy={busy} pending="元に戻しています…">
+              元に戻す
+            </BusyLabel>
           </button>
         </>
       }
@@ -430,5 +476,17 @@ function UndoDialog({ r, onClose, onDone }: { r: MigrationRecord; onClose: () =>
       </ul>
       {error ? <ErrorNotice error={error} /> : null}
     </Dialog>
+  );
+}
+
+/** 引き継ぎ済みの一覧の見出し(列の名前)。スクロールしても上に残る */
+function MigratedHead() {
+  return (
+    <li className="mi-row mi-head list-head" aria-hidden="true">
+      <span>日時・担当</span>
+      <span>おうち</span>
+      <span>ポイント</span>
+      <span />
+    </li>
   );
 }
