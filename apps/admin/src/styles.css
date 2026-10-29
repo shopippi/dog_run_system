@@ -307,7 +307,7 @@ input::placeholder { color: var(--text-tertiary); }
   .btn.ghost:hover:not(:disabled) { background: var(--surface-sunk); color: var(--text); }
   .btn.danger-fill:hover:not(:disabled) { background: var(--danger-fill); filter: brightness(.92); }
   .segment button:hover { color: var(--text); }
-  .visit:hover { background: var(--surface-sunk); }
+  .visit:not(.list-head):hover { background: var(--surface-sunk); }
   .result-row:hover { background: var(--surface-sunk); }
   .photo-cell:hover { background: var(--surface-sunk); }
 }
@@ -886,8 +886,18 @@ input::placeholder { color: var(--text-tertiary); }
   background: var(--surface); border-bottom: 1px solid var(--border);
   font-size: var(--fs-12); font-weight: var(--fw-strong); color: var(--text-secondary);
 }
+/* 見出しの下の線と、次の行の上の線が重ならないように */
+ul > .list-head + li { border-top: 0; }
 .audit-head { min-height: 0; padding-top: var(--sp-2); padding-bottom: var(--sp-2); }
 @media (max-width: 720px) { .audit-head > :nth-child(n + 3) { display: none; } }
+/* 今日の来場: 時刻・(顔と名前で)おうち・様子(バッジ)。行の高さは 64 のまま、見出しは低く */
+.visits-head { min-height: 0; padding-top: var(--sp-2); padding-bottom: var(--sp-2); }
+.visits-head-who { grid-column: 2 / 4; }
+.visits-head-badges { text-align: right; }
+@media (max-width: 720px) { .visits-head > :nth-child(n + 3) { display: none; } }
+/* 引き継ぎ済み: パネルの中の一覧なので、見出しは左右の余白なしで線だけ */
+.mi-head { min-height: 0; padding-top: var(--sp-2); padding-bottom: var(--sp-2); }
+@media (max-width: 720px) { .mi-head { display: none; } }
 
 /* ---- ダイアログ: 角丸 16、背景をうすくぼかし、少し大きくなりながら出る ---- */
 .dialog { border-radius: var(--radius-xl); }

@@ -360,6 +360,7 @@ function MigratedList() {
         error ? null : (
           <Loading>
             <ul className="mi-list">
+              <MigratedHead />
               {Array.from({ length: 3 }, (_, i) => (
                 <li key={i} className="mi-row">
                   <span className="mi-when">
@@ -385,6 +386,7 @@ function MigratedList() {
         <p className="empty">まだ引き継いだ旧カードはありません。</p>
       ) : (
         <ul className="mi-list" aria-label="引き継ぎ済みの旧カード">
+          <MigratedHead />
           {data.records.map((r) => (
             <li
               key={r.auditId}
@@ -474,5 +476,17 @@ function UndoDialog({ r, onClose, onDone }: { r: MigrationRecord; onClose: () =>
       </ul>
       {error ? <ErrorNotice error={error} /> : null}
     </Dialog>
+  );
+}
+
+/** 引き継ぎ済みの一覧の見出し(列の名前)。スクロールしても上に残る */
+function MigratedHead() {
+  return (
+    <li className="mi-row mi-head list-head" aria-hidden="true">
+      <span>日時・担当</span>
+      <span>おうち</span>
+      <span>ポイント</span>
+      <span />
+    </li>
   );
 }

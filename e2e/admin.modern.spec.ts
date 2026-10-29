@@ -62,7 +62,7 @@ test('読み込み中はスケルトンを出し、読み込んだら消える�
   await expect(busy).toBeVisible();
   await expect(busy.getByText('読み込んでいます')).toHaveCount(1);
   const skSummary = await page.locator('.sk-body .summary').boundingBox();
-  const skRow = await page.locator('.sk-body .visit').first().boundingBox();
+  const skRow = await page.locator('.sk-body .visit:not(.list-head)').first().boundingBox();
   await expect(busy).toHaveCount(0);
   await expect(page.getByRole('list', { name: '今日の来場' })).toBeVisible();
   const summary = await page.locator('section.summary').boundingBox();
@@ -272,5 +272,31 @@ test('下の階層では道しるべを出し、リンクで戻れる(おうち�
   await expect(page.getByRole('heading', { name: 'おうちを探す', level: 1 })).toBeVisible();
   // 上の階層の画面には、道しるべを出さない
   await expect(crumbs).toHaveCount(0);
+  await page.close();
+});
+
+test('一覧の見出し(列の名前)は上に固定される(今日の来場・操作ログ・引き継ぎ済み)', async ({ browser }) => {
+  const page = await browser.newPage(DESKTOP);
+  await adminLogin(page, 'admin');
+  const cases: { path: string; list: string; labels: string[] }[] = [
+    { path: '/', list: '今日の来場', labels: ['時刻', 'おうち', '様子'] },
+    { path: '/audit', list: '操作の一覧', labels: ['日時', '操作と対象', 'した人'] },
+  ];
+  for (const c of cases) {
+    await page.goto(`/admin${c.path}`);
+    const list = page.getByRole('list', { name: c.list });
+    await list.waitFor();
+    const head = list.locator('.list-head');
+    await expect(head).toHaveCount(1);
+    // 読み上げでは行として数えない
+    await expect(head).toHaveAttribute('aria-hidden', 'true');
+    for (const l of c.labels) await expect(head.getByText(l, { exact: true })).toBeVisible();
+    expect(await head.evaluate((el) => getComputedStyle(el).position)).toBe('sticky');
+  }
+  // 引き継ぎ済み: まだ1件もないときは見出しも出さない(空の文だけ)
+  await page.goto('/admin/migration');
+  const panel = page.getByRole('region', { name: '引き継ぎ済みの一覧' });
+  await panel.waitFor();
+  await expect(panel.getByText('まだ引き継いだ旧カードはありません。').or(panel.locator('.mi-head'))).toBeVisible();
   await page.close();
 });

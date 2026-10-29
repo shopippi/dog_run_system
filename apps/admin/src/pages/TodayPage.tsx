@@ -68,6 +68,7 @@ export function TodayPage() {
               <p className="empty">まだ来場はありません。</p>
             ) : (
               <ul className="visits" aria-label="今日の来場">
+                <VisitsHead />
                 {data.visits.map((v) => (
                   <VisitRow key={v.id} v={v} fresh={fresh.has(v.id)} canEdit={!readOnly} onChanged={reload} />
                 ))}
@@ -77,6 +78,18 @@ export function TodayPage() {
         </>
       )}
     </div>
+  );
+}
+
+/** 一覧の見出し(列の名前)。スクロールしても上に残る */
+function VisitsHead() {
+  return (
+    <li className="visit visits-head list-head" aria-hidden="true">
+      <span>時刻</span>
+      <span className="visits-head-who">おうち</span>
+      <span className="visits-head-badges">様子</span>
+      <span />
+    </li>
   );
 }
 
@@ -101,6 +114,7 @@ function TodaySkeleton({ walkin }: { walkin: boolean }) {
       </section>
       <section className="panel list-panel">
         <ul className="visits">
+          <VisitsHead />
           {Array.from({ length: 5 }, (_, i) => (
             <li key={i} className="visit">
               <SkeletonText size={13} w={40} />
