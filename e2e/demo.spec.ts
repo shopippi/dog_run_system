@@ -101,11 +101,16 @@ test('管理画面: ログイン・今日の来場・取り消し・製作者は
   await page.getByRole('button', { name: '受付スタッフ', exact: true }).click();
   await expect(page.getByRole('status')).toContainText('受付スタッフの佐藤さんとしてログインしました');
   const row = a.getByRole('listitem', { name: /こむぎ/ });
-  await row.getByRole('button', { name: '取り消す' }).click();
   const confirm = a.getByRole('dialog', { name: 'チェックインを取り消す' });
-  await confirm.getByRole('radio', { name: '二重のチェックイン' }).check();
-  await confirm.getByRole('button', { name: '取り消す' }).click();
-  await expect(row.getByText('取り消し済み(二重のチェックイン)')).toBeVisible();
+  // ログインを切り替えた直後は管理画面が読み込み直され、開いたダイアログが閉じることがある。取り消しが済むまでやり直す
+  const cancelled = row.getByText('取り消し済み(二重のチェックイン)');
+  await expect(async () => {
+    if (await cancelled.isVisible()) return;
+    if (!(await confirm.isVisible())) await row.getByRole('button', { name: '取り消す' }).click({ timeout: 3000 });
+    await confirm.getByRole('radio', { name: '二重のチェックイン' }).check({ timeout: 3000 });
+    await confirm.getByRole('button', { name: '取り消す' }).click({ timeout: 3000 });
+    await expect(cancelled).toBeVisible({ timeout: 3000 });
+  }).toPass({ timeout: 25_000 });
 
   // お客さんの会員証は 9 ポイントに戻る
   await page.getByRole('button', { name: 'リッチメニューから開く' }).click();
