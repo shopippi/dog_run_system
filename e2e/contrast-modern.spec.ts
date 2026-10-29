@@ -17,15 +17,17 @@ for (const scheme of ['light', 'dark'] as const) {
 
     test('トースト・ダイアログ・道しるべの文字が背景に対して読める', async ({ browser }) => {
       test.setTimeout(90_000);
+      // ライトとダークで同じデータベースを使うので、犬の名前を分ける(検索で1件に絞れるように)
+      const [dog, kana] = scheme === 'light' ? ['モナカ', 'もなか'] : ['ヨウカン', 'ようかん'];
       const customer = await browser.newPage({ colorScheme: scheme });
       const user = newLineUser('パパ');
-      await registerViaUi(customer, user, ['モナカ']);
+      await registerViaUi(customer, user, [dog]);
       await checkinViaLiff(customer, user);
       await customer.close();
 
       const page = await browser.newPage({ ...DESKTOP, colorScheme: scheme });
       await adminLogin(page, 'admin');
-      const row = page.getByRole('listitem', { name: /モナカ/ }).first();
+      const row = page.getByRole('listitem', { name: new RegExp(dog) }).first();
 
       // ダイアログ(背景をぼかす)
       await row.getByRole('button', { name: '取り消す' }).click();
@@ -35,12 +37,12 @@ for (const scheme of ['light', 'dark'] as const) {
 
       // トースト(「元に戻す」つき)。「元に戻す」にフォーカスがある間は消えない
       await dialog.getByRole('button', { name: '取り消す' }).click();
-      const toast = adminToast(page, 'モナカのチェックインを取り消しました。');
+      const toast = adminToast(page, `${dog}のチェックインを取り消しました。`);
       await toast.getByRole('button', { name: '元に戻す' }).focus();
       await check(page, 'M-02 取り消しのトースト');
       await expect(toast).toBeVisible();
       await toast.getByRole('button', { name: '元に戻す' }).click();
-      await adminToast(page, 'モナカの取り消しを元に戻しました。').waitFor();
+      await adminToast(page, `${dog}の取り消しを元に戻しました。`).waitFor();
       await check(page, 'M-02 元に戻したトースト');
 
       // 道しるべ(おうちの詳細)
@@ -51,9 +53,9 @@ for (const scheme of ['light', 'dark'] as const) {
       await page.locator('h1').click();
       await expect(page.locator('.search-kbd')).toBeVisible();
       await check(page, 'M-04 おうちを探す(「/」の印)');
-      await search.fill('もなか');
-      await page.getByRole('link', { name: 'モナカのおうちの詳細を開く' }).click();
-      await page.getByRole('navigation', { name: 'いまいる場所' }).getByText('モナカのおうち').waitFor();
+      await search.fill(kana);
+      await page.getByRole('link', { name: `${dog}のおうちの詳細を開く` }).click();
+      await page.getByRole('navigation', { name: 'いまいる場所' }).getByText(`${dog}のおうち`).waitFor();
       await check(page, 'M-06 おうちの詳細(道しるべ)');
       await page.close();
     });

@@ -411,7 +411,9 @@ test('管理者: 確認待ち・旧カードの引き継ぎ', async ({ browser }
   await shot(page, 'admin-migration-direct');
   await section.getByRole('button', { name: '引き継ぐ' }).click();
   await page.getByRole('dialog', { name: '旧カードのポイントを引き継ぐ' }).getByRole('button', { name: '引き継ぐ' }).click();
-  await expect(section.getByText(/ポイントを引き継ぎました/)).toBeVisible();
+  await expect(adminToast(page, /ポイントを引き継ぎました/)).toBeVisible();
+  // 一覧の写真にお知らせが重ならないよう、閉じてから撮る
+  await adminToast(page, /ポイントを引き継ぎました/).getByRole('button', { name: 'お知らせを閉じる' }).click();
   await scrollToTop(page.getByRole('region', { name: '引き継ぎ済みの一覧' }), 120);
   await shot(page, 'admin-migration-list');
   await context.close();

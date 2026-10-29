@@ -177,6 +177,7 @@ test('管理画面: 写真は API から読んでから出し(404 にならな�
   await expect(a.getByRole('alert')).toHaveCount(0);
   const weather = list.getByRole('listitem', { name: /天気の取得/ });
   await weather.getByRole('button', { name: '今すぐ実行' }).click();
-  await expect(weather.getByRole('status')).toContainText('スキップしました(インターネットにつながらない環境のため)。');
+  // 結果は右下のトースト(お知らせ)に出る
+  await expect(a.locator('.toasts [role="status"]').filter({ hasText: '天気の取得' })).toContainText('スキップしました(インターネットにつながらない環境のため)。');
   await expect(list.getByRole('listitem', { name: '天気の取得 正常' })).toBeVisible();
 });
