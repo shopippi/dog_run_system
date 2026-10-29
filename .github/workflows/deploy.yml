@@ -23,6 +23,8 @@ env:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    # Cloudflare のトークン(CLOUDFLARE_API_TOKEN)は GitHub の Environment「Secret」に入っている
+    environment: ${{ vars.DEPLOY_ENVIRONMENT || 'Secret' }}
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
@@ -36,7 +38,7 @@ jobs:
       - name: 設定の確認
         run: |
           if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
-            echo "::error::GitHub の Secrets に CLOUDFLARE_API_TOKEN がありません。Settings → Secrets and variables → Actions に登録してください。"
+            echo "::error::GitHub の Secrets に CLOUDFLARE_API_TOKEN がありません。Settings → Secrets and variables → Actions の Environment「Secret」に登録してください。"
             exit 1
           fi
           pnpm --filter @dr/api exec wrangler whoami

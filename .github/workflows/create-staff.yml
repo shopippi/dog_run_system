@@ -25,6 +25,8 @@ env:
 jobs:
   create:
     runs-on: ubuntu-latest
+    # Cloudflare のトークン(CLOUDFLARE_API_TOKEN)は GitHub の Environment「Secret」に入っている
+    environment: ${{ vars.DEPLOY_ENVIRONMENT || 'Secret' }}
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
