@@ -6,6 +6,7 @@ import { loadSqlJs } from './engine/sqljs';
 import { makeCardBackground, makeDogPhoto } from './seed/art';
 import { ACCOUNTS, DEMO_PASSWORD, STAFF } from './seed/fixtures';
 import { SCENES } from './scenes';
+import { LiffBar, LineTalk } from './LineTalk';
 
 type Account = { userId: string; name: string };
 type Talk = { id: number; from: string; text: string; at: string };
@@ -121,6 +122,8 @@ function Demo({ engine }: { engine: DemoEngine }) {
   const [ui, setUi] = useState<Ui>(loadUi);
   const [, setTick] = useState(0);
   const [phone, setPhone] = useState<{ route: string; key: number }>({ route: '/', key: 0 });
+  // LINE のトーク画面を出しているか / トーク画面のリッチメニューから開いたか(上に LINE の帯を出す)
+  const [lineView, setLineView] = useState<'app' | 'talk' | 'liff'>('app');
   const [admin, setAdmin] = useState<{ route: string; key: number }>({ route: '/', key: 0 });
   const [status, setStatus] = useState('');
   const [busy, setBusy] = useState(false);
@@ -186,7 +189,14 @@ function Demo({ engine }: { engine: DemoEngine }) {
 
   const openPhone = (route: string, who = ui.who) => {
     if (who !== ui.who) update({ who });
+    setLineView('app');
     setPhone((p) => ({ route, key: p.key + 1 }));
+  };
+  /** リッチメニューから開く(LINE の中で開いたように、上に LINE の帯を出す)。チェックインは受付の QR を読んだことにする */
+  const openFromRichMenu = (route: string) => {
+    const r = route === 'checkin' ? `/checkin?k=${encodeURIComponent(engine.passphrase())}` : route;
+    setPhone((p) => ({ route: r, key: p.key + 1 }));
+    setLineView('liff');
   };
   const openAdmin = (route: string) => setAdmin((p) => ({ route, key: p.key + 1 }));
 
@@ -390,7 +400,10 @@ function Demo({ engine }: { engine: DemoEngine }) {
               {accountNote(account.userId)}
             </p>
           </div>
-          <div className="launch">
+          <div className="launch three">
+            <button type="button" className="btn sub" onClick={() => setLineView('talk')} aria-pressed={lineView === 'talk'}>
+              LINE のトーク画面
+            </button>
             <button type="button" className="btn sub" onClick={() => openPhone(`/checkin?k=${encodeURIComponent(engine.passphrase())}`)}>
               受付の QR を読み取る
             </button>
@@ -399,12 +412,19 @@ function Demo({ engine }: { engine: DemoEngine }) {
             </button>
           </div>
           <div className="phone">
+            {lineView === 'talk' ? (
+              <LineTalk facility="グリーンドーム" onOpen={openFromRichMenu} />
+            ) : (
+              <>
+            {lineView === 'liff' && <LiffBar title="グリーンドーム 会員証" onClose={() => setLineView('talk')} />}
             <iframe
               key={`${phone.key}:${ui.who}`}
               ref={phoneRef}
               title="お客さんのスマホ"
               src={`liff/index.html${liffHash(phone.route, account)}`}
             />
+              </>
+            )}
           </div>
 
           <section className="panel talk" aria-labelledby="talk-h">

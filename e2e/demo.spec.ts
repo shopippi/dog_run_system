@@ -180,3 +180,26 @@ test('管理画面: 写真は API から読んでから出し(404 にならな�
   await expect(weather.getByRole('status')).toContainText('スキップしました(インターネットにつながらない環境のため)。');
   await expect(list.getByRole('listitem', { name: '天気の取得 正常' })).toBeVisible();
 });
+
+test('LINE のトーク画面: リッチメニューから会員証・来場履歴・チェックインを開き、× でトークに戻る', async ({ page }) => {
+  await openDemo(page);
+  await page.getByRole('button', { name: 'LINE のトーク画面' }).click();
+  const talk = page.getByRole('region', { name: 'LINE のトーク画面' });
+  await expect(talk.getByText('友だち追加ありがとうございます')).toBeVisible();
+  const menu = talk.getByRole('group', { name: 'リッチメニュー' });
+  await expect(menu.locator('img')).toBeVisible();
+  if (process.env.SHOT_DIR) await page.locator('.phone').screenshot({ path: `${process.env.SHOT_DIR}/LINE のトーク画面.png` });
+
+  await menu.getByRole('button', { name: 'リッチメニューの「会員証」' }).click();
+  await expect(phone(page).getByText('グリーンドーム 会員証').first()).toBeVisible();
+  await page.getByRole('button', { name: '閉じて LINE のトークに戻る' }).click();
+  await expect(talk).toBeVisible();
+
+  await menu.getByRole('button', { name: 'リッチメニューの「来場履歴」' }).click();
+  await expect(phone(page).getByRole('heading', { name: '来場履歴' })).toBeVisible();
+  await page.getByRole('button', { name: '閉じて LINE のトークに戻る' }).click();
+
+  // チェックインは、受付の QR を読み取ったことにして開く
+  await menu.getByRole('button', { name: 'リッチメニューの「チェックイン」' }).click();
+  await expect(phone(page).getByRole('button', { name: 'チェックインする' })).toBeVisible();
+});
