@@ -182,11 +182,16 @@ test('下から出るシートは、下へ少し引っ張っても戻り、遠�
   await trigger.click();
   await expect(sheet).toBeVisible();
   await page.waitForTimeout(600);
+  // (テストの端末の速さに左右されないよう、指の動きは画面の中で一度に送る)
   p = await grabAt();
-  await page.mouse.move(p.x, p.y);
-  await page.mouse.down();
-  await page.mouse.move(p.x, p.y + 60, { steps: 4 });
-  await page.mouse.up();
+  await page.evaluate(({ x, y }) => {
+    const g = document.querySelector('.sheet-grab')!;
+    const ev = (type: string, dy: number) =>
+      g.dispatchEvent(new PointerEvent(type, { bubbles: true, pointerId: 7, pointerType: 'touch', clientX: x, clientY: y + dy, isPrimary: true }));
+    ev('pointerdown', 0);
+    for (const dy of [15, 30, 45, 60]) ev('pointermove', dy);
+    ev('pointerup', 60);
+  }, p);
   await expect(sheet).toHaveCount(0);
   await expect(page.getByRole('region', { name: 'スタンプ' }).getByText('10 / 10', { exact: true })).toBeVisible();
 });

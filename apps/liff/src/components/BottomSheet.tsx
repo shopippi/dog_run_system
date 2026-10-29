@@ -155,7 +155,11 @@ function SheetBody({
   // 掴みの印のあたり(シートの上の部分)を下へ引っ張ると閉じる
   const onPointerDown = (e: PointerEvent<HTMLDivElement>) => {
     if (busy || closing) return;
-    e.currentTarget.setPointerCapture(e.pointerId);
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch {
+      // 指を捕まえられなくても、引っ張る操作はそのまま続ける
+    }
     drag.current = { startY: e.clientY - dragY.get(), samples: [{ y: e.clientY, t: e.timeStamp }] };
     setDragging(true);
   };
