@@ -67,6 +67,7 @@ const TYPE_LABELS: Record<string, string> = {
   dog: 'ワンちゃん',
   visit: '来場',
   family_member: '家族',
+  day_note: 'その日のメモ',
 };
 
 const keyOf = (type: string, id: string | null) => `${type}:${id ?? ''}`;

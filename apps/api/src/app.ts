@@ -34,6 +34,8 @@ import { adminTicketRoutes } from './routes/admin/tickets';
 import { migrationRoutes } from './routes/admin/migrations';
 import { cardBackgroundRoutes } from './routes/customer/card-background';
 import { facilityHandler } from './routes/facility';
+import { dashboardDaysRoutes } from './routes/admin/dashboard-days';
+import { dayNotesRoutes } from './routes/admin/day-notes';
 
 export function createApp() {
   const app = new Hono<AppEnv>();
@@ -98,6 +100,8 @@ export function createApp() {
   admin.route('/', systemRoutes);
   admin.route('/', adminTicketRoutes);
   admin.route('/', migrationRoutes);
+  admin.route('/', dashboardDaysRoutes);
+  admin.route('/', dayNotesRoutes);
   app.route('/admin/api', admin);
 
   app.all('/api/*', (c) =>

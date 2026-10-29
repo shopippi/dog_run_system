@@ -53,6 +53,10 @@ export const AUDIT_ACTION_LABELS: Record<string, string> = {
   'ticket.exchange': '無料券と交換',
   'ticket.use': '無料券の使用',
   'ticket.mark_used': '無料券を使用済みにする',
+  'day_note.create': 'その日のメモを書いた',
+  'day_note.update': 'その日のメモを直した',
+  'day_note.delete': 'その日のメモを消した',
+  'system.run.postal_areas': '郵便番号から地域を調べる処理の実行',
 };
 
 export function auditActionLabel(action: string): string {
