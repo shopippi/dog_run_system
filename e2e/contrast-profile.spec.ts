@@ -103,9 +103,15 @@ for (const scheme of ['light', 'dark'] as const) {
       await page.getByRole('button', { name: 'この子の登録をおやすみする' }).waitFor();
       await check(page, 'L-09 犬の変更(おやすみ)');
       await page.getByRole('button', { name: 'この子の登録をおやすみする' }).click();
+      // 下から出るシート(背景が暗くなった状態)
+      const sheet = page.getByRole('dialog', { name: /の登録をおやすみします/ });
+      await sheet.waitFor();
+      await page.waitForTimeout(400);
       await check(page, 'L-09 犬の変更(おやすみの確認)');
-      await page.getByRole('button', { name: 'おやすみする', exact: true }).click();
+      await sheet.getByRole('button', { name: 'おやすみする', exact: true }).click();
       await page.getByText('おやすみ中のワンちゃん').waitFor();
+      // トーストが出ている状態も測る
+      await page.locator('.toast').waitFor();
       await check(page, 'L-09 犬の管理(おやすみ中)');
       await page.close();
     });

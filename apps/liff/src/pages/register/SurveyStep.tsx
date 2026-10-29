@@ -2,6 +2,8 @@ import { checkSurveyAnswers, type SurveyQuestion } from '@dr/shared';
 import { useState } from 'react';
 import { ErrorNotice, MessageNotice } from '../../components/ErrorNotice';
 import { Progress } from '../../components/Progress';
+import { ActionBar } from '../../components/ActionBar';
+import { BusyLabel } from '../../components/BusyLabel';
 import { SurveyForm, isLaterQuestion, toAnswers, type SurveyValues } from '../../components/SurveyForm';
 
 type Props = {
@@ -49,14 +51,16 @@ export function SurveyStep({ questions, values, onChange, onBack, onNext, busy, 
       )}
       {message && <MessageNotice message={message} />}
       {error ? <ErrorNotice error={error} /> : null}
-      <div className="actions">
+      <button type="button" className="btn ghost" disabled={busy} onClick={onBack}>
+        ワンちゃんの登録にもどる
+      </button>
+      <ActionBar>
         <button type="button" className="btn" disabled={busy} onClick={next}>
-          {busy ? '登録しています…' : '登録する'}
+          <BusyLabel busy={busy} busyText="登録しています…">
+            登録する
+          </BusyLabel>
         </button>
-        <button type="button" className="btn ghost" disabled={busy} onClick={onBack}>
-          ワンちゃんの登録にもどる
-        </button>
-      </div>
+      </ActionBar>
     </main>
   );
 }

@@ -1,6 +1,9 @@
-import { Route, Routes, useLocation, useNavigate } from 'react-router-dom';
+import { useEffect, useState, type ReactNode } from 'react';
+import { Route, Routes, useLocation, useNavigate, useNavigationType } from 'react-router-dom';
 import { AppHeader, type HeaderBack } from './components/AppHeader';
 import { ErrorNotice } from './components/ErrorNotice';
+import { ToastProvider } from './components/Toast';
+import { skeletonFor } from './pages/skeletons';
 import { useMe } from './hooks/useMe';
 import { usePendingSurvey } from './hooks/usePendingSurvey';
 import { RegisterFlow } from './pages/register/RegisterFlow';
@@ -27,43 +30,71 @@ export function App() {
   const navigate = useNavigate();
 
   // 招待を開いたときは、登録の有無にかかわらず招待の画面を出す(C-12)
-  if (location.pathname.startsWith('/invite/')) {
-    return (
-      <div className="app">
-        <AppHeader />
-        <Routes>
-          <Route
-            path="/invite/:code"
-            element={
-              <JoinPage
-                onJoined={() => {
-                  navigate('/', { replace: true });
-                  void reload();
-                }}
-              />
-            }
-          />
-        </Routes>
-      </div>
+  const invite = location.pathname.startsWith('/invite/');
+  let content: ReactNode;
+  if (invite) {
+    content = (
+      <Routes>
+        <Route
+          path="/invite/:code"
+          element={
+            <JoinPage
+              onJoined={() => {
+                navigate('/', { replace: true });
+                void reload();
+              }}
+            />
+          }
+        />
+      </Routes>
     );
+  } else if (loading && !me) {
+    content = skeletonFor(location.pathname);
+  } else if (error || !me) {
+    content = (
+      <main className="screen">
+        <ErrorNotice error={error} onRetry={reload} />
+      </main>
+    );
+  } else if (!me.registered) {
+    content = <RegisterFlow me={me} onFinished={reload} />;
+  } else {
+    content = <Registered />;
   }
 
   return (
-    <div className="app">
-      <AppHeader back={me?.registered ? backFor(location.pathname) : null} />
-      {loading && !me ? (
-        <main className="screen">
-          <p className="loading">読み込んでいます…</p>
-        </main>
-      ) : error || !me ? (
-        <main className="screen">
-          <ErrorNotice error={error} onRetry={reload} />
-        </main>
-      ) : !me.registered ? (
-        <RegisterFlow me={me} onFinished={reload} />
-      ) : (
-        <Registered />
-      )}
+    <Shell>
+      <AppHeader back={!invite && me?.registered ? backFor(location.pathname) : null} />
+      <RouteView>{content}</RouteView>
+    </Shell>
+  );
+}
+
+function Shell({ children }: { children: ReactNode }) {
+  return (
+    <ToastProvider>
+      <div className="app">{children}</div>
+    </ToastProvider>
+  );
+}
+
+/**
+ * 画面の切り替え(docs/design.md 11.3)。新しい画面は 8px 下から 200ms でふわっと出る。
+ * 戻る(ブラウザの戻る・はじめに開いたとき)は動かさない。読み込み中の形から読み込み後への切り替えも動かさない
+ * (同じ URL のあいだは同じ入れ物のまま)。動きを減らす設定では動かさない(styles.css)。
+ */
+function RouteView({ children }: { children: ReactNode }) {
+  const location = useLocation();
+  const navType = useNavigationType();
+  // はじめの表示は動かさない
+  const [first, setFirst] = useState(true);
+  useEffect(() => {
+    setFirst(false);
+  }, []);
+  const animate = !first && navType !== 'POP';
+  return (
+    <div key={location.pathname} className={`route${animate ? ' enter' : ''}`}>
+      {children}
     </div>
   );
 }

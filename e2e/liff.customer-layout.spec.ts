@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { cancelVisit, checkinOn, joinFamily } from './customer-helpers';
 import { newLineUser, openLiff, registerViaUi } from './helpers';
+import { liffShot } from './liff-shot';
 
 // お客さん向けの残りの画面(担当E)の見え方。確かめ方は e2e/liff.layout.spec.ts と同じ。
 const IOS_UA =
@@ -47,7 +48,7 @@ async function checkScreen(page: Page, device: string, screen: string) {
   });
   expect(problems, `${device} / ${screen}`).toEqual([]);
   if (process.env.SHOT_DIR) {
-    await page.screenshot({ path: `${process.env.SHOT_DIR}/${device}/${screen}.png`, fullPage: true });
+    await liffShot(page, `${process.env.SHOT_DIR}/${device}/${screen}.png`);
   }
 }
 
@@ -74,7 +75,7 @@ for (const d of DEVICES) {
       await page.getByRole('heading', { name: 'プロフィール' }).waitFor();
       await page.getByLabel('お住まいの郵便番号').fill('1234567');
       await page.getByRole('button', { name: '保存する' }).click();
-      await page.getByRole('status').waitFor();
+      await expect(page.getByRole('status')).toHaveText('保存しました');
       await checkScreen(page, d.name, 'L-10 プロフィール');
 
       // L-11 家族(招待と、いまの家族・抜ける確認)

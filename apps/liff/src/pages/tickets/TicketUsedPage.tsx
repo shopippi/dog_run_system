@@ -4,6 +4,7 @@ import { Link, useParams } from 'react-router-dom';
 import { ErrorNotice } from '../../components/ErrorNotice';
 import { useClock } from '../../hooks/useClock';
 import { api } from '../../lib/api';
+import { DoneSkeleton } from '../skeletons';
 
 const WEEKDAYS = ['日', '月', '火', '水', '木', '金', '土'];
 
@@ -39,7 +40,7 @@ export function TicketUsedPage() {
   useEffect(load, [load]);
 
   if (error) return <main className="screen"><ErrorNotice error={error} onRetry={load} /></main>;
-  if (!detail) return <main className="screen"><p className="loading">読み込んでいます…</p></main>;
+  if (!detail) return <DoneSkeleton avatars={false} />;
 
   const clock = toJstIso(new Date(now.getTime() + offset)).slice(11, 19);
 

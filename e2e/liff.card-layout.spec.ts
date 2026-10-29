@@ -2,6 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { makeCardPhoto } from './card-helpers';
 import { newLineUser, openLiff, registerViaUi } from './helpers';
 import { earnPoints } from './tickets-helpers';
+import { liffShot } from './liff-shot';
 
 // 担当I: 会員証(L-07)の背景と、背景を変える画面(L-07b)の見え方(C-06、docs/design.md 5章)。
 // 確かめ方は e2e/liff.layout.spec.ts と同じ。会員証は 墨(初期値)・砂(明るい単色)・写真(明るい写真と暗い写真)で撮る。
@@ -55,7 +56,7 @@ async function checkScreen(page: Page, device: string, screen: string) {
   });
   expect(problems, `${device} / ${screen}`).toEqual([]);
   if (process.env.SHOT_DIR) {
-    await page.screenshot({ path: `${process.env.SHOT_DIR}/${device}/${screen}.png`, fullPage: true });
+    await liffShot(page, `${process.env.SHOT_DIR}/${device}/${screen}.png`);
   }
 }
 

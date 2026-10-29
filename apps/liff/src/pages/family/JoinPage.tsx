@@ -7,6 +7,9 @@ import { Terms } from '../../components/Terms';
 import { SurveyForm, toAnswers, type SurveyValues } from '../../components/SurveyForm';
 import { api, postJson } from '../../lib/api';
 import { MergeFlow } from './MergeFlow';
+import { ActionBar } from '../../components/ActionBar';
+import { BusyLabel } from '../../components/BusyLabel';
+import { JoinSkeleton } from '../skeletons';
 
 /**
  * L-12 招待を受けたときの画面(C-12)。
@@ -59,9 +62,10 @@ export function JoinPage({ onJoined }: { onJoined: () => void }) {
   };
 
   if (!info) {
+    if (!error) return <JoinSkeleton />;
     return (
       <main className="screen">
-        {error ? <ErrorNotice error={error} onRetry={load} /> : <p className="loading">読み込んでいます…</p>}
+        <ErrorNotice error={error} onRetry={load} />
       </main>
     );
   }
@@ -170,9 +174,13 @@ export function JoinPage({ onJoined }: { onJoined: () => void }) {
       </label>
       {message && <MessageNotice message={message} />}
       {error ? <ErrorNotice error={error} /> : null}
-      <button type="button" className="btn" disabled={busy} onClick={accept}>
-        {busy ? '参加しています…' : '参加する'}
-      </button>
+      <ActionBar>
+        <button type="button" className="btn" disabled={busy} onClick={accept}>
+          <BusyLabel busy={busy} busyText="参加しています…">
+            参加する
+          </BusyLabel>
+        </button>
+      </ActionBar>
     </main>
   );
 }

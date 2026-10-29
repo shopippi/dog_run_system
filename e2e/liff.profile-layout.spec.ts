@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { answerSurvey, newLineUser, openLiff, registerViaUi } from './helpers';
+import { liffShot } from './liff-shot';
 
 // 飼い主とワンちゃんの情報・ワンちゃんの登録のおやすみ(担当J)の見え方。確かめ方は e2e/liff.layout.spec.ts と同じ。
 const IOS_UA =
@@ -46,7 +47,7 @@ async function checkScreen(page: Page, device: string, screen: string) {
   });
   expect(problems, `${device} / ${screen}`).toEqual([]);
   if (process.env.SHOT_DIR) {
-    await page.screenshot({ path: `${process.env.SHOT_DIR}/${device}/${screen}.png`, fullPage: true });
+    await liffShot(page, `${process.env.SHOT_DIR}/${device}/${screen}.png`);
   }
 }
 

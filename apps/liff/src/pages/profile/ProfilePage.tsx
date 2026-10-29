@@ -3,6 +3,10 @@ import { useCallback, useEffect, useState } from 'react';
 import { ErrorNotice, MessageNotice } from '../../components/ErrorNotice';
 import { SurveyForm, toAnswers, toSurveyValues, type SurveyValues } from '../../components/SurveyForm';
 import { api, patchJson } from '../../lib/api';
+import { ActionBar } from '../../components/ActionBar';
+import { BusyLabel } from '../../components/BusyLabel';
+import { useToast } from '../../components/Toast';
+import { ProfileSkeleton } from '../skeletons';
 
 /** 追加の質問は、答えなくてもよい(7.2)。固定の質問だけを必須として扱う */
 const relax = (questions: SurveyQuestion[]) => questions.map((q) => (q.fixedKey ? q : { ...q, required: false }));
@@ -18,7 +22,7 @@ export function ProfilePage() {
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<unknown>(null);
   const [busy, setBusy] = useState(false);
-  const [saved, setSaved] = useState(false);
+  const toast = useToast();
 
   const load = useCallback(() => {
     setLoadError(null);
@@ -32,16 +36,13 @@ export function ProfilePage() {
   useEffect(load, [load]);
 
   if (loadError) return <main className="screen"><ErrorNotice error={loadError} onRetry={load} /></main>;
-  if (!profile) return <main className="screen"><p className="loading">読み込んでいます…</p></main>;
+  if (!profile) return <ProfileSkeleton />;
 
   const questions = relax(profile.questions);
   const mine = questions.filter((q) => q.target === 'member');
   const household = questions.filter((q) => q.target === 'household');
 
-  const change = (v: SurveyValues) => {
-    setValues(v);
-    setSaved(false);
-  };
+  const change = (v: SurveyValues) => setValues(v);
 
   const save = async () => {
     const answers = toAnswers(questions, values);
@@ -57,7 +58,7 @@ export function ProfilePage() {
       const p = await patchJson<ProfileResponse>('/api/me/profile', { answers });
       setProfile(p);
       setValues(toValues(p));
-      setSaved(true);
+      toast('保存しました');
     } catch (e) {
       setError(e);
     } finally {
@@ -92,16 +93,15 @@ export function ProfilePage() {
         </section>
       )}
 
-      {saved && (
-        <div className="alert info" role="status">
-          <p>保存しました。</p>
-        </div>
-      )}
       {message && <MessageNotice message={message} />}
       {error ? <ErrorNotice error={error} /> : null}
-      <button type="button" className="btn" disabled={busy} onClick={save}>
-        {busy ? '保存しています…' : '保存する'}
-      </button>
+      <ActionBar>
+        <button type="button" className="btn" disabled={busy} onClick={save}>
+          <BusyLabel busy={busy} busyText="保存しています…">
+            保存する
+          </BusyLabel>
+        </button>
+      </ActionBar>
     </main>
   );
 }

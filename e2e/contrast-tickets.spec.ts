@@ -29,10 +29,10 @@ for (const scheme of ['light', 'dark'] as const) {
       await page.getByRole('button', { name: '無料券と交換する(10ポイント)' }).waitFor();
       await check(page, 'L-07 会員証(交換できるとき・無料券あり)');
       await page.getByRole('button', { name: '無料券と交換する(10ポイント)' }).click();
-      await page.getByRole('group', { name: '無料券との交換の確認' }).waitFor();
+      await page.getByRole('dialog', { name: '無料券と交換します' }).waitFor();
       await check(page, 'L-07 会員証(交換の確認)');
-      await page.getByRole('button', { name: '交換する' }).click();
-      await page.getByRole('status').waitFor();
+      await page.getByRole('dialog', { name: '無料券と交換します' }).getByRole('button', { name: '交換する', exact: true }).click();
+      await expect(page.getByRole('status')).toHaveText('無料券と交換しました。');
       await check(page, 'L-07 会員証(交換したあと)');
       await check(page, 'L-07 会員証(スライドの前)');
       // キーボードでも使える(スライダーにフォーカスして → を4回)

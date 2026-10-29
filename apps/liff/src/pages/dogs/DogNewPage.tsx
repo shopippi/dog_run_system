@@ -6,6 +6,10 @@ import { ErrorNotice, MessageNotice } from '../../components/ErrorNotice';
 import { useBreeds } from '../../hooks/useBreeds';
 import { postJson } from '../../lib/api';
 import { uploadDogPhoto } from '../../lib/photo';
+import { ActionBar } from '../../components/ActionBar';
+import { BusyLabel } from '../../components/BusyLabel';
+import { useToast } from '../../components/Toast';
+import { DogFormSkeleton } from '../skeletons';
 
 /** ワンちゃんの追加(C-08) */
 export function DogNewPage() {
@@ -15,6 +19,7 @@ export function DogNewPage() {
   const [error, setError] = useState<unknown>(null);
   const [busy, setBusy] = useState(false);
   const navigate = useNavigate();
+  const toast = useToast();
 
   const save = async () => {
     const r = draftToInput(draft);
@@ -34,6 +39,7 @@ export function DogNewPage() {
           // 写真はあとから登録し直せる
         }
       }
+      toast(`${dog.name}を追加しました`);
       navigate('/dogs', { replace: true });
     } catch (e) {
       setError(e);
@@ -42,7 +48,7 @@ export function DogNewPage() {
   };
 
   if (breedsError) return <main className="screen"><ErrorNotice error={breedsError} /></main>;
-  if (!breeds) return <main className="screen"><p className="loading">読み込んでいます…</p></main>;
+  if (!breeds) return <DogFormSkeleton edit={false} />;
   return (
     <main className="screen">
       <div className="page-head">
@@ -51,9 +57,13 @@ export function DogNewPage() {
       <DogForm draft={draft} breeds={breeds} onChange={setDraft} title="新しいワンちゃん" />
       {message && <MessageNotice message={message} />}
       {error ? <ErrorNotice error={error} /> : null}
-      <button type="button" className="btn" disabled={busy} onClick={save}>
-        {busy ? '追加しています…' : '追加する'}
-      </button>
+      <ActionBar>
+        <button type="button" className="btn" disabled={busy} onClick={save}>
+          <BusyLabel busy={busy} busyText="追加しています…">
+            追加する
+          </BusyLabel>
+        </button>
+      </ActionBar>
     </main>
   );
 }

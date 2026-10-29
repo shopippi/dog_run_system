@@ -7,6 +7,11 @@ import { useBreeds } from '../../hooks/useBreeds';
 import { useDogs } from '../../hooks/useDogs';
 import { patchJson, postJson } from '../../lib/api';
 import { uploadDogPhoto } from '../../lib/photo';
+import { ActionBar } from '../../components/ActionBar';
+import { BottomSheet } from '../../components/BottomSheet';
+import { BusyLabel } from '../../components/BusyLabel';
+import { useToast } from '../../components/Toast';
+import { DogFormSkeleton } from '../skeletons';
 
 /** ワンちゃんの変更と、登録のおやすみ(C-08)。犬種とサイズは受付で変える(6.1) */
 export function DogEditPage() {
@@ -21,6 +26,7 @@ export function DogEditPage() {
   const [confirmRetire, setConfirmRetire] = useState(false);
   const [retireError, setRetireError] = useState<unknown>(null);
   const navigate = useNavigate();
+  const toast = useToast();
 
   useEffect(() => {
     if (dog && !draft) setDraft(dogToDraft(dog));
@@ -36,7 +42,7 @@ export function DogEditPage() {
       </main>
     );
   }
-  if (!dog || !draft || !breeds) return <main className="screen"><p className="loading">読み込んでいます…</p></main>;
+  if (!dog || !draft || !breeds) return <DogFormSkeleton />;
 
   const save = async () => {
     const r = draftToInput(draft);
@@ -59,6 +65,7 @@ export function DogEditPage() {
         comboVaccineYear: comboVaccineYear ?? null,
       });
       if (draft.photo) await uploadDogPhoto(dog.id, draft.photo);
+      toast('保存しました');
       navigate('/dogs', { replace: true });
     } catch (e) {
       setError(e);
@@ -71,6 +78,7 @@ export function DogEditPage() {
     setRetireError(null);
     try {
       await postJson(`/api/dogs/${dog.id}/retire`, {});
+      toast(`${dog.name}の登録をおやすみしました`);
       navigate('/dogs', { replace: true });
     } catch (e) {
       setRetireError(e);
@@ -97,31 +105,37 @@ export function DogEditPage() {
       />
       {message && <MessageNotice message={message} />}
       {error ? <ErrorNotice error={error} /> : null}
-      <button type="button" className="btn" disabled={busy} onClick={save}>
-        {busy ? '保存しています…' : '保存する'}
-      </button>
 
-      {/* 登録をおやすみする(内部の値は retired)。見出しも説明も置かず、一番下に小さく置く */}
+      {/* 登録をおやすみする(内部の値は retired)。見出しも説明も置かず、一番下に小さく置く。確認は下から出るシート */}
       <div className="dog-rest">
         {retireError ? <ErrorNotice error={retireError} /> : null}
-        {confirmRetire ? (
-          <div className="confirm-inline" role="group" aria-label="登録のおやすみの確認">
-            <p>{dog.name}の登録をおやすみします。来場の記録はそのまま残り、いつでも戻せます。</p>
-            <div className="actions">
-              <button type="button" className="btn sub" disabled={busy} onClick={retire}>
-                おやすみする
-              </button>
-              <button type="button" className="btn ghost" disabled={busy} onClick={() => setConfirmRetire(false)}>
-                やめる
-              </button>
-            </div>
-          </div>
-        ) : (
-          <button type="button" className="dog-rest-link" onClick={() => setConfirmRetire(true)}>
-            この子の登録をおやすみする
-          </button>
-        )}
+        <button type="button" className="dog-rest-link" onClick={() => setConfirmRetire(true)}>
+          この子の登録をおやすみする
+        </button>
       </div>
+      <BottomSheet
+        open={confirmRetire}
+        onClose={() => setConfirmRetire(false)}
+        busy={busy}
+        title={`${dog.name}の登録をおやすみします`}
+        actions={
+          <button type="button" className="btn" disabled={busy} onClick={retire}>
+            <BusyLabel busy={busy} busyText="手続きしています…">
+              おやすみする
+            </BusyLabel>
+          </button>
+        }
+      >
+        <p>来場の記録はそのまま残り、いつでも戻せます。</p>
+      </BottomSheet>
+
+      <ActionBar>
+        <button type="button" className="btn" disabled={busy} onClick={save}>
+          <BusyLabel busy={busy && !confirmRetire} busyText="保存しています…">
+            保存する
+          </BusyLabel>
+        </button>
+      </ActionBar>
     </main>
   );
 }

@@ -28,7 +28,9 @@ test('C-08 犬の追加・名前と写真の変更・登録のおやすみと戻
   // 登録をおやすみする(変更画面の一番下の小さいボタン。確認つき)
   await page.getByRole('link', { name: /ニコ/ }).click();
   await page.getByRole('button', { name: 'この子の登録をおやすみする' }).click();
-  await expect(page.getByText('ニコの登録をおやすみします。来場の記録はそのまま残り、いつでも戻せます。')).toBeVisible();
+  // 確認は下から出るシート(docs/design.md 11.3)
+  const rest = page.getByRole('dialog', { name: 'ニコの登録をおやすみします' });
+  await expect(rest).toContainText('来場の記録はそのまま残り、いつでも戻せます。');
   await page.getByRole('button', { name: 'おやすみする', exact: true }).click();
   await expect(page.getByText('おやすみ中のワンちゃん')).toBeVisible();
   await expect(page.getByRole('link', { name: /ニコ/ })).toHaveCount(0);

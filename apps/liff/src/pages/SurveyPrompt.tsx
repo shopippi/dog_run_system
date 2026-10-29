@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { ErrorNotice } from '../components/ErrorNotice';
 import { SurveyForm, toAnswers, type SurveyValues } from '../components/SurveyForm';
 import { postJson } from '../lib/api';
+import { ActionBar } from '../components/ActionBar';
 
 /**
  * 登録のあとに管理者が追加した質問を、次に開いたときに1回だけ出す(7.2)。
@@ -34,14 +35,14 @@ export function SurveyPrompt({ questions, onDone }: { questions: SurveyQuestion[
       </div>
       <SurveyForm questions={questions} values={values} onChange={setValues} showRequired={false} />
       {error ? <ErrorNotice error={error} /> : null}
-      <div className="actions">
+      <button type="button" className="btn ghost" disabled={busy} onClick={() => send(true)}>
+        答えずに進む
+      </button>
+      <ActionBar>
         <button type="button" className="btn" disabled={busy} onClick={() => send(false)}>
           回答する
         </button>
-        <button type="button" className="btn ghost" disabled={busy} onClick={() => send(true)}>
-          答えずに進む
-        </button>
-      </div>
+      </ActionBar>
     </main>
   );
 }

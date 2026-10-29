@@ -16,6 +16,15 @@ test.beforeEach(async ({ context }) => {
 const phone = (page: Page) => page.frameLocator('iframe[title="お客さんのスマホ"]');
 const adminFrame = (page: Page) => page.frameLocator('iframe[title="受付・管理画面"]');
 
+/**
+ * スマホの画面の下に固定した帯(主ボタン)を押す。帯は iframe の中で固定されているため、
+ * Playwright のスクロールではデモのページ側が動かない。先にスマホの枠の下端が見えるところまでページを動かす。
+ */
+async function barClick(page: Page, name: string) {
+  await page.locator('iframe[title="お客さんのスマホ"]').evaluate((el) => el.scrollIntoView({ block: 'end' }));
+  await phone(page).locator('.action-bar').getByRole('button', { name, exact: true }).click();
+}
+
 async function openDemo(page: Page) {
   await page.goto('/');
   await page.getByRole('heading', { name: '打ち合わせ用の手順' }).waitFor({ timeout: 30_000 });
@@ -35,17 +44,17 @@ test('手順1〜4: はじめての登録、9ポイントのおうちのチェッ
   const p = phone(page);
   await expect(p.getByRole('heading', { name: 'はじめての方へ' })).toBeVisible();
   await p.getByLabel('利用規約とプライバシーポリシーに同意します').check();
-  await p.getByRole('button', { name: '同意して次へ' }).click();
+  await barClick(page, '同意して次へ');
   const form = p.locator('fieldset.dog-form').first();
   await form.getByLabel('名前').fill('ポチ');
   await form.getByRole('combobox', { name: /犬種/ }).selectOption({ label: '柴犬' });
   await p.locator('input[type="file"]').first().setInputFiles({ name: 'dog.jpg', mimeType: 'image/jpeg', buffer: await makePhoto(page) });
   await expect(p.getByText('写真を撮り直す・選び直す')).toBeVisible();
-  await p.getByRole('button', { name: '次へ' }).click();
+  await barClick(page, '次へ');
   await p.getByRole('radiogroup', { name: /年代/ }).getByRole('radio', { name: '30代' }).check();
   await p.getByRole('radiogroup', { name: /性別/ }).getByRole('radio', { name: '女性' }).check();
   await p.getByRole('radiogroup', { name: /きっかけ/ }).getByRole('radio', { name: 'Instagram' }).check();
-  await p.getByRole('button', { name: '登録する' }).click();
+  await barClick(page, '登録する');
   await expect(p.getByText('登録が完了しました')).toBeVisible();
   await expect(p.getByText('DR-000031')).toBeVisible();
   await expect(page.getByTestId('who-note')).toContainText('ポチのおうち(DR-000031)');
@@ -54,7 +63,7 @@ test('手順1〜4: はじめての登録、9ポイントのおうちのチェッ
   await scene(page, 2);
   await expect(page.getByTestId('who-note')).toContainText('9ポイント');
   await p.getByRole('checkbox', { name: /だいず/ }).uncheck();
-  await p.getByRole('button', { name: 'チェックインする' }).click();
+  await barClick(page, 'チェックインする');
   await expect(p.getByRole('region', { name: 'チェックイン完了' })).toBeVisible();
   await expect(p.getByText(/会員証の「無料券と交換する」から、無料券と交換できます/)).toBeVisible();
   await expect(adminFrame(page).getByRole('listitem', { name: /こむぎ/ })).toBeVisible();
@@ -69,13 +78,13 @@ test('手順1〜4: はじめての登録、9ポイントのおうちのチェッ
   await p.getByRole('radiogroup', { name: /年代/ }).getByRole('radio', { name: '40代' }).check();
   await p.getByRole('radiogroup', { name: /性別/ }).getByRole('radio', { name: '男性' }).check();
   await p.getByLabel('利用規約とプライバシーポリシーに同意します').check();
-  await p.getByRole('button', { name: '参加する' }).click();
+  await barClick(page, '参加する');
   await expect(p.getByText('参加しました')).toBeVisible();
 
   // 4 パパも同じ日にチェックイン: ポイントは増えず、一緒に来た だいず を追加できる
   await scene(page, 4);
   await expect(p.getByText('今日はこむぎママさんがチェックイン済みです。')).toBeVisible();
-  await p.getByRole('button', { name: 'ワンちゃんを追加する' }).click();
+  await barClick(page, 'ワンちゃんを追加する');
   await expect(p.getByRole('region', { name: 'チェックイン完了' })).toBeVisible();
   await expect(page.getByTestId('who-note')).toContainText('こむぎ・だいずのおうち(DR-000001)・10ポイント');
 });
@@ -94,7 +103,7 @@ test('管理画面: ログイン・今日の来場・取り消し・製作者は
 
   // お客さんがチェックインすると、今日の来場に出る
   await scene(page, 2);
-  await phone(page).getByRole('button', { name: 'チェックインする' }).click();
+  await barClick(page, 'チェックインする');
   await expect(phone(page).getByRole('region', { name: 'チェックイン完了' })).toBeVisible();
 
   // 受付スタッフで取り消す
@@ -127,7 +136,7 @@ test('管理画面: ログイン・今日の来場・取り消し・製作者は
 test('再読み込みしても続きから使え、「翌日にする」と「最初からやり直す」が効く', async ({ page }) => {
   await openDemo(page);
   await scene(page, 2);
-  await phone(page).getByRole('button', { name: 'チェックインする' }).click();
+  await barClick(page, 'チェックインする');
   await expect(phone(page).getByRole('region', { name: 'チェックイン完了' })).toBeVisible();
 
   await page.reload();

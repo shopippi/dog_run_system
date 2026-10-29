@@ -6,6 +6,7 @@ import { useMe } from '../../hooks/useMe';
 import { postJson } from '../../lib/api';
 import { inviteUrl, isInLineApp, shareToLine } from '../../lib/liff';
 import { FamilyMembers } from './FamilyMembers';
+import { useToast } from '../../components/Toast';
 
 function formatExpiry(iso: string) {
   const [date, time] = [iso.slice(5, 10).replace('-', '/'), iso.slice(11, 16)];
@@ -20,6 +21,7 @@ export function FamilyPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
   const householdName = me?.registered ? me.household.displayName : '';
+  const toast = useToast();
 
   const create = async () => postJson<InviteCreated>('/api/invites', {});
 
@@ -32,6 +34,7 @@ export function FamilyPage() {
       const sent = await shareToLine(text);
       setInvite(inv);
       setMode(sent ? 'sent' : 'qr');
+      if (sent) toast('招待を送りました');
     } catch (e) {
       setError(e);
     } finally {
@@ -63,12 +66,7 @@ export function FamilyPage() {
       </div>
 
       {mode === 'sent' && invite && (
-        <div className="alert info" role="status">
-          <p>
-            <b>招待を送りました。</b>
-          </p>
-          <p>ご家族がLINEでリンクを開き、「参加する」を押すと完了です。</p>
-        </div>
+        <p className="body-text fam-sent">ご家族がLINEでリンクを開き、「参加する」を押すと完了です。</p>
       )}
 
       {mode === 'qr' && invite && (
