@@ -75,7 +75,7 @@ for (const d of DEVICES) {
       await page.getByRole('heading', { name: 'プロフィール' }).waitFor();
       await page.getByLabel('お住まいの郵便番号').fill('1234567');
       await page.getByRole('button', { name: '保存する' }).click();
-      await page.getByRole('status').waitFor();
+      await expect(page.getByRole('status')).toHaveText('保存しました');
       await checkScreen(page, d.name, 'L-10 プロフィール');
 
       // L-11 家族(招待と、いまの家族・抜ける確認)

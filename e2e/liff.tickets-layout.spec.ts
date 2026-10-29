@@ -67,10 +67,12 @@ for (const d of DEVICES) {
       await page.getByRole('button', { name: '無料券と交換する(10ポイント)' }).click();
       await page.getByRole('dialog', { name: '無料券と交換します' }).waitFor();
       await checkScreen(page, d.name, 'L-07 会員証(交換の確認)');
-      await page.getByRole('button', { name: '交換する' }).click();
-      await page.getByRole('status').waitFor();
+      const sheet = page.getByRole('dialog', { name: '無料券と交換します' });
+      await sheet.getByRole('button', { name: '交換する', exact: true }).click();
+      await expect(page.getByRole('status')).toHaveText('無料券と交換しました。');
+      await expect(sheet).toHaveCount(0);
       await page.getByRole('button', { name: '無料券と交換する(10ポイント)' }).click();
-      await page.getByRole('button', { name: '交換する' }).click();
+      await sheet.getByRole('button', { name: '交換する', exact: true }).click();
       await expect(page.getByText('未使用 2枚')).toBeVisible();
       await checkScreen(page, d.name, 'L-07 会員証(無料券あり)');
 

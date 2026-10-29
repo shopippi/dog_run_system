@@ -111,7 +111,7 @@ for (const d of DEVICES) {
       await page.getByRole('img', { name: '家族の招待のQRコード' }).waitFor();
       await checkScreen(page, d.name, 'L-11 家族の招待');
       await page.getByRole('button', { name: 'LINEで招待を送る' }).click();
-      await page.getByRole('status').waitFor();
+      await page.locator('.toast').waitFor();
       const messages = await page.evaluate(() => (window as unknown as { __sharedMessages: string[] }).__sharedMessages);
       const invitePath = messages.at(-1)!.match(/\/liff(\/invite\/[A-Za-z0-9_-]+)/)![1]!;
 
