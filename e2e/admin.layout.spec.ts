@@ -29,6 +29,13 @@ async function checkScreen(page: Page, folder: string, screen: string, touch: bo
     ),
   );
   const minHeight = touch ? 44 : 40;
+  // 指の操作のエミュレーション(pointer: coarse)が効いていることを先に確かめる。
+  // 全体の写真を撮った直後は一瞬だけ外れていて、すべての部品が 40px と出ることがあったため(画面の不具合ではない)
+  if (touch) {
+    await expect
+      .poll(() => page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--control-h').trim()), { timeout: 5000 })
+      .toBe('44px');
+  }
   const problems = await page.evaluate((minHeight) => {
     const out: string[] = [];
     const doc = document.documentElement;

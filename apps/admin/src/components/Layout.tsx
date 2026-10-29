@@ -1,7 +1,7 @@
 import { useFacilityName } from '../hooks/useFacilityName';
 import { STAFF_ROLE_LABELS } from '@dr/shared';
 import { useEffect, type ReactNode } from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '../lib/auth';
 import { Icon, type IconName } from './Icon';
 
@@ -61,6 +61,7 @@ export function Layout({ children }: { children: ReactNode }) {
     return true;
   };
   useSlashToSearch();
+  useActiveNavInView();
   return (
     <div className="shell">
       <aside className="side">
@@ -103,6 +104,25 @@ export function Layout({ children }: { children: ReactNode }) {
       </main>
     </div>
   );
+}
+
+/**
+ * メニューが画面に収まらず、メニューの中だけが動くとき、選んでいる画面のメニューが隠れないようにする。
+ */
+function useActiveNavInView() {
+  const { pathname } = useLocation();
+  useEffect(() => {
+    const nav = document.querySelector<HTMLElement>('.side .nav');
+    const active = nav?.querySelector<HTMLElement>('a.active');
+    if (!nav || !active) return;
+    // ページ全体は動かさず、メニューの中だけを動かす
+    const n = nav.getBoundingClientRect();
+    const a = active.getBoundingClientRect();
+    if (a.top < n.top) nav.scrollTop -= n.top - a.top + 8;
+    else if (a.bottom > n.bottom) nav.scrollTop += a.bottom - n.bottom + 8;
+    if (a.left < n.left) nav.scrollLeft -= n.left - a.left + 8;
+    else if (a.right > n.right) nav.scrollLeft += a.right - n.right + 8;
+  }, [pathname]);
 }
 
 /**

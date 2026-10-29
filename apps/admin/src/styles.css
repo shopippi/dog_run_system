@@ -844,7 +844,26 @@ input::placeholder { color: var(--text-tertiary); }
   .nav a:not(.active):hover { background: color-mix(in srgb, var(--surface-sunk) 70%, var(--canvas)); }
 }
 @media (min-width: 960px) {
-  .side-foot { border-top-color: transparent; }
+  /*
+   * サイドバーは画面の高さいっぱいで上に固定(position: sticky; top: 0; height: 100vh)。メニューが収まらないときはメニューだけが動き、
+   * 下の「名前・ログアウト」はいつも画面の下に見える。メニューとの境目が分かるよう、上の線は残す。
+   */
+  .side { height: 100vh; height: 100dvh; border-right: 0; }
+  /* 境目の線は、ページの長さいっぱいに引く(サイドバー自身の線だと、画面の高さで切れて見える) */
+  .shell { position: relative; }
+  .shell::before { content: ""; position: absolute; top: 0; bottom: 0; left: 231px; width: 1px; background: var(--border); pointer-events: none; z-index: 21; }
+  /* 名前とログアウトは1行にして、メニューに使える高さを広げる */
+  .side-foot { flex-direction: row; align-items: center; justify-content: space-between; padding: var(--sp-2) var(--sp-3); }
+  /* 名前と役割は2段にして、ログアウトの横に収める(名前が長いときだけ … で切る) */
+  .side-foot .who { flex: 1; display: flex; flex-direction: column; padding: 0 var(--sp-2); line-height: 1.35; }
+  .side-foot .who > * { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .side-foot .who span { font-size: var(--fs-12); }
+  .side-foot .btn { flex: none; padding: 0 var(--sp-2); }
+  /* 見出しと余白を少し詰めて、1280×800 でも「記録」のメニューまで見えるようにする */
+  .side-brand { min-height: 52px; }
+  .side .nav { padding-top: var(--sp-1); }
+  .nav-group { padding-bottom: var(--sp-1); }
+  .nav-label { padding: 6px var(--sp-3) 2px; }
 }
 
 /* ---- 押せる行: ホバーで surface-sunk、押した瞬間に少し縮む ---- */

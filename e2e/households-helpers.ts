@@ -24,6 +24,12 @@ async function settle(page: Page) {
 export async function checkScreen(page: Page, folder: string, screen: string, touch: boolean) {
   await settle(page);
   const minHeight = touch ? 44 : 40;
+  // 指の操作のエミュレーション(pointer: coarse)が効いてから測る(全体の写真を撮った直後は、一瞬だけ外れていることがある)
+  if (touch) {
+    await expect
+      .poll(() => page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--control-h').trim()), { timeout: 5000 })
+      .toBe('44px');
+  }
   const problems = await page.evaluate((minHeight) => {
     const out: string[] = [];
     const doc = document.documentElement;

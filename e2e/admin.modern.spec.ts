@@ -300,3 +300,27 @@ test('一覧の見出し(列の名前)は上に固定される(今日の来場�
   await expect(panel.getByText('まだ引き継いだ旧カードはありません。').or(panel.locator('.mi-head'))).toBeVisible();
   await page.close();
 });
+
+test('サイドバーは画面の高さいっぱいで上に固定。1280×800 で「操作ログ」まで見え、長いページの下でも名前とログアウトが見える', async ({ browser }) => {
+  const page = await browser.newPage(DESKTOP);
+  await adminLogin(page, 'admin', '/search');
+  await page.getByRole('searchbox', { name: '探す言葉' }).fill(memberNo);
+  await page.getByRole('link', { name: 'コムギ・ダイズのおうちの詳細を開く' }).click();
+  await page.getByRole('region', { name: 'おうちの概要' }).waitFor();
+  const nav = page.getByRole('navigation', { name: 'メニュー' });
+  await expect(nav.getByRole('link', { name: '操作ログ' })).toBeInViewport({ ratio: 1 });
+  // 長いページの下までスクロールしても、サイドバーは画面の高さいっぱいで、ログアウトは画面の下に見える
+  await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+  expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
+  const side = await page.locator('aside.side').boundingBox();
+  expect(side!.y).toBeCloseTo(0, 0);
+  expect(side!.height).toBeCloseTo(800, 0);
+  const logout = page.getByRole('button', { name: 'ログアウト' });
+  await expect(logout).toBeInViewport({ ratio: 1 });
+  expect((await logout.boundingBox())!.y).toBeGreaterThan(700);
+
+  // メニューの下の方の画面を開くと、そのメニューが見える位置までメニューの中が動く
+  await nav.getByRole('link', { name: '使い方・困ったとき' }).click();
+  await expect(nav.getByRole('link', { name: '使い方・困ったとき' })).toBeInViewport({ ratio: 1 });
+  await page.close();
+});
