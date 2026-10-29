@@ -1,14 +1,15 @@
 # Cloudflare への配信(本番)。
-# - 動くとき: main に push(マージ)したとき、または Actions の画面の「Run workflow」で手で動かしたとき
+# - 動くとき: main か deploy/demo(クライアントに見せるデモ用)に push したとき、または Actions の画面の「Run workflow」で手で動かしたとき
 # - 必要な Secrets: CLOUDFLARE_API_TOKEN(Workers・D1・R2 を編集できるトークン)
-# - 任意の Secrets: STAFF_INITIAL_PASSWORD と ADMIN_EMAIL があれば、管理画面のアカウントがまだ1つもないときに、最初の管理者を作る
+# - 任意の Secrets: STAFF_INITIAL_PASSWORD があれば、管理画面のアカウントがまだ1つもないときに、最初の管理者を作る
+#   (メールアドレスは Secret か Variable の ADMIN_EMAIL。なければ admin@greendome.example)
 # アカウント ID と LIFF ID は公開してよい値なので、ここに書く(Variables の CLOUDFLARE_ACCOUNT_ID / LIFF_ID で上書きできる)。
 name: Deploy
 
 on:
   workflow_dispatch:
   push:
-    branches: [main]
+    branches: [main, deploy/demo]
 
 concurrency:
   group: deploy-production
@@ -62,10 +63,10 @@ jobs:
         working-directory: apps/api
         env:
           STAFF_PASSWORD: ${{ secrets.STAFF_INITIAL_PASSWORD }}
-          ADMIN_EMAIL: ${{ secrets.ADMIN_EMAIL || vars.ADMIN_EMAIL }}
+          ADMIN_EMAIL: ${{ secrets.ADMIN_EMAIL || vars.ADMIN_EMAIL || 'admin@greendome.example' }}
         run: |
-          if [ -z "$STAFF_PASSWORD" ] || [ -z "$ADMIN_EMAIL" ]; then
-            echo "STAFF_INITIAL_PASSWORD か ADMIN_EMAIL がないので、管理者は作りません。"
+          if [ -z "$STAFF_PASSWORD" ]; then
+            echo "::warning::Secrets に STAFF_INITIAL_PASSWORD がないので、最初の管理者は作りません。登録してからもう一度配信してください。"
             exit 0
           fi
           COUNT=$(pnpm exec wrangler d1 execute DB --remote --env production --json --command "SELECT COUNT(*) AS n FROM staff_users" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const j=JSON.parse(s);console.log(j[0].results[0].n)})')
