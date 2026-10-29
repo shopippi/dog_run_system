@@ -63,7 +63,7 @@ function Stamp({
   today: boolean;
   plan: StampPlan;
 }) {
-  const svg = (
+  const mark = (
     <svg
       className={`paw${on ? ' on' : ''}${bone ? ' bone' : ''}${fresh ? ' fresh' : ''}${on && today ? ' today' : ''}`}
       viewBox="0 0 24 24"
@@ -78,6 +78,8 @@ function Stamp({
       {bone ? BONE : PAW}
     </svg>
   );
+  // 傾けた肉球の四隅が枠からはみ出さないよう、36px の枠で切る(にじみの輪は枠の外に広がる)
+  const svg = <span className="paw-clip">{mark}</span>;
   const isFresh = fresh && plan.freshDelay !== null;
   const delay = isFresh ? plan.freshDelay : plan.delays.get(i);
   // 動かさないとき(まだの分・動きを減らす設定・同じ日に開き直したとき)は、最初から押された形

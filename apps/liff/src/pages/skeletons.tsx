@@ -191,24 +191,26 @@ export function DogsSkeleton() {
   return (
     <SkeletonScreen>
       <HeadSk lead={1} width="32%" />
-      <AvatarRowsSk count={2} />
+      <AvatarRowsSk count={2} avatar={64} className="dog-row dog-list-sk" />
       <ButtonSk />
     </SkeletonScreen>
   );
 }
 
 /** 犬の入力欄のパネル(L-02・L-09) */
-function DogFormSk({ breed = true }: { breed?: boolean }) {
+function DogFormSk({ breed = true, photo = true }: { breed?: boolean; photo?: boolean }) {
   return (
     <div className="panel dog-form">
       <SkeletonText size={15} width="30%" />
-      <div className="photo-pick">
-        <SkeletonCircle size={72} />
-        <div className="photo-pick-body sk-grow">
-          <Skeleton width={180} height={44} radius={12} />
-          <SkeletonText size={13} width="70%" />
+      {photo ? (
+        <div className="photo-pick">
+          <SkeletonCircle size={72} />
+          <div className="photo-pick-body sk-grow">
+            <Skeleton width={180} height={44} radius={12} />
+            <SkeletonText size={13} width="70%" />
+          </div>
         </div>
-      </div>
+      ) : null}
       <FieldSk label="16%" />
       {breed ? <FieldSk label="16%" /> : null}
       {breed ? <FieldSk label="18%" height={44} /> : null}
@@ -222,8 +224,17 @@ function DogFormSk({ breed = true }: { breed?: boolean }) {
 export function DogFormSkeleton({ edit = true }: { edit?: boolean }) {
   return (
     <SkeletonScreen>
-      <HeadSk lead={edit ? 2 : 0} width={edit ? '24%' : '46%'} />
-      <DogFormSk breed={!edit} />
+      {/* 変更画面は、上に大きな写真(4:3)と「写真を変える」 */}
+      {edit ? (
+        <div className="photo-hero">
+          <Skeleton className="dog-hero" height="auto" radius={16} />
+          <div className="photo-hero-acts">
+            <Skeleton width={150} height={44} radius={12} />
+          </div>
+        </div>
+      ) : null}
+      <HeadSk lead={edit ? 3 : 0} width={edit ? '24%' : '46%'} />
+      <DogFormSk breed={!edit} photo={!edit} />
       <BarSk />
     </SkeletonScreen>
   );

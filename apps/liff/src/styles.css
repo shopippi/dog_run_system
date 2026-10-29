@@ -650,6 +650,7 @@ a { color: var(--accent-text); }
 /* 押していく動き(11.6)。動きは Motion で、外側の入れ物(.paw-press)に付ける。肉球の傾きと濃さはそのまま */
 .paw-cell { position: relative; display: block; width: 36px; height: 36px; }
 .paw-press { display: block; width: 36px; height: 36px; will-change: transform, opacity; }
+.paw-clip { display: block; width: 36px; height: 36px; overflow: hidden; overflow: clip; }
 /* 新しく付いた 1 個を押した瞬間のインクのにじみ(ink の薄い輪が 1 回広がって消える) */
 .paw-ink { position: absolute; inset: 0; border-radius: 50%; background: var(--ink); opacity: 0; pointer-events: none; }
 /* 今日の来場で付いたスタンプは、朱肉の色(緑は使わない。白・ダークの面の上で 3:1 以上) */
