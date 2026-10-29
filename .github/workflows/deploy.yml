@@ -65,6 +65,8 @@ jobs:
           pnpm exec wrangler deploy --env production 2>&1 | tee deploy.log
           URL=$(grep -oE 'https://[a-z0-9.-]+\.workers\.dev' deploy.log | head -1)
           echo "DEPLOY_URL=$URL" >> "$GITHUB_ENV"
+          # 外(GitHub の画面以外)からも読めるよう、注釈にも出す
+          echo "::notice title=配信先::${URL}/liff/ と ${URL}/admin/"
 
       - name: 最初の管理者を作る(まだ1人もいないときだけ)
         working-directory: apps/api
@@ -80,6 +82,7 @@ jobs:
           if [ "$COUNT" = "0" ]; then
             pnpm staff:create --email "$ADMIN_EMAIL" --name 管理者 --role admin --remote --env production
             echo "ADMIN_CREATED=1" >> "$GITHUB_ENV"
+            echo "::notice title=最初の管理者::${ADMIN_EMAIL} を作りました"
           else
             echo "管理画面のアカウントがすでにあるので、作りません。"
           fi
