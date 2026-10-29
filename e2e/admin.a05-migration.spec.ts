@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { adminLogin, newLineUser, openLiff, registerViaUi } from './helpers';
+import { adminLogin, adminToast, newLineUser, openLiff, registerViaUi } from './helpers';
 import { insertMigrationRequest } from './merge-helpers';
 
 test('A-05 受付で旧カードを確かめて直接入力する。確認の印が2つともないと引き継げない。上限を超えると入れられない。同じ種類は2回目を入れられない', async ({ browser }) => {
@@ -83,7 +83,7 @@ test('A-05 引き継ぎ済みの一覧から元に戻すと、もう一度入力
   await expect(undo.getByRole('button', { name: 'やめる' })).toBeFocused();
   await expect(undo).toContainText('5ポイント');
   await undo.getByRole('button', { name: '元に戻す' }).click();
-  await expect(list.getByText(/の引き継ぎを元に戻しました。/)).toBeVisible();
+  await expect(adminToast(page, /の引き継ぎを元に戻しました。/)).toBeVisible();
   await expect(row.getByText(/^元に戻しました/)).toBeVisible();
   await expect(row.getByRole('button', { name: '元に戻す' })).toHaveCount(0);
 

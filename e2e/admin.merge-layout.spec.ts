@@ -1,5 +1,5 @@
 import { expect, test, type Browser, type CDPSession, type Page } from '@playwright/test';
-import { adminLogin, answerSurvey, makePhoto, newLineUser, openLiff, registerViaUi } from './helpers';
+import { adminLogin, adminToast, answerSurvey, makePhoto, newLineUser, openLiff, registerViaUi } from './helpers';
 import { insertMigrationRequest, putMedia, visitYesterday } from './merge-helpers';
 
 // 担当B(おうちの統合・確認待ち)の画面の見え方。e2e/admin.layout.spec.ts の checkScreen と同じ確かめ方。
@@ -171,7 +171,7 @@ test.describe('おうちの統合・確認待ちの見え方', () => {
       await expect(dialog.getByRole('button', { name: 'やめる' })).toBeFocused();
       await checkScreen(page, v.name, 'M-08 おうちの統合(確認)', v.touch);
       await dialog.getByRole('button', { name: 'まとめる' }).click();
-      await expect(page.getByRole('status')).toContainText('にまとめました');
+      await expect(adminToast(page, 'にまとめました')).toBeVisible();
       await checkScreen(page, v.name, 'M-08 おうちの統合(まとめた後)', v.touch);
       await page.close();
     });

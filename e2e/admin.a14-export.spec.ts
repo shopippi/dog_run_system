@@ -1,6 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import { expect, test } from '@playwright/test';
-import { adminLogin, newLineUser, registerViaUi } from './helpers';
+import { adminLogin, adminToast, newLineUser, registerViaUi } from './helpers';
 
 // A-14 CSV出力(M-18)
 
@@ -17,7 +17,7 @@ test('A-14 種類を選んでダウンロードすると、BOM つきの日本�
   await expect(panel.getByLabel('期間の始め')).toHaveCount(0);
   const [dl] = await Promise.all([page.waitForEvent('download'), panel.getByRole('button', { name: 'ダウンロード' }).click()]);
   // ファイル名(日本語)は画面の案内で確かめる。ヘッドレスの Chromium は日本語のファイル名を "download" にしてしまうため
-  await expect(panel.getByRole('status')).toHaveText(/^「ワンちゃん_\d{4}-\d{2}-\d{2}\.csv」をダウンロードしました。$/);
+  await expect(adminToast(page, /^「ワンちゃん_\d{4}-\d{2}-\d{2}\.csv」をダウンロードしました。$/)).toBeVisible();
   const bytes = await readFile((await dl.path())!);
   expect([...bytes.subarray(0, 3)]).toEqual([0xef, 0xbb, 0xbf]);
   const text = bytes.toString('utf8').slice(1);
@@ -33,7 +33,7 @@ test('A-14 種類を選んでダウンロードすると、BOM つきの日本�
   await panel.getByLabel('期間の終わり').fill('2026-10-31');
   const [dl2] = await Promise.all([page.waitForEvent('download'), panel.getByRole('button', { name: 'ダウンロード' }).click()]);
   expect((await readFile((await dl2.path())!)).toString('utf8').slice(1).split('\r\n')[0]).toMatch(/^来場日,時刻,会員ID/);
-  await expect(panel.getByRole('status')).toHaveText(/^「来場_2026-10-10〜2026-10-31_\d{4}-\d{2}-\d{2}\.csv」をダウンロードしました。$/);
+  await expect(adminToast(page, /^「来場_2026-10-10〜2026-10-31_\d{4}-\d{2}-\d{2}\.csv」をダウンロードしました。$/)).toBeVisible();
   await page.close();
 });
 

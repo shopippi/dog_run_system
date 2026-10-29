@@ -92,6 +92,8 @@ export function DashChart({
   const ref = useRef<HTMLCanvasElement>(null);
   const colors = useColors();
   const [failed, setFailed] = useState(false);
+  // 描けたら、300ms でふわっと出す(docs/design.md 11.4)
+  const [ready, setReady] = useState(false);
   useEffect(() => {
     let alive = true;
     let chart: Chart | null = null;
@@ -123,6 +125,7 @@ export function DashChart({
         };
         chart = new Chart(ref.current, config);
         setFailed(false);
+        setReady(true);
       })
       .catch((e) => {
         // 1つのグラフが描けなくても、画面のほかの部分は使えるようにする
@@ -136,7 +139,7 @@ export function DashChart({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [colors, ...deps]);
   return (
-    <div className="dash-chart" style={{ height }}>
+    <div className={`dash-chart${ready ? ' ready' : ''}`} style={{ height }}>
       <canvas ref={ref} role="img" aria-label={label} />
       {failed && <p className="empty">グラフを表示できませんでした。画面を読み込み直してください。</p>}
     </div>

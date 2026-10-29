@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { adminLogin } from './helpers';
+import { adminLogin, adminToast } from './helpers';
 
 // A-12 ルールの設定(M-13)
 // データベースはほかのテストと共有するため、変えた設定はテストの最後に元に戻す。
@@ -20,7 +20,7 @@ test('A-12 管理者が無料券に必要なポイント数を変えて保存す
   await section.getByRole('radiogroup', { name: '無料券の有効期限' }).getByRole('radio', { name: 'もらった日から' }).click();
   await section.getByLabel('無料券の有効期限(か月)').fill('6');
   await save.click();
-  await expect(section.getByRole('status')).toHaveText('保存しました。');
+  await expect(adminToast(page, '保存しました。')).toBeVisible();
 
   await page.reload();
   const again = page.getByRole('region', { name: 'ポイントと無料券' });
@@ -33,7 +33,7 @@ test('A-12 管理者が無料券に必要なポイント数を変えて保存す
   await again.getByLabel('無料券1枚に必要なポイント数').fill('10');
   await ticketExpiry.getByRole('radio', { name: '期限なし' }).click();
   await again.getByRole('button', { name: '保存する' }).click();
-  await expect(again.getByRole('status')).toHaveText('保存しました。');
+  await expect(adminToast(page, '保存しました。')).toBeVisible();
 });
 
 test('A-12 受付のQRコードの合言葉を作り直すと、QRコードの中身が変わる', async ({ page }) => {

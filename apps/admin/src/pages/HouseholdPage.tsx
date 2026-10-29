@@ -18,7 +18,10 @@ import { ManualPointsDialog } from '../components/ManualPointsDialog';
 import { TicketUseDialog } from '../components/TicketUseDialog';
 import { ErrorNotice } from '../components/ErrorNotice';
 import { Icon } from '../components/Icon';
+import { BusyLabel } from '../components/BusyLabel';
 import { PageHead } from '../components/PageHead';
+import { Loading, Skeleton, SkeletonCircle, SkeletonKpis, SkeletonText } from '../components/Skeleton';
+import { useToast, type ToastOptions } from '../components/Toast';
 import { useLoad } from '../hooks/useLoad';
 import { adminApi, adminPatch } from '../lib/api';
 import { useAuth } from '../lib/auth';
@@ -32,30 +35,27 @@ export function HouseholdPage() {
   const { id } = useParams();
   const { readOnly } = useAuth();
   const { data, error, reload } = useLoad(() => adminApi<HouseholdDetail>(`/households/${id}`), [id]);
-  const [notice, setNotice] = useState<ReactNode>(null);
+  const toast = useToast();
 
   return (
     <div className="page">
-      <div className="hh-back">
-        <Link to="/search" className="btn ghost">
-          <Icon name="chevron-left" />
-          探す画面に戻る
-        </Link>
-      </div>
       <PageHead
         title="おうちの詳細"
+        crumbs={[
+          { label: 'おうちを探す', to: '/search' },
+          { label: data && String(data.id) === id ? data.displayName : <Skeleton w={140} h={12} r={4} style={{ display: 'inline-block' }} /> },
+        ]}
         howto="おうちの家族・ワンちゃん・来場・ポイントをまとめて見る画面です。変えた内容はすべて操作ログに残り、操作ログから元に戻せます。"
       />
       {error ? <ErrorNotice error={error} onRetry={reload} /> : null}
       {!data ? (
-        error ? null : <p className="loading">読み込んでいます…</p>
+        error ? null : <HouseholdSkeleton canEdit={!readOnly} />
       ) : (
         <Detail
           d={data}
           canEdit={!readOnly && data.status === 'active'}
-          notice={notice}
           onChanged={(d, message) => {
-            setNotice(message);
+            if (message) toast({ ...message, undo: message.undo && { ...message.undo, onUndone: () => void reload() } });
             if (d) void reload();
           }}
         />
@@ -64,16 +64,71 @@ export function HouseholdPage() {
   );
 }
 
+/** 読み込み中: 概要(写真・呼び名・数値ブロック)と、家族・ワンちゃん・来場履歴のまとまり */
+function HouseholdSkeleton({ canEdit }: { canEdit: boolean }) {
+  const section = (title: number, rows: number, avatar: boolean) => (
+    <section className="panel hh-section">
+      <div className="hh-section-title">
+        <SkeletonText size={17} lh={1.35} w={title} />
+      </div>
+      <ul className="hh-list">
+        {Array.from({ length: rows }, (_, i) => (
+          <li key={i} className={`hh-row${avatar ? ' hh-dog' : ''}`}>
+            {avatar ? <SkeletonCircle size={48} /> : null}
+            <span className="hh-main">
+              <SkeletonText size={15} w={[110, 90, 130][i % 3]} />
+              <SkeletonText size={13} w={[240, 200, 180][i % 3]} />
+            </span>
+            <SkeletonText size={13} w={avatar ? 72 : 120} />
+            <span className="hh-end" />
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+  return (
+    <Loading>
+      <section className="panel hh-head">
+        <div className="hh-id">
+          <span className="stack">
+            <SkeletonCircle size={64} />
+          </span>
+          <div className="hh-name">
+            <SkeletonText size={20} lh={1.35} w={200} />
+            <SkeletonText size={13} w="min(420px, 100%)" />
+            {canEdit && (
+              <span className="sk-line" style={{ height: 'var(--control-h)', marginTop: 4 }}>
+                <Skeleton w={84} h={12} r={4} />
+              </span>
+            )}
+          </div>
+        </div>
+        <SkeletonKpis n={4} className="kpis hh-kpis" />
+      </section>
+      {canEdit && (
+        <div className="hh-actions">
+          <Skeleton w={216} h="var(--control-h)" r={8} />
+          <Skeleton w={104} h="var(--control-h)" r={8} />
+        </div>
+      )}
+      {section(48, 2, false)}
+      {section(80, 2, true)}
+      {section(72, 3, false)}
+    </Loading>
+  );
+}
+
+/** 変えたあとのお知らせ(トースト)。元に戻せる操作は auditId を付ける */
+type Changed = Omit<ToastOptions, 'undo'> & { undo?: { auditId: number | null; doneMessage?: string } };
+
 function Detail({
   d,
   canEdit,
-  notice,
   onChanged,
 }: {
   d: HouseholdDetail;
   canEdit: boolean;
-  notice: ReactNode;
-  onChanged: (reload: boolean, message: ReactNode) => void;
+  onChanged: (reload: boolean, message: Changed | null) => void;
 }) {
   const activeDogs = d.dogs.filter((x) => x.status === 'active');
   const activeFamily = d.family.filter((m) => m.status === 'active').length;
@@ -109,11 +164,6 @@ function Detail({
           </p>
         </div>
       )}
-      {notice ? (
-        <div className="alert info" role="status">
-          {notice}
-        </div>
-      ) : null}
 
       <Section title="家族" count={activeFamily} unit="人">
         <ul className="hh-list" aria-label="家族">
@@ -153,14 +203,12 @@ function Detail({
           d={d}
           m={removing}
           onClose={() => setRemoving(null)}
-          onDone={() => {
+          onDone={(auditId) => {
             setRemoving(null);
-            onChanged(
-              true,
-              <p>
-                {removing.name ?? '家族'}さんを外しました。間違えたときは、<Link to="/audit">操作ログ</Link>から元に戻せます。
-              </p>,
-            );
+            onChanged(true, {
+              message: `${removing.name ?? '家族'}さんを外しました。`,
+              undo: { auditId, doneMessage: `${removing.name ?? '家族'}さんを家族に戻しました。` },
+            });
           }}
         />
       )}
@@ -169,14 +217,12 @@ function Detail({
           d={d}
           ticket={usingTicket}
           onClose={() => setUsingTicket(null)}
-          onDone={() => {
+          onDone={(r) => {
             setUsingTicket(null);
-            onChanged(
-              true,
-              <p>
-                無料券を1枚、使用済みにしました。来場1回分の料金を無料にしてください。間違えたときは、<Link to="/audit">操作ログ</Link>から元に戻せます。
-              </p>,
-            );
+            onChanged(true, {
+              message: '無料券を1枚、使用済みにしました。来場1回分の料金を無料にしてください。',
+              undo: { auditId: r.auditId ?? null, doneMessage: '無料券を未使用に戻しました。' },
+            });
           }}
         />
       )}
@@ -308,12 +354,7 @@ function Detail({
           onClose={() => setProfileOpen(false)}
           onDone={() => {
             setProfileOpen(false);
-            onChanged(
-              true,
-              <p>
-                おうちの回答を変えました。間違えたときは、<Link to="/audit">操作ログ</Link>から元に戻せます。
-              </p>,
-            );
+            onChanged(true, { message: 'おうちの回答を変えました。間違えたときは、操作ログから元に戻せます。' });
           }}
         />
       )}
@@ -401,7 +442,7 @@ function NameBlock({
 }: {
   d: HouseholdDetail;
   canEdit: boolean;
-  onChanged: (reload: boolean, message: ReactNode) => void;
+  onChanged: (reload: boolean, message: Changed | null) => void;
 }) {
   const [editing, setEditing] = useState(false);
   const [value, setValue] = useState(d.displayName);
@@ -414,7 +455,7 @@ function NameBlock({
     try {
       const next = await adminPatch<HouseholdDetail>(`/households/${d.id}`, { displayName: value });
       setEditing(false);
-      onChanged(true, <p>呼び名を「{next.displayName}」にしました。間違えたときは、操作ログから元に戻せます。</p>);
+      onChanged(true, { message: `呼び名を「${next.displayName}」にしました。間違えたときは、操作ログから元に戻せます。` });
     } catch (e) {
       setError(e);
     } finally {
@@ -438,7 +479,9 @@ function NameBlock({
         </div>
         <div className="hh-rename-acts">
           <button type="submit" className="btn sub" disabled={busy}>
-            {busy ? '保存しています…' : '呼び名を保存'}
+            <BusyLabel busy={busy} pending="保存しています…">
+              呼び名を保存
+            </BusyLabel>
           </button>
           <button
             type="button"
@@ -485,7 +528,7 @@ function NameBlock({
 }
 
 /** おうちに対する操作。主なボタンは「ポイント・無料券を登録」 */
-function Actions({ d, onChanged }: { d: HouseholdDetail; onChanged: (reload: boolean, message: ReactNode) => void }) {
+function Actions({ d, onChanged }: { d: HouseholdDetail; onChanged: (reload: boolean, message: Changed | null) => void }) {
   const [open, setOpen] = useState<'points' | 'family' | null>(null);
   return (
     <div className="hh-actions">
@@ -512,13 +555,10 @@ function Actions({ d, onChanged }: { d: HouseholdDetail; onChanged: (reload: boo
           onClose={() => setOpen(null)}
           onDone={(r) => {
             setOpen(null);
-            onChanged(
-              true,
-              <p>
-                登録しました。いまは {r.balanceAfter}ポイント・使える無料券 {r.ticketsAfter}枚 です。間違えたときは、
-                <Link to="/audit">操作ログ</Link>から元に戻せます。
-              </p>,
-            );
+            onChanged(true, {
+              message: `登録しました。いまは ${r.balanceAfter}ポイント・使える無料券 ${r.ticketsAfter}枚 です。`,
+              undo: { auditId: r.auditId ?? null, doneMessage: 'ポイント・無料券の登録を元に戻しました。' },
+            });
           }}
         />
       )}

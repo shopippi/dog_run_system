@@ -1,6 +1,6 @@
 import { useFacilityName } from '../hooks/useFacilityName';
 import { STAFF_ROLE_LABELS } from '@dr/shared';
-import type { ReactNode } from 'react';
+import { useEffect, type ReactNode } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../lib/auth';
 import { Icon, type IconName } from './Icon';
@@ -60,6 +60,7 @@ export function Layout({ children }: { children: ReactNode }) {
     if (it.writeOnly && readOnly) return false;
     return true;
   };
+  useSlashToSearch();
   return (
     <div className="shell">
       <aside className="side">
@@ -102,4 +103,26 @@ export function Layout({ children }: { children: ReactNode }) {
       </main>
     </div>
   );
+}
+
+/**
+ * キーボードの「/」で、その画面の検索欄(data-search-input を付けた入力欄)にフォーカスする(docs/design.md 11.4)。
+ * 入力欄にいるとき・ダイアログを開いているとき・ほかのキーと一緒に押したときは何もしない。
+ */
+function useSlashToSearch() {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== '/' || e.ctrlKey || e.metaKey || e.altKey || e.isComposing) return;
+      const t = e.target;
+      if (t instanceof HTMLElement && (t.isContentEditable || t.closest('input, textarea, select, [contenteditable="true"]'))) return;
+      if (document.querySelector('dialog[open]')) return;
+      const input = [...document.querySelectorAll<HTMLInputElement>('input[data-search-input]')].find((el) => el.offsetParent !== null);
+      if (!input) return;
+      e.preventDefault();
+      input.focus();
+      input.select();
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, []);
 }

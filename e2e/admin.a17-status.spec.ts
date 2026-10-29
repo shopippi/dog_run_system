@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { adminLogin } from './helpers';
+import { adminLogin, adminToast } from './helpers';
 
 // A-17・D-02 システムの状態(M-17)の通し操作
 test.describe('A-17 システムの状態', () => {
@@ -9,12 +9,12 @@ test.describe('A-17 システムの状態', () => {
     const stats = list.getByRole('listitem', { name: /日別の集計/ });
     await expect(stats).toBeVisible();
     await stats.getByRole('button', { name: '今すぐ実行' }).click();
-    await expect(stats.getByRole('status')).toContainText('日別の集計を作り直しました');
+    await expect(adminToast(page, '日別の集計を作り直しました')).toBeVisible();
     await expect(list.getByRole('listitem', { name: '日別の集計 正常' })).toBeVisible();
 
     const backup = list.getByRole('listitem', { name: /バックアップ/ });
     await backup.getByRole('button', { name: '今すぐ実行' }).click();
-    await expect(backup.getByRole('status')).toContainText('個の表');
+    await expect(adminToast(page, '個の表')).toBeVisible();
     await expect(list.getByRole('listitem', { name: 'バックアップ 正常' })).toBeVisible();
     // 管理者には詳細(記録の件数)は出さない
     await expect(page.getByRole('region', { name: '記録の件数' })).toHaveCount(0);

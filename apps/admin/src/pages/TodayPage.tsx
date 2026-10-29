@@ -1,11 +1,14 @@
-import { CANCEL_REASONS, type AdminVisit, type TodayResponse } from '@dr/shared';
+import { CANCEL_REASONS, type AdminVisit, type TodayResponse, type WithAuditId } from '@dr/shared';
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Dialog } from '../components/Dialog';
 import { DogFace } from '../components/DogFace';
 import { ErrorNotice } from '../components/ErrorNotice';
 import { Icon } from '../components/Icon';
+import { BusyLabel } from '../components/BusyLabel';
 import { PageHead } from '../components/PageHead';
+import { Loading, Skeleton, SkeletonCircle, SkeletonGhost, SkeletonKpis, SkeletonText } from '../components/Skeleton';
+import { useToast } from '../components/Toast';
 import { WalkinForm } from '../components/WalkinForm';
 import { usePolling } from '../hooks/usePolling';
 import { adminApi, adminPost } from '../lib/api';
@@ -48,7 +51,7 @@ export function TodayPage() {
       />
       {error ? <ErrorNotice error={error} onRetry={reload} /> : null}
       {!data ? (
-        <p className="loading">読み込んでいます…</p>
+        error ? null : <TodaySkeleton walkin={!readOnly} />
       ) : (
         <>
           <section className="panel summary" aria-label="今日の集計">
@@ -74,6 +77,47 @@ export function TodayPage() {
         </>
       )}
     </div>
+  );
+}
+
+/** 読み込み中(最初の1回だけ。30秒ごとの読み直しでは出さない)。数値ブロック・会員以外のお客さん・来場の行 5 つ */
+function TodaySkeleton({ walkin }: { walkin: boolean }) {
+  return (
+    <Loading>
+      <section className="panel summary">
+        <SkeletonKpis n={4} />
+        {walkin && (
+          <div className="walkin">
+            <div className="walkin-row">
+              <div className="walkin-label">
+                <SkeletonText size={14} w={140} />
+                <SkeletonText size={13} w={280} />
+              </div>
+              <Skeleton w={156} h="var(--control-h)" r={8} />
+              <Skeleton w={96} h="var(--control-h)" r={8} />
+            </div>
+          </div>
+        )}
+      </section>
+      <section className="panel list-panel">
+        <ul className="visits">
+          {Array.from({ length: 5 }, (_, i) => (
+            <li key={i} className="visit">
+              <SkeletonText size={13} w={40} />
+              <SkeletonCircle size={40} />
+              <span className="visit-body">
+                <SkeletonText size={15} w={[120, 160, 96, 140, 110][i]} />
+                <SkeletonText size={13} w={[240, 200, 260, 220, 180][i]} />
+              </span>
+              <span className="badges" />
+              <span className="visit-acts">
+                <SkeletonGhost w={42} />
+              </span>
+            </li>
+          ))}
+        </ul>
+      </section>
+    </Loading>
   );
 }
 
@@ -174,6 +218,7 @@ function VisitRow({
             setConfirming(false);
             onChanged();
           }}
+          onUndone={onChanged}
         />
       )}
     </li>
@@ -186,21 +231,29 @@ function CancelConfirm({
   label,
   onClose,
   onDone,
+  onUndone,
 }: {
   v: AdminVisit;
   label: string;
   onClose: () => void;
   onDone: () => void;
+  /** トーストの「元に戻す」で戻したあと */
+  onUndone: () => void;
 }) {
   const [reason, setReason] = useState<string>(CANCEL_REASONS[0]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
+  const toast = useToast();
   const submit = async () => {
     setBusy(true);
     setError(null);
     try {
-      await adminPost(`/checkins/${v.id}/cancel`, { reason });
+      const r = await adminPost<{ ok: true } & WithAuditId>(`/checkins/${v.id}/cancel`, { reason });
       onDone();
+      toast({
+        message: `${v.time} ${label}のチェックインを取り消しました。`,
+        undo: { auditId: r.auditId, doneMessage: `${v.time} ${label}の取り消しを元に戻しました。`, onUndone: onUndone },
+      });
     } catch (e) {
       setError(e);
       setBusy(false);
@@ -216,7 +269,9 @@ function CancelConfirm({
             やめる
           </button>
           <button type="button" className="btn danger-fill" disabled={busy} onClick={submit}>
-            {busy ? '取り消しています…' : '取り消す'}
+            <BusyLabel busy={busy} pending="取り消しています…">
+              取り消す
+            </BusyLabel>
           </button>
         </>
       }

@@ -1,7 +1,7 @@
 import { mkdirSync } from 'node:fs';
 import path from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
-import { adminLogin, openCheckin, openLiff } from './helpers';
+import { adminLogin, adminToast, openCheckin, openLiff } from './helpers';
 import {
   alreadySeeded,
   desktopContext,
@@ -238,7 +238,7 @@ test('管理者: 今日の来場・会員以外・取り消し・代理チェッ
   const walkin = page.getByRole('region', { name: '会員以外のお客さん' });
   await walkin.getByRole('button', { name: '1頭ふやす' }).click();
   await walkin.getByRole('button', { name: '記録する' }).click();
-  await expect(walkin.getByRole('status')).toContainText('を記録しました');
+  await expect(adminToast(page, 'を記録しました')).toBeVisible();
   await shot(page, 'admin-walkin');
 
   // 初期データの今日の来場(こむぎ以外)を1件取り消す
@@ -309,7 +309,7 @@ test('管理者: おうちの詳細・手動登録・ワンちゃん・家族', 
   await expect(preview).toBeVisible();
   await shot(page, 'admin-points-preview');
   await preview.getByRole('button', { name: '登録する' }).click();
-  await expect(page.getByRole('status')).toContainText('ポイント');
+  await expect(adminToast(page, 'ポイント')).toBeVisible();
 
   // 家族を追加(QRコード)・家族を外す(確認だけ)
   await page.getByRole('button', { name: '家族を追加' }).click();
@@ -380,7 +380,7 @@ test('管理者: おうちの統合', async ({ browser }) => {
   await expect(dialog).toBeVisible();
   await shot(page, 'admin-merge-confirm');
   await dialog.getByRole('button', { name: 'まとめる' }).click();
-  await expect(page.getByRole('status')).toContainText('にまとめました');
+  await expect(adminToast(page, 'にまとめました')).toBeVisible();
   await page.evaluate(() => window.scrollTo(0, 0));
   await shot(page, 'admin-merge-done');
   await context.close();
@@ -459,7 +459,7 @@ test('管理者: ダッシュボード', async ({ browser }) => {
   await shot(page, 'admin-dashboard');
   // グラフとイベントの効果は、過去3か月で見せる(今月はイベントがない日もあるため)
   await page.getByRole('radiogroup', { name: '期間' }).getByRole('radio', { name: '過去3か月' }).check({ force: true });
-  await expect(page.locator('p.dash-period-label')).not.toContainText('読み込んでいます');
+  await expect(page.locator('[aria-busy="true"]')).toHaveCount(0);
   await page.waitForTimeout(1000);
   await scrollToTop(page.getByRole('region', { name: '天気ごとの1日あたりの頭数' }), 24);
   await page.waitForTimeout(800);

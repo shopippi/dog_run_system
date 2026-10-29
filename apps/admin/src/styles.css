@@ -811,3 +811,168 @@ input::placeholder { color: var(--text-tertiary); }
 /* 相性は4つ(得意・ふつう・苦手・未登録)なので、列の幅に合わせて等分する */
 .dg-fields .segment.dg-soc { grid-auto-columns: minmax(0, 1fr); width: 100%; max-width: 360px; }
 .dg-fields .segment.dg-soc button { padding: 0 var(--sp-1); }
+
+/* ==== 2026-10-29 今風の見直し(docs/design.md 11章)。面と影・スケルトン・トースト・道しるべ・ダイアログ ==== */
+:root {
+  --fw-medium: 500;
+  /* 960px 未満の上のバー(呼び名の段 52 + メニューの段)。一覧の見出しを、その下に固定する */
+  --topbar-h: calc(52px + 1px + 12px + var(--control-h) + 1px);
+  --sticky-top: var(--topbar-h);
+  /* トースト(黒い帯・白文字)。ダークモードでは下地と見分けられるよう、少し明るい面に細い線を足す */
+  --toast-bg: #16191D;
+  --toast-text: #FFFFFF;
+  --toast-sub: rgba(255, 255, 255, .72);
+  --toast-link: #9BBCEE;
+  --toast-line: transparent;
+}
+@media (min-width: 960px) { :root { --sticky-top: 0px; } }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { --toast-bg: #2A2E33; --toast-line: rgba(255, 255, 255, .08); }
+}
+:root[data-theme="dark"] { --toast-bg: #2A2E33; --toast-line: rgba(255, 255, 255, .08); }
+
+/* ---- 面と影: 置いてある面は線 + ごく薄い影 ---- */
+.panel { box-shadow: var(--shadow-card); }
+/* 角を丸く切り抜きつつ、中の一覧の見出しを上に固定できるよう、hidden ではなく clip にする */
+.list-panel, .hh-section { overflow: clip; }
+
+/* ---- サイドバー: 下地は canvas、選択中のメニューは surface の面が浮く ---- */
+.side { background: var(--canvas); }
+.nav a { font-weight: var(--fw-medium); transition: background-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out); }
+.nav a.active { background: var(--surface); color: var(--text); font-weight: var(--fw-medium); box-shadow: var(--shadow-card); }
+@media (hover: hover) {
+  .nav a:not(.active):hover { background: color-mix(in srgb, var(--surface-sunk) 70%, var(--canvas)); }
+}
+@media (min-width: 960px) {
+  .side-foot { border-top-color: transparent; }
+}
+
+/* ---- 押せる行: ホバーで surface-sunk、押した瞬間に少し縮む ---- */
+.result-row, .hh-link, .dash-dormant-row, .photo-cell, .pick-row, .cfg-cal-cell, .nav a {
+  transition-property: background-color, border-color, color, box-shadow, transform;
+  transition-duration: var(--dur-fast);
+  transition-timing-function: var(--ease-out);
+}
+.result-row:active:not(:disabled), .hh-link:active, .dash-dormant-row:active, .photo-cell:active, .nav a:active { transform: scale(.99); }
+.pick-row:active, .cfg-cal-cell:active:not(.cfg-cal-blank) { transform: scale(.98); }
+.btn { transition: background-color var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out); }
+.btn:active:not(:disabled) { transform: scale(.98); }
+@media (hover: hover) {
+  .hh-row.hh-link:hover, .result-row:hover:not(:disabled) { background: var(--surface-sunk); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .result-row:active, .hh-link:active, .dash-dormant-row:active, .photo-cell:active, .nav a:active, .pick-row:active, .cfg-cal-cell:active, .btn:active { transform: none !important; }
+}
+
+/* ---- 道しるべ(下の階層のページの頭の上) ---- */
+/* リンクは押せる高さ(40/44)を取り、上下の余白は詰めて、見た目は 13px の1行にする */
+.crumbs ol {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 0 var(--sp-1);
+  margin: calc((20px - var(--control-h)) / 2) 0 calc((20px - var(--control-h)) / 2 + 2px); padding: 0;
+  list-style: none; font-size: var(--fs-13); line-height: 20px; color: var(--text-secondary);
+}
+.crumbs li { display: inline-flex; align-items: center; gap: var(--sp-1); min-width: 0; }
+.crumbs li { min-height: var(--control-h); }
+.crumbs a { display: inline-flex; align-items: center; min-height: var(--control-h); color: var(--text-secondary); text-decoration: none; border-radius: var(--radius-sm); }
+.crumbs a:hover { color: var(--text); text-decoration: underline; text-underline-offset: 3px; }
+.crumbs [aria-current="page"] { color: var(--text-secondary); overflow-wrap: anywhere; }
+.crumbs-sep { color: var(--text-tertiary); padding: 0 2px; }
+
+/* ---- 一覧の見出し(列の名前)を上に固定 ---- */
+.dash-table-wrap { max-height: min(70vh, 560px); overflow: auto; }
+.dash-table thead th { position: sticky; top: 0; z-index: 1; background: var(--surface); box-shadow: inset 0 -1px 0 var(--border); }
+.list-head {
+  position: sticky; top: var(--sticky-top); z-index: 5;
+  background: var(--surface); border-bottom: 1px solid var(--border);
+  font-size: var(--fs-12); font-weight: var(--fw-strong); color: var(--text-secondary);
+}
+.audit-head { min-height: 0; padding-top: var(--sp-2); padding-bottom: var(--sp-2); }
+@media (max-width: 720px) { .audit-head > :nth-child(n + 3) { display: none; } }
+
+/* ---- ダイアログ: 角丸 16、背景をうすくぼかし、少し大きくなりながら出る ---- */
+.dialog { border-radius: var(--radius-xl); }
+.dialog[open] { animation: dialog-pop var(--dur) var(--ease-out); }
+@keyframes dialog-pop { from { opacity: 0; transform: scale(.98); } }
+.dialog::backdrop { background: var(--backdrop); backdrop-filter: blur(2px); -webkit-backdrop-filter: blur(2px); animation: backdrop-in var(--dur) var(--ease-out); }
+@keyframes backdrop-in { from { opacity: 0; } }
+.dialog-foot { border-top: 0; padding-top: var(--sp-2); padding-bottom: var(--sp-5); }
+@media (prefers-reduced-motion: reduce) { .dialog[open], .dialog::backdrop { animation: none; } }
+
+/* ---- トースト(右下の黒い帯・白文字) ---- */
+.toasts {
+  position: fixed; right: var(--sp-6); bottom: var(--sp-6); z-index: 100;
+  display: flex; flex-direction: column; align-items: flex-end; gap: var(--sp-2);
+  width: min(440px, calc(100vw - 2 * var(--sp-4))); pointer-events: none;
+}
+.toast {
+  pointer-events: auto; display: flex; align-items: center; gap: var(--sp-1) var(--sp-2);
+  max-width: 100%; padding: var(--sp-1) var(--sp-1) var(--sp-1) var(--sp-4);
+  border-radius: var(--radius-lg); border: 1px solid var(--toast-line);
+  background: var(--toast-bg); color: var(--toast-text); box-shadow: var(--shadow-float);
+  font-size: var(--fs-14); animation: toast-in var(--dur) var(--ease-out);
+}
+@keyframes toast-in { from { opacity: 0; transform: translateY(8px); } }
+.toast-msg { flex: 1; min-width: 0; padding: 6px 0; line-height: 1.5; overflow-wrap: anywhere; }
+.toast-act {
+  flex: none; min-height: var(--control-h); padding: 0 var(--sp-2); border: 0; border-radius: var(--radius-sm);
+  background: transparent; color: var(--toast-link); font-size: var(--fs-14); font-weight: var(--fw-strong); white-space: nowrap;
+}
+.toast-act:disabled { color: var(--toast-sub); }
+.toast-close {
+  flex: none; display: grid; place-items: center; width: var(--control-h); height: var(--control-h); border: 0; border-radius: var(--radius-sm);
+  background: transparent; color: var(--toast-sub);
+}
+.toast-act:focus-visible, .toast-close:focus-visible { outline: 2px solid var(--toast-link); outline-offset: 0; }
+@media (hover: hover) {
+  .toast-act:hover:not(:disabled), .toast-close:hover { background: rgba(255, 255, 255, .1); color: var(--toast-text); }
+  .toast-act:hover:not(:disabled) { color: var(--toast-link); }
+}
+@media (max-width: 600px) { .toasts { right: var(--sp-4); bottom: var(--sp-4); } }
+@media (prefers-reduced-motion: reduce) { .toast { animation: none; } }
+
+/* ---- スケルトン(読み込み中の形) ---- */
+.sk-wrap:not(.sk-shell), .sk-body { display: flex; flex-direction: column; gap: var(--sp-4); min-width: 0; }
+.sk-body { animation: sk-in var(--dur) var(--ease-out); }
+@keyframes sk-in { from { opacity: 0; } }
+.sk {
+  display: block; flex: none; max-width: 100%; border-radius: var(--radius-sm);
+  background: linear-gradient(90deg, var(--skeleton) 0%, var(--skeleton) 30%, var(--skeleton-shine) 50%, var(--skeleton) 70%, var(--skeleton) 100%);
+  background-size: 300% 100%; background-position: 100% 0;
+  animation: sk-shine 1.4s ease-in-out infinite;
+}
+@keyframes sk-shine { from { background-position: 100% 0; } to { background-position: 0 0; } }
+.sk-circle { border-radius: 50%; }
+.sk-text { display: flex; flex-direction: column; min-width: 0; width: 100%; }
+.sk-line { display: flex; align-items: center; min-width: 0; }
+.sk-row-end { display: flex; justify-content: flex-end; }
+.sk-ghost { display: inline-flex; align-items: center; min-height: var(--control-h); padding: 0 var(--sp-3); }
+.sk-panel-block { padding: var(--sp-5); }
+.sk-shell > .sk-body { display: contents; }
+.sk-shell .nav { pointer-events: none; }
+.sk-nav { display: flex; align-items: center; gap: 10px; flex: none; min-height: var(--control-h); padding: 0 var(--sp-3); }
+@media (prefers-reduced-motion: reduce) { .sk, .sk-body { animation: none; } }
+
+/* ---- ボタンを押したあとの待ち: 回る印と「保存しています…」。幅は変えない ---- */
+.busy-swap { display: inline-grid; }
+.busy-swap > span { grid-area: 1 / 1; display: inline-flex; align-items: center; justify-content: center; gap: var(--sp-2); }
+.busy-swap .busy-pending { visibility: hidden; }
+.busy-swap[data-busy] .busy-idle { visibility: hidden; }
+.busy-swap[data-busy] .busy-pending { visibility: visible; }
+.spin { width: 16px; height: 16px; flex: none; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: spin .7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .spin { animation-duration: 1.6s; } }
+
+/* ---- 検索欄の「/」の印(マウスで使う端末だけ) ---- */
+.search-kbd {
+  position: absolute; right: 12px; top: 50%; transform: translateY(-50%); display: none;
+  min-width: 22px; height: 22px; padding: 0 6px; border: 1px solid var(--border-strong); border-radius: var(--radius-sm);
+  font-family: var(--font-mono); font-size: var(--fs-12); line-height: 20px; text-align: center; color: var(--text-secondary); pointer-events: none;
+}
+@media (hover: hover) and (pointer: fine) {
+  .search-field input:placeholder-shown:not(:focus) ~ .search-kbd { display: block; }
+}
+
+/* ---- ダッシュボード: グラフは読み込んだあと 300ms でふわっと出す ---- */
+.dash-chart canvas { opacity: 0; }
+.dash-chart.ready canvas { opacity: 1; transition: opacity 300ms var(--ease-out); }
+@media (prefers-reduced-motion: reduce) { .dash-chart.ready canvas { transition: none; } }

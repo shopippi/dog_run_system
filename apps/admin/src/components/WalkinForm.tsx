@@ -1,21 +1,23 @@
 import { useState } from 'react';
 import { adminPost } from '../lib/api';
+import { BusyLabel } from './BusyLabel';
 import { ErrorNotice } from './ErrorNotice';
 import { Icon } from './Icon';
+import { useToast } from './Toast';
 
 /** 会員以外のお客さんの頭数を記録する(S-05)。LINE を使わないお客さんは、受付で頭数だけを入れる */
 export function WalkinForm({ onDone }: { onDone: () => void }) {
   const [count, setCount] = useState(1);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
-  const [done, setDone] = useState<number | null>(null);
+  const toast = useToast();
 
   const submit = async () => {
     setBusy(true);
     setError(null);
     try {
       await adminPost('/walkins', { dogCount: count });
-      setDone(count);
+      toast(`会員以外のお客さん ${count}頭 を記録しました。`);
       setCount(1);
       onDone();
     } catch (e) {
@@ -44,14 +46,11 @@ export function WalkinForm({ onDone }: { onDone: () => void }) {
           </button>
         </div>
         <button type="button" className="btn sub" disabled={busy} onClick={submit}>
-          {busy ? '記録しています…' : '記録する'}
+          <BusyLabel busy={busy} pending="記録しています…">
+            記録する
+          </BusyLabel>
         </button>
       </div>
-      {done !== null && !error && (
-        <p className="walkin-done" role="status">
-          会員以外のお客さん {done}頭 を記録しました。
-        </p>
-      )}
       {error ? <ErrorNotice error={error} /> : null}
     </section>
   );

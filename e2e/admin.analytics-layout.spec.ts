@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { d1, daysAgo, householdIdOf } from './analytics-helpers';
-import { adminLogin, newLineUser, openCheckin, registerViaUi } from './helpers';
+import { adminLogin, adminToast, newLineUser, openCheckin, registerViaUi } from './helpers';
 
 // 担当D(分析と自動処理)の画面の見え方(e2e/admin.layout.spec.ts と同じ確かめ方)。
 // PC(1280×800)とタブレット縦(768×1024)で、ダッシュボード(M-05)とシステムの状態(M-17)を確かめる。
@@ -112,7 +112,7 @@ test.describe('担当D の画面の見え方', () => {
       await adminLogin(page, 'admin', '/status');
       const stats = page.getByRole('listitem', { name: /日別の集計/ });
       await stats.getByRole('button', { name: '今すぐ実行' }).click();
-      await expect(stats.getByRole('status')).toBeVisible();
+      await expect(adminToast(page, '日別の集計')).toBeVisible();
       await checkScreen(page, v.name, 'M-17 システムの状態', v.touch);
       await page.close();
 
