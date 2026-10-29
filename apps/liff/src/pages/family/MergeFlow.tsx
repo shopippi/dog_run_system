@@ -7,6 +7,7 @@ import { postJson } from '../../lib/api';
 import { ActionBar } from '../../components/ActionBar';
 import { BottomSheet } from '../../components/BottomSheet';
 import { BusyLabel } from '../../components/BusyLabel';
+import { PressButton } from '../../components/PressButton';
 
 /** 自分のワンちゃんごとの選択。sameAs は招待した側の同じ子(いなければ null) */
 type Choice = { sameAs: number | null; keepPhoto: 'mine' | 'theirs' };
@@ -95,9 +96,9 @@ export function MergeFlow({
             </p>
           </div>
         </div>
-        <button type="button" className="btn" onClick={onDone}>
+        <PressButton type="button" className="btn" onClick={onDone}>
           会員証を見る
-        </button>
+        </PressButton>
       </main>
     );
   }
@@ -199,7 +200,7 @@ export function MergeFlow({
         やめる
       </Link>
       <ActionBar>
-        <button
+        <PressButton
           type="button"
           className="btn"
           onClick={() => {
@@ -208,7 +209,7 @@ export function MergeFlow({
           }}
         >
           まとめる
-        </button>
+        </PressButton>
       </ActionBar>
 
       {/* 確認は下から出るシート(docs/design.md 11.3) */}
@@ -219,11 +220,11 @@ export function MergeFlow({
         title="まとめてよいですか?"
         cancelLabel="もどる"
         actions={
-          <button type="button" className="btn" disabled={busy} onClick={run}>
+          <PressButton type="button" className="btn" disabled={busy} onClick={run}>
             <BusyLabel busy={busy} busyText="まとめています…">
               まとめる
             </BusyLabel>
-          </button>
+          </PressButton>
         }
       >
         <p className="mg-confirm-text">

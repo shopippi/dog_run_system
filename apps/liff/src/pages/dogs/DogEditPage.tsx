@@ -12,6 +12,7 @@ import { BottomSheet } from '../../components/BottomSheet';
 import { BusyLabel } from '../../components/BusyLabel';
 import { useToast } from '../../components/Toast';
 import { DogFormSkeleton } from '../skeletons';
+import { PressButton } from '../../components/PressButton';
 
 /** ワンちゃんの変更と、登録のおやすみ(C-08)。犬種とサイズは受付で変える(6.1) */
 export function DogEditPage() {
@@ -119,22 +120,22 @@ export function DogEditPage() {
         busy={busy}
         title={`${dog.name}の登録をおやすみします`}
         actions={
-          <button type="button" className="btn" disabled={busy} onClick={retire}>
+          <PressButton type="button" className="btn" disabled={busy} onClick={retire}>
             <BusyLabel busy={busy} busyText="手続きしています…">
               おやすみする
             </BusyLabel>
-          </button>
+          </PressButton>
         }
       >
         <p>来場の記録はそのまま残り、いつでも戻せます。</p>
       </BottomSheet>
 
       <ActionBar>
-        <button type="button" className="btn" disabled={busy} onClick={save}>
+        <PressButton type="button" className="btn" disabled={busy} onClick={save}>
           <BusyLabel busy={busy && !confirmRetire} busyText="保存しています…">
             保存する
           </BusyLabel>
-        </button>
+        </PressButton>
       </ActionBar>
     </main>
   );

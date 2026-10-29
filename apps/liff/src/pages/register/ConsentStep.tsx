@@ -5,6 +5,7 @@ import { Progress } from '../../components/Progress';
 import { Terms } from '../../components/Terms';
 import { ActionBar } from '../../components/ActionBar';
 import { BusyLabel } from '../../components/BusyLabel';
+import { PressButton } from '../../components/PressButton';
 
 /** L-01 同意・はじめての方へ(C-01) */
 export function ConsentStep({ me, onSubmit }: { me: MeUnregistered; onSubmit: () => Promise<void> }) {
@@ -55,11 +56,11 @@ export function ConsentStep({ me, onSubmit }: { me: MeUnregistered; onSubmit: ()
       </label>
       {error ? <ErrorNotice error={error} /> : null}
       <ActionBar>
-        <button type="button" className="btn" disabled={!agreed || busy} onClick={next}>
+        <PressButton type="button" className="btn" disabled={!agreed || busy} onClick={next}>
           <BusyLabel busy={busy} busyText="登録しています…">
             同意して次へ
           </BusyLabel>
-        </button>
+        </PressButton>
       </ActionBar>
     </main>
   );

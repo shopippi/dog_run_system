@@ -1,3 +1,4 @@
+import { LazyMotion, MotionConfig, domAnimation, m, useReducedMotion } from 'motion/react';
 import { useEffect, useState, type ReactNode } from 'react';
 import { Route, Routes, useLocation, useNavigate, useNavigationType } from 'react-router-dom';
 import { AppHeader, type HeaderBack } from './components/AppHeader';
@@ -23,6 +24,7 @@ import { useMergeNotice } from './hooks/useMergeNotice';
 import { MergeNoticeScreen } from './pages/family/MergeNoticeScreen';
 import { TicketUsedPage } from './pages/tickets/TicketUsedPage';
 import { CardBackgroundPage } from './pages/card/CardBackgroundPage';
+import { easeOut } from './lib/motion';
 
 export function App() {
   const { me, error, loading, reload } = useMe();
@@ -72,16 +74,22 @@ export function App() {
 
 function Shell({ children }: { children: ReactNode }) {
   return (
-    <ToastProvider>
-      <div className="app">{children}</div>
-    </ToastProvider>
+    // 動きは Motion の m 部品で付ける。使う機能だけを読み込み(LazyMotion + domAnimation)、
+    // 動きを減らす設定では、位置や大きさの動きを止める(reducedMotion="user")
+    <LazyMotion features={domAnimation} strict>
+      <MotionConfig reducedMotion="user">
+        <ToastProvider>
+          <div className="app">{children}</div>
+        </ToastProvider>
+      </MotionConfig>
+    </LazyMotion>
   );
 }
 
 /**
- * 画面の切り替え(docs/design.md 11.3)。新しい画面は 8px 下から 200ms でふわっと出る。
+ * 画面の切り替え(docs/design.md 11.3・11.6)。新しい画面は 8px 下から 200ms でふわっと出る(Motion)。
  * 戻る(ブラウザの戻る・はじめに開いたとき)は動かさない。読み込み中の形から読み込み後への切り替えも動かさない
- * (同じ URL のあいだは同じ入れ物のまま)。動きを減らす設定では動かさない(styles.css)。
+ * (同じ URL のあいだは同じ入れ物のまま)。動きを減らす設定では動かさない。
  */
 function RouteView({ children }: { children: ReactNode }) {
   const location = useLocation();
@@ -91,11 +99,18 @@ function RouteView({ children }: { children: ReactNode }) {
   useEffect(() => {
     setFirst(false);
   }, []);
-  const animate = !first && navType !== 'POP';
+  const reduce = useReducedMotion();
+  const animate = !first && navType !== 'POP' && !reduce;
   return (
-    <div key={location.pathname} className={`route${animate ? ' enter' : ''}`}>
+    <m.div
+      key={location.pathname}
+      className={`route${animate ? ' enter' : ''}`}
+      initial={animate ? { opacity: 0, y: 8 } : false}
+      animate={{ opacity: 1, y: 0 }}
+      transition={easeOut}
+    >
       {children}
-    </div>
+    </m.div>
   );
 }
 

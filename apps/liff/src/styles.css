@@ -247,6 +247,8 @@ a { color: var(--accent-text); }
   padding: var(--sp-4) var(--sp-4) var(--sp-4) var(--sp-5); border-radius: var(--radius-xl);
   background: var(--mc-bg); color: var(--mc-text);
   box-shadow: var(--shadow-card);
+  /* 背景の色を変えたときは、ふわっと切り替える(写真は Motion でクロスフェード) */
+  transition: background-color 250ms ease-out, color 250ms ease-out;
 }
 .mc-preset-ink { --mc-bg: var(--card-ink); }
 .mc-preset-navy { --mc-bg: var(--card-navy); }
@@ -285,9 +287,10 @@ a { color: var(--accent-text); }
 }
 .mc-change:focus-visible { outline: 2px solid var(--mc-text); outline-offset: -4px; }
 .mc-dogs { display: flex; }
+/* 犬のアバター 44px。白い縁 2px で重ねる(重なりは 12px) */
 .mc-dogs > .av { box-shadow: 0 0 0 2px var(--mc-bg); }
 .mc-photo-bg .mc-dogs > .av { box-shadow: 0 0 0 2px var(--on-card-85); }
-.mc-dogs > .av + .av { margin-left: -8px; }
+.mc-dogs > .av + .av { margin-left: -12px; }
 .mc-bottom { display: flex; align-items: flex-end; justify-content: space-between; gap: var(--sp-3); }
 .mc-id { font-size: var(--fs-13); color: var(--mc-sub); line-height: 1.3; }
 .mc-points { display: flex; align-items: baseline; gap: var(--sp-1); line-height: 1.1; white-space: nowrap; }
@@ -617,15 +620,11 @@ a { color: var(--accent-text); }
 .paw * { vector-effect: non-scaling-stroke; }
 /* たまった分: ink の塗り。押した跡らしく、少し傾ける(角度と濃さは画面の index から決める) */
 .paw.on { fill: var(--ink); stroke: none; transform: rotate(var(--tilt, 0deg)); }
-/* 新しく付いた 1 個だけ、開いたときに押す動き(1 回だけ) */
-.paw.on.fresh { animation: paw-press 250ms ease-out 1; }
-@keyframes paw-press {
-  from { transform: rotate(var(--tilt, 0deg)) scale(1.4); }
-  to { transform: rotate(var(--tilt, 0deg)) scale(1); }
-}
-@media (prefers-reduced-motion: reduce) {
-  .paw.on.fresh { animation: none; }
-}
+/* 押していく動き(11.6)。動きは Motion で、外側の入れ物(.paw-press)に付ける。肉球の傾きと濃さはそのまま */
+.paw-cell { position: relative; display: block; width: 36px; height: 36px; }
+.paw-press { display: block; width: 36px; height: 36px; will-change: transform, opacity; }
+/* 新しく付いた 1 個を押した瞬間のインクのにじみ(ink の薄い輪が 1 回広がって消える) */
+.paw-ink { position: absolute; inset: 0; border-radius: 50%; background: var(--ink); opacity: 0; pointer-events: none; }
 .tk-empty { font-size: var(--fs-14); color: var(--text-secondary); }
 
 /* ================================================================
@@ -672,11 +671,7 @@ a { color: var(--accent-text); }
 
 /* ---- 画面の切り替え: 新しい画面は 8px 下から 200ms でふわっと出る(戻るときは動かさない) ---- */
 .route { flex: 1; display: flex; flex-direction: column; min-width: 0; }
-.route.enter { animation: route-in var(--dur) var(--ease-out); }
-@keyframes route-in {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: none; }
-}
+/* 新しい画面の出方は Motion(App.tsx の RouteView) */
 
 /* ---- 押せる面は、押した瞬間に少し縮む(11.2) ---- */
 .menu a:active, a.dog-row:active, .help-rows summary:active { background-color: var(--surface-sunk); }
@@ -748,17 +743,16 @@ html.has-action-bar { scroll-padding-bottom: calc(var(--action-bar-h, 80px) + va
 
 /* ---- 下から出るシート(11.3) ---- */
 .sheet-root { position: fixed; inset: 0; z-index: 50; display: flex; flex-direction: column; justify-content: flex-end; }
-.sheet-backdrop { position: absolute; inset: 0; background: var(--backdrop); animation: fade-in var(--dur) ease-out; }
+.sheet-backdrop { position: absolute; inset: 0; background: var(--backdrop); }
+/* 出入りの動きは Motion(BottomSheet.tsx)。外側(.sheet-slide)が下から出入りし、内側(.sheet)は引っ張った分だけ動く */
+.sheet-slide { position: relative; display: flex; flex-direction: column; width: 100%; min-height: 0; max-height: calc(100dvh - 48px); }
 .sheet {
-  position: relative; width: 100%; max-width: 560px; margin: 0 auto; max-height: calc(100dvh - 48px);
+  position: relative; width: 100%; max-width: 560px; margin: 0 auto; max-height: calc(100dvh - 48px); min-height: 0;
   display: flex; flex-direction: column; overflow-y: auto; overscroll-behavior: contain;
   padding: 0 var(--sp-5) calc(var(--sp-4) + env(safe-area-inset-bottom, 0px));
   border-radius: var(--radius-sheet) var(--radius-sheet) 0 0;
   background: var(--surface); box-shadow: var(--shadow-sheet);
-  animation: sheet-in var(--dur-slow) var(--ease-out);
-  transition: transform var(--dur) var(--ease-out);
 }
-.sheet.dragging { transition: none; }
 .sheet-grab { display: flex; flex-direction: column; gap: var(--sp-4); padding: 10px 0 var(--sp-3); touch-action: none; cursor: grab; }
 .sheet-handle { align-self: center; width: 36px; height: 4px; border-radius: 2px; background: var(--border-strong); }
 .sheet-title { font-size: var(--fs-17); line-height: 1.45; overflow-wrap: anywhere; }
@@ -768,12 +762,6 @@ html.has-action-bar { scroll-padding-bottom: calc(var(--action-bar-h, 80px) + va
 .sheet-actions { display: flex; flex-direction: column; gap: var(--sp-2); padding-top: var(--sp-5); }
 .btn.danger-fill { background: var(--danger-fill); color: var(--on-card); }
 .sheet-root.closing { pointer-events: none; }
-.sheet-root.closing .sheet-backdrop { animation: fade-out var(--dur) ease-in forwards; }
-.sheet-root.closing .sheet { animation: sheet-out var(--dur) ease-in forwards; }
-@keyframes fade-in { from { opacity: 0; } }
-@keyframes fade-out { to { opacity: 0; } }
-@keyframes sheet-in { from { transform: translateY(100%); } }
-@keyframes sheet-out { to { transform: translateY(100%); } }
 
 /* ---- トースト(11.3)。下から出る小さな黒い帯・白文字。safe-area と下の帯の上に出す ---- */
 .toast-region {
@@ -786,11 +774,7 @@ html.has-action-bar .toast-region { bottom: calc(var(--action-bar-h, 80px) + var
   max-width: 520px; padding: var(--sp-3) var(--sp-4); border-radius: var(--radius-lg);
   background: var(--ink); color: var(--on-ink); box-shadow: var(--shadow-float);
   font-size: var(--fs-15); line-height: 1.45; text-align: center;
-  animation: toast-in var(--dur) var(--ease-out);
 }
-.toast.leaving { animation: toast-out var(--dur) ease-in forwards; }
-@keyframes toast-in { from { opacity: 0; transform: translateY(12px); } }
-@keyframes toast-out { to { opacity: 0; transform: translateY(8px); } }
 
 /* ---- 空の状態(11.3)。中央に 40px の線のアイコン + 15px の一文 + 必要なら副ボタン ---- */
 .empty { display: flex; flex-direction: column; align-items: center; gap: var(--sp-3); padding: var(--sp-8) var(--sp-4); text-align: center; }
@@ -799,7 +783,17 @@ html.has-action-bar .toast-region { bottom: calc(var(--action-bar-h, 80px) + var
 .empty .btn { width: auto; min-width: 200px; }
 
 @media (prefers-reduced-motion: reduce) {
-  .route.enter, .sheet, .sheet-backdrop, .toast, .toast.leaving,
-  .sheet-root.closing .sheet, .sheet-root.closing .sheet-backdrop { animation: none; }
   .btn:active:not(:disabled), .pick-row:active { transform: none; }
 }
+
+/* ================================================================
+ * 動き(docs/design.md 11.6)。動きそのものは Motion で付け、ここには入れ物の形だけを書く
+ * ================================================================ */
+/* 数字が上下にスライドして切り替わる(iOS の数字)。新旧の数字を同じ場所に重ね、はみ出しは見せない */
+.roll { display: inline-grid; vertical-align: bottom; overflow: hidden; font-variant-numeric: tabular-nums; }
+.roll-item { grid-area: 1 / 1; display: inline-block; text-align: right; }
+/* チェックイン完了の「+1ポイント」の横に押すハンコ */
+.done-points { display: inline-flex; align-items: center; gap: 6px; }
+.done-pon { position: relative; display: inline-block; width: 22px; height: 22px; flex: none; }
+.done-pon .pon-mark { display: block; width: 22px; height: 22px; fill: var(--ink); transform: rotate(-8deg); }
+.done-pon .paw-ink { inset: -2px; }

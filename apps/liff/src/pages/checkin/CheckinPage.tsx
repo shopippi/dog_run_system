@@ -9,6 +9,7 @@ import { ActionBar } from '../../components/ActionBar';
 import { BusyLabel } from '../../components/BusyLabel';
 import { EmptyState } from '../../components/EmptyState';
 import { CheckinSkeleton } from '../skeletons';
+import { PressButton } from '../../components/PressButton';
 
 /** L-05 チェックイン(C-04)。受付のQRコードから開く → 来た犬を選ぶ → 確定。無料券は会員証で右へスライドして使う(8章) */
 export function CheckinPage() {
@@ -114,19 +115,19 @@ export function CheckinPage() {
               チェックインの画面を見る
             </button>
             <ActionBar>
-              <button type="button" className="btn" disabled={busy || selected.size === 0} onClick={addDogs}>
+              <PressButton type="button" className="btn" disabled={busy || selected.size === 0} onClick={addDogs}>
                 <BusyLabel busy={busy} busyText="追加しています…">
                   ワンちゃんを追加する
                 </BusyLabel>
-              </button>
+              </PressButton>
             </ActionBar>
           </>
         ) : (
           <>
             <p className="lead">登録しているワンちゃんは、みんな記録されています。</p>
-            <button type="button" className="btn" onClick={() => navigate(`/checkin/done/${visit.id}`)}>
+            <PressButton type="button" className="btn" onClick={() => navigate(`/checkin/done/${visit.id}`)}>
               チェックインの画面を見る
-            </button>
+            </PressButton>
           </>
         )}
       </main>
@@ -141,9 +142,9 @@ export function CheckinPage() {
           <p className="lead">受付にあるQRコードを、LINEのカメラで読み取ってください。</p>
         </div>
         {canScan() && (
-          <button type="button" className="btn" onClick={scan}>
+          <PressButton type="button" className="btn" onClick={scan}>
             QRコードを読み取る
-          </button>
+          </PressButton>
         )}
       </main>
     );
@@ -162,11 +163,11 @@ export function CheckinPage() {
       )}
       {error ? <ErrorNotice error={error} /> : null}
       <ActionBar>
-        <button type="button" className="btn" disabled={busy || selected.size === 0} onClick={submit}>
+        <PressButton type="button" className="btn" disabled={busy || selected.size === 0} onClick={submit}>
           <BusyLabel busy={busy} busyText="チェックインしています…">
             チェックインする
           </BusyLabel>
-        </button>
+        </PressButton>
       </ActionBar>
     </main>
   );

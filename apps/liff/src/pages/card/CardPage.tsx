@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { ErrorNotice } from '../../components/ErrorNotice';
 import { Icon } from '../../components/Icon';
 import { MemberCard } from '../../components/MemberCard';
+import { PressButton } from '../../components/PressButton';
 
 import { ProfileNudge } from '../../components/ProfileNudge';
 import { useMe } from '../../hooks/useMe';
@@ -48,12 +49,13 @@ function Card({ me, reload }: { me: MeRegistered; reload: () => Promise<void> })
         dogs={card.dogs}
         balance={card.balance}
         background={me.cardBackground}
+        appear
       />
 
       {/* 交換のボタンが出ているときは、そちらを主ボタンにする(主ボタンは1画面に1つ) */}
-      <button type="button" className={canExchange ? 'btn sub' : 'btn'} onClick={startCheckin}>
+      <PressButton type="button" className={canExchange ? 'btn sub' : 'btn'} onClick={startCheckin}>
         {card.todayVisitId ? '今日のチェックインを見る' : 'チェックイン(受付のQRを読む)'}
-      </button>
+      </PressButton>
 
       <StampPanel card={card} memberNo={household.memberNo} onChanged={reload} />
 

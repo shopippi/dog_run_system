@@ -10,6 +10,7 @@ import { ActionBar } from '../../components/ActionBar';
 import { BusyLabel } from '../../components/BusyLabel';
 import { useToast } from '../../components/Toast';
 import { DogFormSkeleton } from '../skeletons';
+import { PressButton } from '../../components/PressButton';
 
 /** ワンちゃんの追加(C-08) */
 export function DogNewPage() {
@@ -58,11 +59,11 @@ export function DogNewPage() {
       {message && <MessageNotice message={message} />}
       {error ? <ErrorNotice error={error} /> : null}
       <ActionBar>
-        <button type="button" className="btn" disabled={busy} onClick={save}>
+        <PressButton type="button" className="btn" disabled={busy} onClick={save}>
           <BusyLabel busy={busy} busyText="追加しています…">
             追加する
           </BusyLabel>
-        </button>
+        </PressButton>
       </ActionBar>
     </main>
   );
