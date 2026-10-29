@@ -73,7 +73,7 @@ function Editor({ me }: { me: MeRegistered }) {
     setError(null);
     let photo: Blob;
     try {
-      // 長い辺 1200px 以下に縮小してから送る(サーバーでは 2MB までを受け取る)
+      // 長い辺 1200px 以下に縮小してから送る(サーバーでは 1.8MB までを受け取る。写真をデータベースに保存するときの1行の上限に合わせる)
       photo = (await resizePhoto(file, { maxEdge: CARD_PHOTO_MAX_EDGE, maxBytes: CARD_PHOTO_MAX_BYTES })).photo;
     } catch {
       setError(new ApiError(0, 'photo', 'この写真は読み込めませんでした。別の写真を選ぶか、カメラで撮り直してください。'));

@@ -34,7 +34,7 @@ cardBackgroundRoutes.put('/me/card-background', async (c) => {
   return c.json(view(saved));
 });
 
-// 写真を使う(スマホで縮小した写真。2MB まで)
+// 写真を使う(スマホで縮小した写真。1.8MB まで)
 cardBackgroundRoutes.post('/me/card-background/photo', async (c) => {
   const member = await requireMember(c.env.DB, c.get('lineUser').userId);
   let form: FormData;
