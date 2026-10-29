@@ -103,9 +103,10 @@ test('お客さん: 会員証・チェックイン・無料券', async ({ browse
 
   await page.getByRole('button', { name: '無料券と交換する(10ポイント)' }).click();
   await expect(page.getByRole('dialog', { name: '無料券と交換します' })).toBeVisible();
-  await scrollToTop(stamps);
+  // シートが開いているあいだ、後ろの画面は読み上げの対象から外れる(スクロールの位置は開く前のまま)。下から出る動きを待つ
+  await page.waitForTimeout(400);
   await shot(page, 'customer-ticket-exchange');
-  await page.getByRole('dialog', { name: '無料券と交換します' }).getByRole('button', { name: '交換する' }).click();
+  await page.getByRole('dialog', { name: '無料券と交換します' }).getByRole('button', { name: '交換する', exact: true }).click();
   await expect(page.getByRole('status')).toHaveText('無料券と交換しました。');
 
   const row = page.getByRole('list', { name: '未使用の無料券' }).getByRole('listitem').first();
