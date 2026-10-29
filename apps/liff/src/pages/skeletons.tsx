@@ -227,7 +227,7 @@ export function DogFormSkeleton({ edit = true }: { edit?: boolean }) {
       {/* 変更画面は、上に大きな写真(4:3)と「写真を変える」 */}
       {edit ? (
         <div className="photo-hero">
-          <Skeleton className="dog-hero" height="auto" radius={16} />
+          <Skeleton className="dog-hero-sk" height="auto" radius={16} />
           <div className="photo-hero-acts">
             <Skeleton width={150} height={44} radius={12} />
           </div>

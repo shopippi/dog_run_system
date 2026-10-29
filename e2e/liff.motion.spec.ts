@@ -99,7 +99,7 @@ test('前回より増えた1個は、ほかより遅れて大きめに「ポン�
 
 test('同じ日・同じ数で開き直すと、最初から押された形で出る(「ポポポン」は1日1回)', async ({ page, request }) => {
   const user = newLineUser('ばあば');
-  await registerViaUi(page, user, ['モモ']);
+  await registerViaUi(page, user, ['リク']);
   await earnPoints(request, user, 4);
   await openLiff(page, user);
   const panel = page.getByRole('region', { name: 'スタンプ' });
@@ -120,7 +120,7 @@ test.describe('動きを減らす設定', () => {
   test.use({ reducedMotion: 'reduce' });
   test('スタンプは動かさず、最初から押された形で出る', async ({ page, request }) => {
     const user = newLineUser('じいじ');
-    await registerViaUi(page, user, ['ハナ']);
+    await registerViaUi(page, user, ['ルル']);
     await earnPoints(request, user, 4);
     await openLiff(page, user);
     const panel = page.getByRole('region', { name: 'スタンプ' });
@@ -195,7 +195,7 @@ test('動画: 会員証を開いたときの「ポポポン」(SHOT_DIR のと�
   test.skip(!SHOT_DIR, 'SHOT_DIR を指定したときだけ撮る');
   const user = newLineUser('ママ');
   const setup = await browser.newPage();
-  await registerViaUi(setup, user, ['こむぎ', 'だいず']);
+  await registerViaUi(setup, user, ['きなこ', 'だいず']);
   await earnPoints(request, user, 9);
   await setup.close();
   const dir = path.join(SHOT_DIR!, 'video');

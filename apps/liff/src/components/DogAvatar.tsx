@@ -27,8 +27,8 @@ export function DogPlaceholder({ name, breedName, size }: { name: string; breedN
       </clipPath>
       <circle cx="50" cy="50" r="50" fill={placeholderColor(breedName, name)} />
       <g clipPath={`url(#${clip})`} className="av-ears" aria-hidden="true">
-        <path d={EAR} />
-        <path d={EAR} transform="translate(100 0) scale(-1 1)" />
+        <path d={EAR} transform="translate(-7 2)" />
+        <path d={EAR} transform="translate(107 2) scale(-1 1)" />
       </g>
       <text x="50" y="50" dy=".36em" textAnchor="middle" fontSize="44" fontWeight="600">
         {initial}
@@ -56,7 +56,7 @@ export function DogAvatar({ name, breedName, url, previewUrl, size = 56 }: Props
 
 /**
  * ワンちゃんの変更画面の上に出す、大きな写真(幅いっぱい、縦横比 4:3、角丸 16)。
- * 写真がなければ、犬種の色の面に大きな頭文字と垂れ耳の絵。
+ * 写真がなければ、犬種の色の面に大きな頭文字。
  */
 export function DogHero({
   name,
@@ -86,10 +86,6 @@ export function DogHero({
   return (
     <svg className="dog-hero dog-hero-ph" viewBox="0 0 400 300" role="img" aria-label={`${name}(写真なし)`}>
       <rect width="400" height="300" fill={placeholderColor(breedName, name)} />
-      <g className="av-ears" aria-hidden="true" transform="translate(80 30) scale(2.4)">
-        <path d={EAR} />
-        <path d={EAR} transform="translate(100 0) scale(-1 1)" />
-      </g>
       <text x="200" y="150" dy=".36em" textAnchor="middle" fontSize="120" fontWeight="600">
         {nameInitial(name)}
       </text>

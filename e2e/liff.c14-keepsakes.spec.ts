@@ -16,7 +16,7 @@ const jstToday = () => new Date(Date.now() + 9 * 3600_000).toISOString().slice(0
 
 test('今日の来場で付いたスタンプは朱肉の色で押され、下に小さく「今日のスタンプ」の印が出る', async ({ page, request }) => {
   const user = newLineUser('ママ');
-  await registerViaUi(page, user, ['こむぎ']);
+  await registerViaUi(page, user, ['きなこ']);
   await earnPoints(request, user, 2);
   await openLiff(page, user);
   const panel = page.getByRole('region', { name: 'スタンプ' });
@@ -40,17 +40,17 @@ test('今日の来場で付いたスタンプは朱肉の色で押され、下�
 
 test('会員証は、ワンちゃんの顔が先(上段)で、誕生月の子がいれば小さく「○月は○○の誕生月です」', async ({ page, request }) => {
   const user = newLineUser('パパ');
-  await registerViaUi(page, user, ['こむぎ', 'だいず']);
+  await registerViaUi(page, user, ['きなこ', 'だいず']);
   const headers = authHeaders(user);
   const dogs = ((await (await request.get('/api/dogs', { headers })).json()) as { dogs: { id: number; name: string }[] }).dogs;
   const today = jstToday();
-  const komugi = dogs.find((d) => d.name === 'こむぎ')!;
+  const komugi = dogs.find((d) => d.name === 'きなこ')!;
   const res = await request.patch(`/api/dogs/${komugi.id}`, { headers, data: { birthYm: `2021-${today.slice(5, 7)}` } });
   expect(res.status(), await res.text()).toBe(200);
 
   await openLiff(page, user);
   const card = page.getByRole('region', { name: '会員証' });
-  await expect(card.getByText(`${Number(today.slice(5, 7))}月はこむぎの誕生月です`)).toBeVisible();
+  await expect(card.getByText(`${Number(today.slice(5, 7))}月はきなこの誕生月です`)).toBeVisible();
   // 犬の顔(44px)が、おうちの呼び名より上にある
   const dogsBox = (await card.locator('.mc-dogs').boundingBox())!;
   const nameBox = (await card.locator('.mc-name').boundingBox())!;
@@ -81,16 +81,16 @@ test('来場の節目(10回目)には、チェックイン完了の画面に「�
 
 test('ワンちゃんの変更画面: 上に大きな写真と「写真を変える」、その子の来場の記録。おやすみは帯より下に小さく', async ({ page, request }) => {
   const user = newLineUser('ママ');
-  await registerViaUi(page, user, ['もも']);
+  await registerViaUi(page, user, ['ノア']);
   await checkinOn(request, user, '2026-09-01');
   await checkinOn(request, user, '2026-09-03');
   await openLiff(page, user, '/dogs');
   // 一覧の写真は 64px
-  const row = page.getByRole('link', { name: /もも/ });
+  const row = page.getByRole('link', { name: /ノア/ });
   await expect(row.locator('.av')).toHaveAttribute('width', '64');
   await row.click();
   // 写真がない子は、大きな頭文字の絵(幅いっぱい、4:3)
-  const hero = page.locator('.dog-hero');
+  const hero = page.locator('svg.dog-hero');
   await expect(hero).toBeVisible();
   const box = (await hero.boundingBox())!;
   const main = (await page.locator('main').boundingBox())!;
