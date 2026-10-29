@@ -223,11 +223,24 @@ export const closureCreateSchema = z.object({
 // A-14 CSV出力
 // ============================================================
 
-export const EXPORT_NAMES = ['households', 'members', 'dogs', 'visits', 'ledger', 'survey'] as const;
+export const EXPORT_NAMES = ['analysis', 'analysis_households', 'households', 'members', 'dogs', 'visits', 'ledger', 'survey'] as const;
 export type ExportName = (typeof EXPORT_NAMES)[number];
 
 /** 出力の種類。period: 期間を指定できるか */
-export const EXPORTS: Record<ExportName, { label: string; desc: string; period: boolean }> = {
+export const EXPORTS: Record<ExportName, { label: string; desc: string; period: boolean; ai?: boolean }> = {
+  // 2026-10-29 AI に渡しやすい CSV(docs/design.md 12.2)。個人を特定できる情報は入れない
+  analysis: {
+    label: 'AIに渡す分析パック',
+    desc: '1日1行。天気・祝日・休業・イベント・その日のメモ・来場の内訳・無料券。名前や会員IDは入りません',
+    period: true,
+    ai: true,
+  },
+  analysis_households: {
+    label: 'AIに渡す おうちごとの表',
+    desc: '1おうち1行。会員IDの代わりに通し番号。地域(市区町村)・きっかけ・来場回数など。名前や会員IDは入りません',
+    period: true,
+    ai: true,
+  },
   households: { label: 'おうち', desc: '会員ID・呼び名・ポイント・無料券・来場回数など。1おうち1行', period: false },
   members: { label: '家族', desc: 'LINEの名前・年代・性別・参加日など。1人1行', period: false },
   dogs: { label: 'ワンちゃん', desc: '犬ID・名前・犬種・サイズ・来場回数など。1頭1行', period: false },
