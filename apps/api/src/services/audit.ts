@@ -41,3 +41,22 @@ export function auditStatement(
   }
   return db.prepare(`INSERT INTO audit_log ${cols} VALUES (?, ?, ?, ?, ${targetSql}, ?, ?, ?, ?, ?)`).bind(...values);
 }
+
+/**
+ * いま記録した操作ログの番号(2026-10-29。管理画面のトーストの「元に戻す」で使う)。
+ * 同じスタッフ・同じ操作・同じ対象のうち、いちばん新しい記録を返す。見つからなければ null。
+ */
+export async function latestAuditId(
+  db: D1Database,
+  args: { action: string; targetType: string; targetId: string | number; staffId: number },
+): Promise<number | null> {
+  const row = await db
+    .prepare(
+      `SELECT id FROM audit_log
+        WHERE action = ? AND target_type = ? AND target_id = ? AND actor_type = 'staff' AND actor_id = ?
+        ORDER BY id DESC LIMIT 1`,
+    )
+    .bind(args.action, args.targetType, String(args.targetId), args.staffId)
+    .first<{ id: number }>();
+  return row?.id ?? null;
+}
