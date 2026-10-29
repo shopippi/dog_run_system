@@ -20,7 +20,8 @@ test('C-08 犬の追加・名前と写真の変更・登録のおやすみと戻
   await expect(page.getByRole('combobox', { name: /犬種/ })).toHaveCount(0);
   await page.locator('fieldset.dog-form').getByLabel('名前').fill('アルくん');
   await page.locator('input[type=file]').setInputFiles({ name: 'a.jpg', mimeType: 'image/jpeg', buffer: await makePhoto(page) });
-  await expect(page.locator('fieldset.dog-form img.av')).toBeVisible();
+  // 変更画面の上の大きな写真が、選んだ写真に変わる
+  await expect(page.locator('img.dog-hero')).toBeVisible();
   await page.getByRole('button', { name: '保存する' }).click();
   await expect(page.getByRole('link', { name: /アルくん/ })).toBeVisible();
   await expect(page.getByRole('link', { name: /アルくん/ }).locator('img.av')).toBeVisible();
@@ -46,6 +47,9 @@ test('C-08 犬の追加・名前と写真の変更・登録のおやすみと戻
 
   // おやすみ中のワンちゃんを戻す
   await openLiff(page, user, '/dogs');
+  // おやすみ中のワンちゃんは、一番下の小さな折りたたみの中(ふだんは閉じている)
+  await expect(page.getByRole('button', { name: 'ニコを戻す' })).toBeHidden();
+  await page.getByText('おやすみ中のワンちゃん(1)').click();
   await page.getByRole('button', { name: 'ニコを戻す' }).click();
   await expect(page.getByRole('link', { name: /ニコ/ })).toBeVisible();
   await expect(page.getByText('おやすみ中のワンちゃん')).toHaveCount(0);

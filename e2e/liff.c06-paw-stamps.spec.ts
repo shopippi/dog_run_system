@@ -35,7 +35,7 @@ test('C-06 スタンプは肉球で、たまった分は少しずつ傾いて塗
   await shot(page, 'L-07 スタンプ(3個)');
 });
 
-test('C-06 新しく付いたスタンプだけ、開いたときに1回押す動きが付く。動きを減らす設定では動かさない', async ({ page, request }) => {
+test('C-06 前回より増えた1個だけに「ポン」の印が付く。もう一度開くと付かない。動きを減らす設定でも印は付くが動かない', async ({ page, request }) => {
   const user = newLineUser('パパ');
   await registerViaUi(page, user, ['アル']);
   await earnPoints(request, user, 2);
@@ -50,21 +50,15 @@ test('C-06 新しく付いたスタンプだけ、開いたときに1回押す�
   await checkinOn(request, user, '2026-09-20');
   await page.reload();
   await expect(panel.locator('.paw.on')).toHaveCount(3);
-  await expect(panel.locator('.paw.fresh')).toHaveCount(1);
-  await expect(panel.locator('.paw').nth(2)).toHaveClass(/fresh/);
-  await expect(panel.locator('.paw.fresh')).toHaveCSS('animation-name', 'paw-press');
-  await expect(panel.locator('.paw.fresh')).toHaveCSS('animation-duration', '0.25s');
-  // もう一度開いても動かない
+  await expect(panel.locator('[data-pon]')).toHaveCount(1);
+  await expect(panel.locator('.paw').nth(2)).toHaveAttribute('data-pon', '');
+  // 動きを減らす設定(このテストの初期値)では、最初から押された形で動かない
+  await expect(panel.locator('.paws')).toHaveAttribute('data-stamps', 'still');
+  await expect(panel.locator('.paw-press')).toHaveCount(0);
+  // もう一度開いても印は付かない
   await page.reload();
   await expect(panel.locator('.paw.on')).toHaveCount(3);
-  await expect(panel.locator('.paw.fresh')).toHaveCount(0);
-
-  // 動きを減らす設定
-  await page.emulateMedia({ reducedMotion: 'reduce' });
-  await checkinOn(request, user, '2026-09-21');
-  await page.reload();
-  await expect(panel.locator('.paw.fresh')).toHaveCount(1);
-  await expect(panel.locator('.paw.fresh')).toHaveCSS('animation-name', 'none');
+  await expect(panel.locator('[data-pon]')).toHaveCount(0);
 });
 
 test('C-06 1枚分を超えた分は「11個目から」の2段目に続き、交換のボタンはスタンプのパネルの中の主ボタン', async ({ page, request }) => {

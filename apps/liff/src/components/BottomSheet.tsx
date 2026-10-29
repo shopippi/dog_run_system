@@ -17,6 +17,8 @@ import { easeOut, exitTween, sheetSpring, spring } from '../lib/motion';
 const CLOSE_DISTANCE = 80;
 /** これより速く下へ払ったら、短くても閉じる(px/ms) */
 const CLOSE_VELOCITY = 0.5;
+/** 速く払って閉じるときに、少なくとも引っ張る距離(px) */
+const FLICK_DISTANCE = 40;
 
 /**
  * 下から出るシート(docs/design.md 11.3・11.6)。確認はこのシートで行う。
@@ -166,16 +168,20 @@ function SheetBody({
     d.samples.push({ y: e.clientY, t: e.timeStamp });
     if (d.samples.length > 6) d.samples.shift();
   };
-  const onPointerEnd = () => {
+  const onPointerEnd = (e: PointerEvent<HTMLDivElement>) => {
     const d = drag.current;
     if (!d) return;
     drag.current = null;
     setDragging(false);
-    const first = d.samples[0]!;
-    const last = d.samples[d.samples.length - 1]!;
-    const velocity = (last.y - first.y) / Math.max(1, last.t - first.t);
+    // 離す直前(100ms)の速さ。止まってから離したときは 0
+    // (取り消されたとき pointercancel は位置を持たないので、最後に動いた位置を使う)
+    const now = e.timeStamp;
+    const end = e.type === 'pointerup' ? { y: e.clientY, t: now } : d.samples[d.samples.length - 1]!;
+    const recent = [...d.samples, end].filter((x) => x.t >= now - 100);
+    const first = recent[0]!;
+    const velocity = recent.length > 1 ? (end.y - first.y) / Math.max(1, end.t - first.t) : 0;
     const dy = dragY.get();
-    if (dy >= CLOSE_DISTANCE || (dy > 16 && velocity > CLOSE_VELOCITY)) {
+    if (dy >= CLOSE_DISTANCE || (dy >= FLICK_DISTANCE && velocity > CLOSE_VELOCITY)) {
       close();
       return;
     }

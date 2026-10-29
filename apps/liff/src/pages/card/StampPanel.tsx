@@ -1,6 +1,6 @@
 import type { MemberCard } from '@dr/shared';
 import { m } from 'motion/react';
-import { PawStamps, useStampPlan } from '../../components/PawStamp';
+import { PawMark, PawStamps, useStampPlan } from '../../components/PawStamp';
 import { RollingNumber } from '../../components/RollingNumber';
 import { easeOut } from '../../lib/motion';
 import { ExchangeControl } from './TicketPanel';
@@ -14,7 +14,12 @@ import { ExchangeControl } from './TicketPanel';
  */
 export function StampPanel({ card, memberNo, onChanged }: { card: MemberCard; memberNo: string; onChanged: () => Promise<void> | void }) {
   const canExchange = card.balance >= card.pointsPerTicket;
-  const { plan, layout, done } = useStampPlan({ balance: card.balance, perTicket: card.pointsPerTicket, owner: memberNo });
+  const { plan, layout, done } = useStampPlan({
+    balance: card.balance,
+    perTicket: card.pointsPerTicket,
+    owner: memberNo,
+    todayPoints: card.todayPoints ?? 0,
+  });
   const dip = plan.pressAt !== null;
   const textAfterBone = canExchange && plan.boneAt !== null;
   return (
@@ -48,6 +53,13 @@ export function StampPanel({ card, memberNo, onChanged }: { card: MemberCard; me
           {canExchange ? '無料券と交換できます' : `あと${card.toNextTicket}ポイントで無料券と交換できます`}
         </p>
       )}
+      {layout.today.length > 0 ? (
+        // 凡例: 朱肉の色の肉球は、今日の来場で付いたスタンプ
+        <p className="stamp-legend">
+          <PawMark size={14} className="stamp-legend-mark" />
+          今日のスタンプ
+        </p>
+      ) : null}
       <ExchangeControl card={card} onChanged={onChanged} />
     </m.section>
   );

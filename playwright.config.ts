@@ -17,6 +17,9 @@ export default defineConfig({
     locale: 'ja-JP',
     timezoneId: 'Asia/Tokyo',
     trace: 'retain-on-failure',
+    // 動き(Motion)のせいで測る位置や写真がぶれないよう、ふだんは「動きを減らす」で動かす。
+    // 動きそのものを確かめるテストだけ、test.use({ reducedMotion: 'no-preference' }) にする
+    reducedMotion: 'reduce',
   },
   projects: [
     // LINE の中で開く画面は、スマホの大きさで確かめる

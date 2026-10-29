@@ -40,7 +40,7 @@ export function DogNewPage() {
           // 写真はあとから登録し直せる
         }
       }
-      toast(`${dog.name}を追加しました`);
+      toast(`${dog.name}を迎えました。これからよろしくお願いします`);
       navigate('/dogs', { replace: true });
     } catch (e) {
       setError(e);

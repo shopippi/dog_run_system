@@ -177,15 +177,24 @@ for (const path of ['/dogs/new', '/profile', '/dogs/:id']) {
     await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
     await page.waitForTimeout(100);
     const lastBottom = await page.evaluate(() => {
-      const els = [...document.querySelectorAll<HTMLElement>('main input:not([type=file]), main select, main .segment, main .chips, main .pf-checks, main .dog-rest-link')];
+      const els = [...document.querySelectorAll<HTMLElement>('main input:not([type=file]), main select, main .segment, main .chips, main .pf-checks')];
       const visible = els.filter((el) => el.getBoundingClientRect().height > 0);
       return Math.max(...visible.map((el) => el.getBoundingClientRect().bottom));
     });
     const top = (await bar.boundingBox())!.y;
     expect(lastBottom).toBeLessThanOrEqual(top);
+    if (path === '/dogs/:id') {
+      // 「この子の登録をおやすみする」は、スクロールしきったときに保存の帯よりも下にだけ見える
+      const rest = (await page.getByRole('button', { name: 'この子の登録をおやすみする' }).boundingBox())!;
+      const barNow = (await bar.boundingBox())!;
+      expect(rest.y).toBeGreaterThanOrEqual(barNow.y + barNow.height - 1);
+      expect(rest.y + rest.height).toBeLessThanOrEqual(viewport.height + 1);
+    }
   });
 }
 
+test.describe('動きあり', () => {
+  test.use({ reducedMotion: 'no-preference' });
 test('画面の切り替え: 新しい画面はふわっと出る。戻るときは動かさない', async ({ page }) => {
   const user = newLineUser('ママ');
   await registerViaUi(page, user, ['アル']);
@@ -199,6 +208,8 @@ test('画面の切り替え: 新しい画面はふわっと出る。戻るとき
   await page.getByRole('region', { name: '会員証' }).waitFor();
   await expect(page.locator('.route')).not.toHaveClass(/enter/);
 });
+});
+
 
 test('空の状態は、線のアイコンと一文', async ({ page }) => {
   const user = newLineUser('ママ');

@@ -1,4 +1,4 @@
-import { toJstDate } from '@dr/shared';
+import { todayStampIndices, toJstDate } from '@dr/shared';
 import { m } from 'motion/react';
 import { useEffect, useState, type CSSProperties } from 'react';
 import { tapticPon } from '../lib/motion';
@@ -8,6 +8,7 @@ import { STAMP_TIMING as T, planStamps, shouldPlay, type StampPlan } from '../li
 // たまった分は押した跡らしく、1つずつ少し傾け、濃さを変える(index から決める。ランダムにしない)。
 // まだの分は輪郭だけ。会員証を開いたときは、たまった分を左上から順に「ポポポン」と押していく。
 // 前回見たときより増えた 1 個は、ほかより少し遅れて大きめに「ポン」と押し、インクがにじむ。
+// 今日の来場で付いたスタンプは、朱肉の色(--stamp-today)で押す。
 
 const PAW = (
   <>
@@ -46,16 +47,32 @@ export function PawMark({ size, className }: { size: number; className?: string 
   );
 }
 
-function Stamp({ i, on, bone, fresh, plan }: { i: number; on: boolean; bone: boolean; fresh: boolean; plan: StampPlan }) {
+function Stamp({
+  i,
+  on,
+  bone,
+  fresh,
+  today,
+  plan,
+}: {
+  i: number;
+  on: boolean;
+  bone: boolean;
+  fresh: boolean;
+  /** 今日の来場で付いたスタンプ(朱肉の色) */
+  today: boolean;
+  plan: StampPlan;
+}) {
   const svg = (
     <svg
-      className={`paw${on ? ' on' : ''}${bone ? ' bone' : ''}${fresh ? ' fresh' : ''}`}
+      className={`paw${on ? ' on' : ''}${bone ? ' bone' : ''}${fresh ? ' fresh' : ''}${on && today ? ' today' : ''}`}
       viewBox="0 0 24 24"
       width={36}
       height={36}
       aria-hidden="true"
       focusable="false"
       {...(fresh ? { 'data-pon': '' } : {})}
+      {...(on && today ? { 'data-today': '' } : {})}
       style={on ? ({ '--tilt': `${stampTilt(i)}deg`, opacity: stampOpacity(i) } as CSSProperties) : undefined}
     >
       {bone ? BONE : PAW}
@@ -120,13 +137,14 @@ function write(key: string, value: string) {
 const prefersReducedMotion = () =>
   typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
-export type StampLayout = { per: number; points: number; filled: number; tiers: number };
+export type StampLayout = { per: number; points: number; filled: number; tiers: number; today: number[] };
 
 /** スタンプの並び(1 段は無料券 1 枚分。1 枚分を超えた分は 2 段目。最大 2 段) */
-export function stampLayout(balance: number, perTicket: number): StampLayout {
+export function stampLayout(balance: number, perTicket: number, todayPoints = 0): StampLayout {
   const per = Math.max(1, Math.min(perTicket, 20));
   const points = Math.max(0, balance);
-  return { per, points, filled: Math.min(points, per), tiers: points > per && per <= 10 ? 2 : 1 };
+  const tiers = points > per && per <= 10 ? 2 : 1;
+  return { per, points, filled: Math.min(points, per), tiers, today: todayStampIndices(points, todayPoints, per * tiers) };
 }
 
 /**
@@ -135,8 +153,18 @@ export function stampLayout(balance: number, perTicket: number): StampLayout {
  * - 同じ日に同じ数で開き直したときは、押していく動きを付けない(1 日 1 回。覚えられない端末では毎回)
  * - 動きを減らす設定では動かさない
  */
-export function useStampPlan({ balance, perTicket, owner }: { balance: number; perTicket: number; owner: string }) {
-  const layout = stampLayout(balance, perTicket);
+export function useStampPlan({
+  balance,
+  perTicket,
+  owner,
+  todayPoints = 0,
+}: {
+  balance: number;
+  perTicket: number;
+  owner: string;
+  todayPoints?: number;
+}) {
+  const layout = stampLayout(balance, perTicket, todayPoints);
   const { per, points, tiers } = layout;
   const [plan] = useState<StampPlan>(() => {
     const seenRaw = read(`${SEEN_KEY}.${owner}`);
@@ -183,7 +211,7 @@ export function PawStamps({
   layout: StampLayout;
   done: boolean;
 }) {
-  const { per, points, filled, tiers } = layout;
+  const { per, points, filled, tiers, today } = layout;
   return (
     <div className="paws" data-stamps={plan.play ? (done ? 'done' : 'playing') : 'still'}>
       {Array.from({ length: tiers }, (_, t) => (
@@ -197,7 +225,17 @@ export function PawStamps({
           >
             {Array.from({ length: per }, (_, j) => {
               const i = t * per + j;
-              return <Stamp key={i} i={i} on={i < points} bone={j === per - 1} fresh={plan.fresh === i} plan={plan} />;
+              return (
+                <Stamp
+                  key={i}
+                  i={i}
+                  on={i < points}
+                  bone={j === per - 1}
+                  fresh={plan.fresh === i}
+                  today={today.includes(i)}
+                  plan={plan}
+                />
+              );
             })}
           </div>
         </div>

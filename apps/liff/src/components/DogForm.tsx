@@ -20,7 +20,7 @@ import {
 import { useId, useState } from 'react';
 import { resizePhoto, type ResizedPhoto } from '../lib/photo';
 import { ChoiceGroup } from './ChoiceGroup';
-import { DogAvatar } from './DogAvatar';
+import { DogAvatar, DogHero } from './DogAvatar';
 
 export type DogDraft = {
   key: string;
@@ -109,6 +109,8 @@ type Props = {
   onRemove?: () => void;
   /** 登録済みの写真(差し替える前の写真) */
   currentPhotoUrl?: string | null;
+  /** 写真の欄を出すか(ワンちゃんの変更画面では、画面の上に大きく別に出す) */
+  showPhoto?: boolean;
 };
 
 const THIS_YEAR = new Date().getFullYear();
@@ -119,27 +121,21 @@ const VACCINE_YEARS = Array.from({ length: currentJstYear() - VACCINE_YEAR_MIN +
 const hasExtra = (d: DogDraft) => Boolean(d.weight || d.sociability || d.rabiesYear || d.comboYear);
 
 /** 犬の登録項目の入力(6.1)。L-02 と L-09 で使う。 */
-export function DogForm({ draft, breeds, onChange, breedEditable = true, title, onRemove, currentPhotoUrl }: Props) {
+export function DogForm({
+  draft,
+  breeds,
+  onChange,
+  breedEditable = true,
+  title,
+  onRemove,
+  currentPhotoUrl,
+  showPhoto = true,
+}: Props) {
   const id = useId();
-  const [photoBusy, setPhotoBusy] = useState(false);
-  const [photoError, setPhotoError] = useState<string | null>(null);
   const set = (patch: Partial<DogDraft>) => onChange({ ...draft, ...patch });
   const breed = breeds.find((b) => b.id === draft.breedId);
   // 任意の項目の欄は、すでに入っていれば開いておく(最初の表示のときだけ決め、入力中に勝手に閉じない)
   const [extraOpen] = useState(() => hasExtra(draft));
-
-  const pickPhoto = async (file: File | undefined) => {
-    if (!file) return;
-    setPhotoBusy(true);
-    setPhotoError(null);
-    try {
-      set({ photo: await resizePhoto(file) });
-    } catch {
-      setPhotoError('この写真は読み込めませんでした。別の写真を選ぶか、カメラで撮り直してください。');
-    } finally {
-      setPhotoBusy(false);
-    }
-  };
 
   return (
     <fieldset className="panel dog-form">
@@ -152,30 +148,9 @@ export function DogForm({ draft, breeds, onChange, breedEditable = true, title, 
         )}
       </div>
 
-      <div className="photo-pick">
-        <DogAvatar
-          name={draft.name || '?'}
-          breedName={breed?.name ?? ''}
-          previewUrl={draft.photo?.previewUrl}
-          url={currentPhotoUrl}
-          size={72}
-        />
-        <div className="photo-pick-body">
-          <label className="up btn sub" htmlFor={`${id}-photo`}>
-            {photoBusy ? '写真を準備しています…' : draft.photo || currentPhotoUrl ? '写真を撮り直す・選び直す' : '写真を撮る・選ぶ'}
-          </label>
-          <input
-            id={`${id}-photo`}
-            type="file"
-            accept="image/*"
-            onChange={(e) => {
-              void pickPhoto(e.target.files?.[0]);
-              e.target.value = '';
-            }}
-          />
-          {photoError ? <span className="err" role="alert">{photoError}</span> : <span className="hint">写真はあとからでも登録できます</span>}
-        </div>
-      </div>
+      {showPhoto ? (
+        <DogPhotoField draft={draft} onChange={onChange} breedName={breed?.name ?? ''} currentPhotoUrl={currentPhotoUrl} />
+      ) : null}
 
       <div className="field">
         <label htmlFor={`${id}-name`}>
@@ -338,5 +313,77 @@ export function DogForm({ draft, breeds, onChange, breedEditable = true, title, 
         </div>
       </details>
     </fieldset>
+  );
+}
+
+/**
+ * ワンちゃんの写真の欄。登録・追加では、小さな写真(72)の横に「写真を撮る・選ぶ」。
+ * ワンちゃんの変更画面(layout="hero")では、幅いっぱいの大きな写真(4:3、角丸 16)の下に「写真を変える」。
+ */
+export function DogPhotoField({
+  draft,
+  onChange,
+  breedName,
+  currentPhotoUrl,
+  layout = 'row',
+}: {
+  draft: DogDraft;
+  onChange: (d: DogDraft) => void;
+  breedName: string;
+  currentPhotoUrl?: string | null;
+  layout?: 'row' | 'hero';
+}) {
+  const id = useId();
+  const [photoBusy, setPhotoBusy] = useState(false);
+  const [photoError, setPhotoError] = useState<string | null>(null);
+  const pickPhoto = async (file: File | undefined) => {
+    if (!file) return;
+    setPhotoBusy(true);
+    setPhotoError(null);
+    try {
+      onChange({ ...draft, photo: await resizePhoto(file) });
+    } catch {
+      setPhotoError('この写真は読み込めませんでした。別の写真を選ぶか、カメラで撮り直してください。');
+    } finally {
+      setPhotoBusy(false);
+    }
+  };
+  const hasPhoto = Boolean(draft.photo || currentPhotoUrl);
+  const input = (
+    <input
+      id={`${id}-photo`}
+      type="file"
+      accept="image/*"
+      onChange={(e) => {
+        void pickPhoto(e.target.files?.[0]);
+        e.target.value = '';
+      }}
+    />
+  );
+  if (layout === 'hero') {
+    return (
+      <div className="photo-hero">
+        <DogHero name={draft.name || '?'} breedName={breedName} photo={draft.photo} url={currentPhotoUrl} />
+        <div className="photo-hero-acts">
+          <label className="up btn sub" htmlFor={`${id}-photo`}>
+            {photoBusy ? '写真を準備しています…' : hasPhoto ? '写真を変える' : '写真を撮る・選ぶ'}
+          </label>
+          {input}
+          {photoError ? <span className="err" role="alert">{photoError}</span> : null}
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div className="photo-pick">
+      <DogAvatar name={draft.name || '?'} breedName={breedName} previewUrl={draft.photo?.previewUrl} url={currentPhotoUrl} size={72} />
+      <div className="photo-pick-body">
+        <label className="up btn sub" htmlFor={`${id}-photo`}>
+          {photoBusy ? '写真を準備しています…' : hasPhoto ? '写真を撮り直す・選び直す' : '写真を撮る・選ぶ'}
+        </label>
+        {input}
+        {photoError ? <span className="err" role="alert">{photoError}</span> : <span className="hint">写真はあとからでも登録できます</span>}
+      </div>
+    </div>
   );
 }

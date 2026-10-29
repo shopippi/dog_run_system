@@ -1,4 +1,4 @@
-import { CARD_LIGHT_PRESETS, type CardBackgroundView, type DogSummary } from '@dr/shared';
+import { birthMonthText, CARD_LIGHT_PRESETS, toJstDate, type CardBackgroundView, type DogSummary } from '@dr/shared';
 import { AnimatePresence, m } from 'motion/react';
 import { Link } from 'react-router-dom';
 import { easeOut } from '../lib/motion';
@@ -39,6 +39,8 @@ export function MemberCard({
   showChange = true,
   appear = false,
 }: Props) {
+  // 誕生月のワンちゃんがいれば、小さく「11月はこむぎの誕生月です」
+  const birthday = birthMonthText(dogs, toJstDate(new Date()));
   const loaded = useAuthedImage(background.kind === 'photo' && !previewUrl ? background.url : null);
   const photo = background.kind === 'photo' ? (previewUrl ?? loaded) : null;
   const tone =
@@ -67,8 +69,13 @@ export function MemberCard({
           />
         ) : null}
       </AnimatePresence>
-      <div className="mc-top">
-        <p className="mc-name">{displayName}</p>
+      {/* ワンちゃんが主役: 犬の顔を先に(上段)、おうちの呼び名はその下 */}
+      <div className="mc-head">
+        <div className="mc-dogs">
+          {dogs.map((d) => (
+            <DogAvatar key={d.id} name={d.name} breedName={d.breedName} url={d.thumbUrl} size={44} />
+          ))}
+        </div>
         <p className="mc-facility">{facilityName}</p>
         {showChange ? (
           <Link to="/card/background" className="mc-change" aria-label="会員証の背景を変える" title="背景を変える">
@@ -76,10 +83,9 @@ export function MemberCard({
           </Link>
         ) : null}
       </div>
-      <div className="mc-dogs">
-        {dogs.map((d) => (
-          <DogAvatar key={d.id} name={d.name} breedName={d.breedName} url={d.thumbUrl} size={44} />
-        ))}
+      <div className="mc-top">
+        <p className="mc-name">{displayName}</p>
+        {birthday ? <p className="mc-birthday">{birthday}</p> : null}
       </div>
       <div className="mc-bottom">
         <p className="mc-id mono">{memberNo}</p>

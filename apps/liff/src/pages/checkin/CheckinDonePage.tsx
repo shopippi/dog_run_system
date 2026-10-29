@@ -1,4 +1,4 @@
-import { toJstIso, type CheckinDetail } from '@dr/shared';
+import { milestoneText, toJstIso, visitMilestone, type CheckinDetail } from '@dr/shared';
 import { m, useReducedMotion } from 'motion/react';
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
@@ -62,6 +62,16 @@ export function CheckinDonePage() {
               ))}
             </div>
             <p className="done-names">{detail.dogs.map((d) => d.name).join('・')}</p>
+            {/* 小さな記念: 来場の回数の節目(10・30・50・100回)に一言 */}
+            {visitMilestone(detail.visitCount ?? 0) !== null ? (
+              <p className="done-milestone">
+                <PawMark size={16} className="done-milestone-mark" />
+                {milestoneText(
+                  detail.dogs.map((d) => d.name),
+                  detail.visitCount,
+                )}
+              </p>
+            ) : null}
             <p className="done-meta">
               <span>{detail.dogs.length}頭</span>
               <span aria-hidden="true"> · </span>
