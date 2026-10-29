@@ -20,6 +20,11 @@ env:
   CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID || '1750afed104e032d623e116c11c29b4d' }}
   LIFF_ID: ${{ vars.LIFF_ID || '2012268866-TDSM6zyj' }}
 
+defaults:
+  run:
+    # 各ステップの出力を1つのファイルにも残す(失敗したときに、最後の部分を注釈に出して、外からも原因が読めるようにする)
+    shell: bash -o pipefail -c "exec > >(tee -a \"$RUNNER_TEMP/deploy.log\") 2>&1; bash -eo pipefail {0}"
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -92,3 +97,13 @@ jobs:
             echo
             echo "LINE Developers の LIFF の「エンドポイント URL」を、上の \`/liff/\` の URL にしてください。"
           } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: 失敗したときの記録(注釈に出す)
+        if: failure()
+        shell: bash
+        run: |
+          f="$RUNNER_TEMP/deploy.log"
+          [ -f "$f" ] || { echo "::error::記録がありません(ステップの準備で失敗)"; exit 0; }
+          tail -n 60 "$f" | sed -e 's/\x1b\[[0-9;]*m//g' > "$RUNNER_TEMP/tail.log"
+          msg=$(sed -e 's/%/%25/g' "$RUNNER_TEMP/tail.log" | awk 'BEGIN{ORS="%0A"}{print}')
+          echo "::error title=配信の失敗(最後の60行)::${msg}"
