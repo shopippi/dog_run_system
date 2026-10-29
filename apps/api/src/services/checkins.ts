@@ -271,3 +271,38 @@ export async function cancelCheckin(
     await refreshDailyStatsQuietly(db, d, args.now);
   }
 }
+
+/** その来場で付いたポイント(台帳の「来場」の記録の合計) */
+export async function visitPoints(db: D1Database, visitId: number): Promise<number> {
+  const row = await db
+    .prepare("SELECT COALESCE(SUM(delta), 0) AS n FROM point_ledger WHERE visit_id = ? AND kind = 'visit'")
+    .bind(visitId)
+    .first<{ n: number }>();
+  return row?.n ?? 0;
+}
+
+/** おうちの来場の回数(その日まで。取り消した来場は数えない)。節目の一言に使う */
+export async function householdVisitCount(db: D1Database, householdId: number, upToDate: string): Promise<number> {
+  const row = await db
+    .prepare('SELECT COUNT(*) AS n FROM visits WHERE household_id = ? AND visit_date <= ? AND cancelled_at IS NULL')
+    .bind(householdId, upToDate)
+    .first<{ n: number }>();
+  return row?.n ?? 0;
+}
+
+/** ワンちゃんごとの来場の回数と最後に来た日(そのおうちの来場のうち、その子が一緒に来たもの。取り消しは除く) */
+export async function dogVisitRecords(db: D1Database, householdId: number) {
+  const { results } = await db
+    .prepare(
+      `SELECT d.id AS dog_id, COUNT(v.id) AS visits, MAX(v.visit_date) AS last_visit_date
+         FROM dogs d
+         LEFT JOIN visit_dogs vd ON vd.dog_id = d.id
+         LEFT JOIN visits v ON v.id = vd.visit_id AND v.cancelled_at IS NULL
+        WHERE d.household_id = ?
+        GROUP BY d.id
+        ORDER BY d.id`,
+    )
+    .bind(householdId)
+    .all<{ dog_id: number; visits: number; last_visit_date: string | null }>();
+  return results.map((r) => ({ dogId: r.dog_id, visits: r.visits, lastVisitDate: r.last_visit_date }));
+}

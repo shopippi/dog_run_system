@@ -7,6 +7,7 @@ import { ActionBar } from '../../components/ActionBar';
 import { BusyLabel } from '../../components/BusyLabel';
 import { useToast } from '../../components/Toast';
 import { ProfileSkeleton } from '../skeletons';
+import { PressButton } from '../../components/PressButton';
 
 /** 追加の質問は、答えなくてもよい(7.2)。固定の質問だけを必須として扱う */
 const relax = (questions: SurveyQuestion[]) => questions.map((q) => (q.fixedKey ? q : { ...q, required: false }));
@@ -96,11 +97,11 @@ export function ProfilePage() {
       {message && <MessageNotice message={message} />}
       {error ? <ErrorNotice error={error} /> : null}
       <ActionBar>
-        <button type="button" className="btn" disabled={busy} onClick={save}>
+        <PressButton type="button" className="btn" disabled={busy} onClick={save}>
           <BusyLabel busy={busy} busyText="保存しています…">
             保存する
           </BusyLabel>
-        </button>
+        </PressButton>
       </ActionBar>
     </main>
   );

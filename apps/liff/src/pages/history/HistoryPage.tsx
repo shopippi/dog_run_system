@@ -84,7 +84,7 @@ export function HistoryPage() {
 
       {tickets.length > 0 && <TicketEvents events={tickets} />}
 
-      {visits.length === 0 && <EmptyState icon="calendar">まだ来場の記録がありません。</EmptyState>}
+      {visits.length === 0 && <EmptyState icon="calendar">まだ来場の記録がありません。はじめて遊びに来た日から、ここに残ります。</EmptyState>}
 
       {months.map((m) => (
         <section key={m.label} className="section" aria-label={m.label}>

@@ -7,6 +7,7 @@ import { postJson } from '../../lib/api';
 import { inviteUrl, isInLineApp, shareToLine } from '../../lib/liff';
 import { FamilyMembers } from './FamilyMembers';
 import { useToast } from '../../components/Toast';
+import { PressButton } from '../../components/PressButton';
 
 function formatExpiry(iso: string) {
   const [date, time] = [iso.slice(5, 10).replace('-', '/'), iso.slice(11, 16)];
@@ -84,9 +85,9 @@ export function FamilyPage() {
       {error ? <ErrorNotice error={error} /> : null}
       <div className="actions">
         {isInLineApp() && (
-          <button type="button" className="btn" disabled={busy || !householdName} onClick={sendByLine}>
+          <PressButton type="button" className="btn" disabled={busy || !householdName} onClick={sendByLine}>
             LINEで招待を送る
-          </button>
+          </PressButton>
         )}
         <button type="button" className={isInLineApp() ? 'btn sub' : 'btn'} disabled={busy} onClick={showQr}>
           招待のQRコードを表示する

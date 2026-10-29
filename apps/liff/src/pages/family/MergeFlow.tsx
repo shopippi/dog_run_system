@@ -7,6 +7,7 @@ import { postJson } from '../../lib/api';
 import { ActionBar } from '../../components/ActionBar';
 import { BottomSheet } from '../../components/BottomSheet';
 import { BusyLabel } from '../../components/BusyLabel';
+import { PressButton } from '../../components/PressButton';
 
 /** 自分のワンちゃんごとの選択。sameAs は招待した側の同じ子(いなければ null) */
 type Choice = { sameAs: number | null; keepPhoto: 'mine' | 'theirs' };
@@ -95,9 +96,9 @@ export function MergeFlow({
             </p>
           </div>
         </div>
-        <button type="button" className="btn" onClick={onDone}>
+        <PressButton type="button" className="btn" onClick={onDone}>
           会員証を見る
-        </button>
+        </PressButton>
       </main>
     );
   }
@@ -165,7 +166,7 @@ export function MergeFlow({
         <ul className="mg-dogs" aria-labelledby="mg-theirs">
           {merge.theirs.dogs.map((d) => (
             <li key={d.id}>
-              <DogAvatar name={d.name} breedName={d.breedName} url={d.thumbUrl} size={40} />
+              <DogAvatar name={d.name} breedName={d.breedName} url={d.thumbUrl} size={56} />
               <span className="dog-row-body">
                 <b>{d.name}</b>
                 <span className="sub-text">{d.breedName}</span>
@@ -199,7 +200,7 @@ export function MergeFlow({
         やめる
       </Link>
       <ActionBar>
-        <button
+        <PressButton
           type="button"
           className="btn"
           onClick={() => {
@@ -208,7 +209,7 @@ export function MergeFlow({
           }}
         >
           まとめる
-        </button>
+        </PressButton>
       </ActionBar>
 
       {/* 確認は下から出るシート(docs/design.md 11.3) */}
@@ -219,11 +220,11 @@ export function MergeFlow({
         title="まとめてよいですか?"
         cancelLabel="もどる"
         actions={
-          <button type="button" className="btn" disabled={busy} onClick={run}>
+          <PressButton type="button" className="btn" disabled={busy} onClick={run}>
             <BusyLabel busy={busy} busyText="まとめています…">
               まとめる
             </BusyLabel>
-          </button>
+          </PressButton>
         }
       >
         <p className="mg-confirm-text">
@@ -242,7 +243,7 @@ export function MergeFlow({
                 const photoDog = c.keepPhoto === 'mine' ? d : t;
                 return (
                   <li key={d.id} className="dog-row">
-                    <DogAvatar name={photoDog.name} breedName={photoDog.breedName} url={photoDog.thumbUrl} size={40} />
+                    <DogAvatar name={photoDog.name} breedName={photoDog.breedName} url={photoDog.thumbUrl} size={56} />
                     <span className="dog-row-body">
                       <b>{t.name}</b>
                       <span className="sub-text">
@@ -285,7 +286,7 @@ function MyDog({
   return (
     <fieldset className="mg-mine" aria-label={`${dog.name}の同じ子`}>
       <legend className="mg-mine-head">
-        <DogAvatar name={dog.name} breedName={dog.breedName} url={dog.thumbUrl} size={48} />
+        <DogAvatar name={dog.name} breedName={dog.breedName} url={dog.thumbUrl} size={56} />
         <span className="dog-row-body">
           <b>{dog.name}</b>
           <span className="sub-text">{dog.breedName}</span>
@@ -314,7 +315,7 @@ function MyDog({
                 disabled={disabled}
                 onChange={() => onChange({ sameAs: t.id })}
               />
-              <DogAvatar name={t.name} breedName={t.breedName} url={t.thumbUrl} size={40} />
+              <DogAvatar name={t.name} breedName={t.breedName} url={t.thumbUrl} size={56} />
               <span className="pick-body">
                 <b>{t.name}</b>
                 <span className="sub-text">{disabled ? 'ほかの子と同じ子に選んでいます' : '同じ子'}</span>
@@ -336,7 +337,7 @@ function MyDog({
                 checked={choice.keepPhoto === 'theirs'}
                 onChange={() => onChange({ keepPhoto: 'theirs' })}
               />
-              <DogAvatar name={same.name} breedName={same.breedName} url={same.thumbUrl} size={48} />
+              <DogAvatar name={same.name} breedName={same.breedName} url={same.thumbUrl} size={56} />
               <span className="pick-body">
                 <b>{theirLabel}の写真</b>
               </span>
@@ -348,7 +349,7 @@ function MyDog({
                 checked={choice.keepPhoto === 'mine'}
                 onChange={() => onChange({ keepPhoto: 'mine' })}
               />
-              <DogAvatar name={dog.name} breedName={dog.breedName} url={dog.thumbUrl} size={48} />
+              <DogAvatar name={dog.name} breedName={dog.breedName} url={dog.thumbUrl} size={56} />
               <span className="pick-body">
                 <b>あなたの写真</b>
               </span>

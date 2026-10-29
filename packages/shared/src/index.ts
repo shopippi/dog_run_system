@@ -32,3 +32,4 @@ export * from './schemas/tickets';
 export * from './api-types-profile';
 export * from './schemas/profile';
 export * from './card-background';
+export * from './keepsakes';

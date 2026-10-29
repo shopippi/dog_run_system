@@ -189,6 +189,8 @@ test('お客さん: ワンちゃんの変更・おやすみ・プロフィール
   if (!(await more.evaluate((d: HTMLDetailsElement) => d.open))) await more.locator('summary').click();
   // 体重・相性・予防注射の年は任意。入れたところを写す(保存はしない)
   await page.getByLabel('体重').fill('6.4');
+  // 下に貼り付く保存の帯に隠れないよう、画面の中ほどまでスクロールしてから選ぶ
+  await more.getByRole('radio', { name: '得意' }).evaluate((el) => el.scrollIntoView({ block: 'center' }));
   await more.getByRole('radio', { name: '得意' }).check({ force: true });
   await page.getByLabel('狂犬病の予防注射').selectOption({ index: 1 });
   await scrollToTop(page.getByText('生まれた年月').first());
