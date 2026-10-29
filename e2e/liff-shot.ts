@@ -9,6 +9,8 @@ import type { Page } from '@playwright/test';
 export async function liffShot(page: Page, path: string) {
   const sheetOpen = (await page.locator('.sheet-root:not(.closing)').count()) > 0;
   if (sheetOpen) {
+    // 下から出る動きが終わってから撮る
+    await page.evaluate(() => Promise.all(document.getAnimations().filter((a) => a.effect && isFinite(Number(a.effect.getComputedTiming().endTime))).map((a) => a.finished.catch(() => undefined))));
     await page.screenshot({ path });
     return;
   }
