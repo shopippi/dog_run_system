@@ -3,6 +3,9 @@ import { useCallback, useEffect, useState } from 'react';
 import { DogAvatar } from '../../components/DogAvatar';
 import { ErrorNotice } from '../../components/ErrorNotice';
 import { api } from '../../lib/api';
+import { BusyLabel } from '../../components/BusyLabel';
+import { EmptyState } from '../../components/EmptyState';
+import { HistorySkeleton } from '../skeletons';
 
 const WEEKDAYS = ['日', '月', '火', '水', '木', '金', '土'];
 
@@ -62,7 +65,7 @@ export function HistoryPage() {
   };
 
   if (error) return <main className="screen"><ErrorNotice error={error} onRetry={load} /></main>;
-  if (!visits) return <main className="screen"><p className="loading">読み込んでいます…</p></main>;
+  if (!visits) return <HistorySkeleton />;
 
   const months: { label: string; visits: HistoryVisit[] }[] = [];
   for (const v of visits) {
@@ -81,7 +84,7 @@ export function HistoryPage() {
 
       {tickets.length > 0 && <TicketEvents events={tickets} />}
 
-      {visits.length === 0 && <p className="cu-empty">まだ来場の記録がありません。</p>}
+      {visits.length === 0 && <EmptyState icon="calendar">まだ来場の記録がありません。</EmptyState>}
 
       {months.map((m) => (
         <section key={m.label} className="section" aria-label={m.label}>
@@ -134,7 +137,9 @@ export function HistoryPage() {
       {moreError ? <ErrorNotice error={moreError} /> : null}
       {next && (
         <button type="button" className="btn sub" disabled={busy} onClick={more}>
-          {busy ? '読み込んでいます…' : 'もっと前の来場を見る'}
+          <BusyLabel busy={busy} busyText="読み込んでいます…">
+            もっと前の来場を見る
+          </BusyLabel>
         </button>
       )}
     </main>

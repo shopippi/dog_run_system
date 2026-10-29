@@ -5,6 +5,10 @@ import { DogAvatar } from '../../components/DogAvatar';
 import { ErrorNotice } from '../../components/ErrorNotice';
 import { ApiError, api, postJson } from '../../lib/api';
 import { canScan, scanCheckinCode } from '../../lib/liff';
+import { ActionBar } from '../../components/ActionBar';
+import { BusyLabel } from '../../components/BusyLabel';
+import { EmptyState } from '../../components/EmptyState';
+import { CheckinSkeleton } from '../skeletons';
 
 /** L-05 チェックイン(C-04)。受付のQRコードから開く → 来た犬を選ぶ → 確定。無料券は会員証で右へスライドして使う(8章) */
 export function CheckinPage() {
@@ -78,9 +82,10 @@ export function CheckinPage() {
   };
 
   if (!status) {
+    if (!error) return <CheckinSkeleton />;
     return (
       <main className="screen">
-        {error ? <ErrorNotice error={error} onRetry={load} /> : <p className="loading">読み込んでいます…</p>}
+        <ErrorNotice error={error} onRetry={load} />
       </main>
     );
   }
@@ -105,20 +110,25 @@ export function CheckinPage() {
           <>
             <DogChecklist dogs={remaining} selected={selected} onToggle={toggle} />
             {error ? <ErrorNotice error={error} /> : null}
-            <button type="button" className="btn" disabled={busy || selected.size === 0} onClick={addDogs}>
-              {busy ? '追加しています…' : 'ワンちゃんを追加する'}
+            <button type="button" className="btn ghost" onClick={() => navigate(`/checkin/done/${visit.id}`)}>
+              チェックインの画面を見る
             </button>
+            <ActionBar>
+              <button type="button" className="btn" disabled={busy || selected.size === 0} onClick={addDogs}>
+                <BusyLabel busy={busy} busyText="追加しています…">
+                  ワンちゃんを追加する
+                </BusyLabel>
+              </button>
+            </ActionBar>
           </>
         ) : (
-          <p className="lead">登録しているワンちゃんは、みんな記録されています。</p>
+          <>
+            <p className="lead">登録しているワンちゃんは、みんな記録されています。</p>
+            <button type="button" className="btn" onClick={() => navigate(`/checkin/done/${visit.id}`)}>
+              チェックインの画面を見る
+            </button>
+          </>
         )}
-        <button
-          type="button"
-          className={remaining.length > 0 ? 'btn ghost' : 'btn'}
-          onClick={() => navigate(`/checkin/done/${visit.id}`)}
-        >
-          チェックインの画面を見る
-        </button>
       </main>
     );
   }
@@ -145,11 +155,19 @@ export function CheckinPage() {
         <h2>チェックイン</h2>
         <p className="lead">今日来たワンちゃんを選んで、「チェックインする」を押してください。</p>
       </div>
-      <DogChecklist dogs={status.dogs} selected={selected} onToggle={toggle} />
+      {status.dogs.length > 0 ? (
+        <DogChecklist dogs={status.dogs} selected={selected} onToggle={toggle} />
+      ) : (
+        <EmptyState icon="paw">登録しているワンちゃんがいません。会員証の「ワンちゃん」から登録してください。</EmptyState>
+      )}
       {error ? <ErrorNotice error={error} /> : null}
-      <button type="button" className="btn" disabled={busy || selected.size === 0} onClick={submit}>
-        {busy ? 'チェックインしています…' : 'チェックインする'}
-      </button>
+      <ActionBar>
+        <button type="button" className="btn" disabled={busy || selected.size === 0} onClick={submit}>
+          <BusyLabel busy={busy} busyText="チェックインしています…">
+            チェックインする
+          </BusyLabel>
+        </button>
+      </ActionBar>
     </main>
   );
 }

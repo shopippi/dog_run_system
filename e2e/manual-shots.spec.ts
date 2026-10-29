@@ -102,10 +102,10 @@ test('お客さん: 会員証・チェックイン・無料券', async ({ browse
   await shot(page, 'customer-stamps');
 
   await page.getByRole('button', { name: '無料券と交換する(10ポイント)' }).click();
-  await expect(page.getByRole('group', { name: '無料券との交換の確認' })).toBeVisible();
+  await expect(page.getByRole('dialog', { name: '無料券と交換します' })).toBeVisible();
   await scrollToTop(stamps);
   await shot(page, 'customer-ticket-exchange');
-  await page.getByRole('group', { name: '無料券との交換の確認' }).getByRole('button', { name: '交換する' }).click();
+  await page.getByRole('dialog', { name: '無料券と交換します' }).getByRole('button', { name: '交換する' }).click();
   await expect(page.getByRole('status')).toHaveText('無料券と交換しました。');
 
   const row = page.getByRole('list', { name: '未使用の無料券' }).getByRole('listitem').first();
@@ -193,7 +193,7 @@ test('お客さん: ワンちゃんの変更・おやすみ・プロフィール
   await scrollToTop(page.getByText('生まれた年月').first());
   await shot(page, 'customer-dog-edit');
   await page.getByRole('button', { name: 'この子の登録をおやすみする' }).click();
-  await expect(page.getByRole('group', { name: '登録のおやすみの確認' })).toBeVisible();
+  await expect(page.getByRole('dialog', { name: /の登録をおやすみします/ })).toBeVisible();
   await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
   await shot(page, 'customer-dog-rest');
   await page.getByRole('button', { name: 'やめる' }).click();

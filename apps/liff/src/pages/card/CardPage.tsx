@@ -8,6 +8,7 @@ import { ProfileNudge } from '../../components/ProfileNudge';
 import { useMe } from '../../hooks/useMe';
 import { useFacilityName } from '../../hooks/useFacilityName';
 import { canScan, scanCheckinCode } from '../../lib/liff';
+import { CardSkeleton } from '../skeletons';
 import { StampPanel } from './StampPanel';
 import { TicketPanel } from './TicketPanel';
 
@@ -15,7 +16,7 @@ import { TicketPanel } from './TicketPanel';
 export function CardPage() {
   const { me, error, reload } = useMe();
   if (error) return <main className="screen"><ErrorNotice error={error} onRetry={reload} /></main>;
-  if (!me || !me.registered) return <main className="screen"><p className="loading">読み込んでいます…</p></main>;
+  if (!me || !me.registered) return <CardSkeleton />;
   return <Card me={me} reload={reload} />;
 }
 
@@ -60,34 +61,31 @@ function Card({ me, reload }: { me: MeRegistered; reload: () => Promise<void> })
 
       <ProfileNudge pending={me.optionalSurveyPending} />
 
-      <nav className="menu rows" aria-label="メニュー">
-        <Link to="/dogs">
-          <span>ワンちゃん</span>
-          <Icon name="chevron-right" />
-        </Link>
-        <Link to="/family">
-          <span>家族を招待</span>
-          <Icon name="chevron-right" />
-        </Link>
-        <Link to="/card/background">
-          <span>背景を変える</span>
-          <Icon name="chevron-right" />
-        </Link>
-        <Link to="/history">
-          <span>来場履歴</span>
-          <Icon name="chevron-right" />
-        </Link>
-        <Link to="/profile">
-          <span>プロフィール</span>
-          <Icon name="chevron-right" />
-        </Link>
+      {/* まとまりの一覧(iOS の「設定」と同じ形。docs/design.md 11.3) */}
+      <nav className="menu" aria-label="メニュー">
+        <div className="rows">
+          <MenuLink to="/dogs">ワンちゃん</MenuLink>
+          <MenuLink to="/family">家族を招待</MenuLink>
+          <MenuLink to="/card/background">背景を変える</MenuLink>
+        </div>
+        <div className="rows">
+          <MenuLink to="/history">来場履歴</MenuLink>
+          <MenuLink to="/profile">プロフィール</MenuLink>
+          <MenuLink to="/help">使い方・よくある質問</MenuLink>
+        </div>
       </nav>
       <p className="note">
         1日1ポイント。{card.pointsPerTicket}ポイントで無料券1枚(来場1回分)と交換できます。前のポイントカードは、受付で見せると引き継げます。
       </p>
-      <Link to="/help" className="cu-link">
-        使い方・よくある質問
-      </Link>
     </main>
+  );
+}
+
+function MenuLink({ to, children }: { to: string; children: string }) {
+  return (
+    <Link to={to}>
+      <span>{children}</span>
+      <Icon name="chevron-right" />
+    </Link>
   );
 }

@@ -18,14 +18,14 @@ test('C-06 10ポイントたまると会員証に「無料券と交換する」�
   // 交換のボタンが主ボタン。チェックインのボタンは副ボタンになる
   await expect(page.getByRole('button', { name: 'チェックイン(受付のQRを読む)' })).toHaveClass(/sub/);
   await page.getByRole('button', { name: '無料券と交換する(10ポイント)' }).click();
-  const confirm = page.getByRole('group', { name: '無料券との交換の確認' });
+  const confirm = page.getByRole('dialog', { name: '無料券と交換します' });
   await expect(confirm).toContainText('10ポイントを無料券1枚と交換します。');
   await expect(confirm).toContainText('いま11ポイント → 交換したあと1ポイント');
   await confirm.getByRole('button', { name: 'やめる' }).click();
   await expect(confirm).toHaveCount(0);
 
   await page.getByRole('button', { name: '無料券と交換する(10ポイント)' }).click();
-  await page.getByRole('group', { name: '無料券との交換の確認' }).getByRole('button', { name: '交換する' }).click();
+  await page.getByRole('dialog', { name: '無料券と交換します' }).getByRole('button', { name: '交換する' }).click();
   await expect(page.getByRole('status')).toHaveText('無料券と交換しました。');
   const tickets = page.getByRole('list', { name: '未使用の無料券' });
   await expect(tickets.getByRole('listitem')).toHaveCount(1);
@@ -47,7 +47,7 @@ test('C-06 無料券を右へスライドすると「使用できました」の
   await earnPoints(request, user, 10);
   await openLiff(page, user);
   await page.getByRole('button', { name: '無料券と交換する(10ポイント)' }).click();
-  await page.getByRole('group', { name: '無料券との交換の確認' }).getByRole('button', { name: '交換する' }).click();
+  await page.getByRole('dialog', { name: '無料券と交換します' }).getByRole('button', { name: '交換する' }).click();
   await checkinToday(request, user);
   await openLiff(page, user);
 

@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { cancelVisit, checkinOn, joinFamily } from './customer-helpers';
 import { newLineUser, openLiff, registerViaUi } from './helpers';
+import { liffShot } from './liff-shot';
 
 // お客さん向けの残りの画面(担当E)の見え方。確かめ方は e2e/liff.layout.spec.ts と同じ。
 const IOS_UA =
@@ -47,7 +48,7 @@ async function checkScreen(page: Page, device: string, screen: string) {
   });
   expect(problems, `${device} / ${screen}`).toEqual([]);
   if (process.env.SHOT_DIR) {
-    await page.screenshot({ path: `${process.env.SHOT_DIR}/${device}/${screen}.png`, fullPage: true });
+    await liffShot(page, `${process.env.SHOT_DIR}/${device}/${screen}.png`);
   }
 }
 

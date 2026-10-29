@@ -2,13 +2,14 @@ import { expect, test, type Page } from '@playwright/test';
 import { checkinOn } from './customer-helpers';
 import { newLineUser, openLiff, registerViaUi } from './helpers';
 import { earnPoints } from './tickets-helpers';
+import { liffShot } from './liff-shot';
 
 // 担当I: 会員証の下のスタンプ(C-06、docs/design.md 5章「スタンプ」)。
 // 肉球のスタンプ(たまった分は ink の塗りで少し傾く。まだの分は輪郭だけ)、10 個目は骨、
 // 1 枚分を超えた分は「11個目から」の 2 段目、新しく付いた 1 個は開いたときに 1 回だけ押す動き。
 
 async function shot(page: Page, name: string) {
-  if (process.env.SHOT_DIR) await page.screenshot({ path: `${process.env.SHOT_DIR}/iPhone 13/${name}.png`, fullPage: true });
+  if (process.env.SHOT_DIR) await liffShot(page, `${process.env.SHOT_DIR}/iPhone 13/${name}.png`);
 }
 
 test('C-06 スタンプは肉球で、たまった分は少しずつ傾いて塗られ、10個目は骨。右上に「3 / 10」', async ({ page, request }) => {
@@ -96,8 +97,8 @@ test('C-06 1枚分を超えた分は「11個目から」の2段目に続き、�
   expect([...order].sort((a, b) => a - b)).toEqual(order);
 
   await exchange.click();
-  await panel.getByRole('group', { name: '無料券との交換の確認' }).getByRole('button', { name: '交換する' }).click();
-  await expect(panel.getByRole('status')).toHaveText('無料券と交換しました。');
+  await page.getByRole('dialog', { name: '無料券と交換します' }).getByRole('button', { name: '交換する' }).click();
+  await expect(page.getByRole('status')).toHaveText('無料券と交換しました。');
   await expect(panel.getByText('2 / 10', { exact: true })).toBeVisible();
   await expect(panel.getByText('11個目から')).toHaveCount(0);
   await expect(page.getByRole('list', { name: '未使用の無料券' }).getByRole('listitem')).toHaveCount(1);

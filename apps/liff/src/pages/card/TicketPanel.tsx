@@ -1,8 +1,10 @@
 import type { MemberCard, TicketExchangeResult, TicketUseDetail } from '@dr/shared';
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { BottomSheet } from '../../components/BottomSheet';
 import { ErrorNotice } from '../../components/ErrorNotice';
 import { SlideToUse } from '../../components/SlideToUse';
+import { useToast } from '../../components/Toast';
 import { postJson } from '../../lib/api';
 
 const ymd = (iso: string) => iso.slice(0, 10).replace(/-/g, '/');
@@ -85,73 +87,73 @@ export function TicketPanel({ card, onChanged }: { card: MemberCard; onChanged: 
 }
 
 /**
- * 「無料券と交換する」(C-06、8章)。ポイントが無料券1枚分以上あるときの主ボタン。確認してから交換する。
- * 会員証の下のスタンプのパネルの中に置く(docs/design.md 5章)。担当G の交換の処理をそのまま移したもの。
+ * 「無料券と交換する」(C-06、8章)。ポイントが無料券1枚分以上あるときの主ボタン。下から出るシートで確認してから交換する。
+ * 会員証の下のスタンプのパネルの中に置く(docs/design.md 5章)。交換できたらトーストで知らせる(11.3)。
  */
 export function ExchangeControl({ card, onChanged }: { card: MemberCard; onChanged: () => Promise<void> | void }) {
-  const [confirm, setConfirm] = useState<{ kind: 'exchange'; opId: string } | null>(null);
+  const [opId, setOpId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
-  const [exchanged, setExchanged] = useState(false);
+  const toast = useToast();
   const canExchange = card.balance >= card.pointsPerTicket;
 
-  const exchange = async (opId: string) => {
+  const exchange = async (id: string) => {
     setBusy(true);
     setError(null);
     try {
-      await postJson<TicketExchangeResult>('/api/tickets/exchange', { opId });
-      setConfirm(null);
-      setExchanged(true);
+      await postJson<TicketExchangeResult>('/api/tickets/exchange', { opId: id });
+      setBusy(false);
+      setOpId(null);
+      toast('無料券と交換しました。');
       await onChanged();
     } catch (e) {
       setError(e);
-    } finally {
       setBusy(false);
     }
   };
 
-  if (!canExchange && !exchanged && !error) return null;
   return (
     <>
-      {exchanged && (
-        <p className="tk-done" role="status">
-          無料券と交換しました。
-        </p>
+      {canExchange && (
+        <button
+          type="button"
+          className="btn"
+          onClick={() => {
+            setError(null);
+            setOpId(newOpId());
+          }}
+        >
+          無料券と交換する({card.pointsPerTicket}ポイント)
+        </button>
       )}
-      {canExchange &&
-        (confirm?.kind === 'exchange' ? (
-          <div className="confirm-inline tk-confirm" role="group" aria-label="無料券との交換の確認">
-            <p>
-              <b>{card.pointsPerTicket}ポイントを無料券1枚と交換します。</b>
-            </p>
-            <p className="sub-text">
-              いま{card.balance}ポイント → 交換したあと{card.balance - card.pointsPerTicket}ポイント
-            </p>
-            <div className="actions">
-              <button type="button" className="btn" disabled={busy} onClick={() => void exchange(confirm.opId)}>
-                {busy ? '交換しています…' : '交換する'}
-              </button>
-              <button type="button" className="btn ghost" disabled={busy} onClick={() => setConfirm(null)}>
-                やめる
-              </button>
-            </div>
-          </div>
-        ) : (
-          <button
-            type="button"
-            className="btn"
-            disabled={busy || confirm !== null}
-            onClick={() => {
-              setExchanged(false);
-              setError(null);
-              setConfirm({ kind: 'exchange', opId: newOpId() });
-            }}
-          >
-            無料券と交換する({card.pointsPerTicket}ポイント)
-          </button>
-        ))}
+      {error && !opId ? <ErrorNotice error={error} /> : null}
 
-      {error ? <ErrorNotice error={error} /> : null}
+      <BottomSheet
+        open={opId !== null}
+        onClose={() => setOpId(null)}
+        busy={busy}
+        title="無料券と交換します"
+        actions={
+          <button type="button" className="btn" disabled={busy} onClick={() => opId && void exchange(opId)}>
+            {busy ? (
+              <>
+                <span className="spinner" aria-hidden="true" />
+                交換しています…
+              </>
+            ) : (
+              '交換する'
+            )}
+          </button>
+        }
+      >
+        <p>
+          <b>{card.pointsPerTicket}ポイントを無料券1枚と交換します。</b>
+        </p>
+        <p className="tk-sheet-points">
+          いま{card.balance}ポイント → 交換したあと{card.balance - card.pointsPerTicket}ポイント
+        </p>
+        {error ? <ErrorNotice error={error} /> : null}
+      </BottomSheet>
     </>
   );
 }

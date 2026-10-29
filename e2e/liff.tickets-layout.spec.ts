@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { newLineUser, openLiff, registerViaUi } from './helpers';
 import { checkinToday, earnPoints, slideToUse } from './tickets-helpers';
+import { liffShot } from './liff-shot';
 
 // 担当G: 無料券の交換と使用(C-06)の、お客さん向けの画面の見え方。確かめ方は e2e/liff.layout.spec.ts と同じ。
 const IOS_UA =
@@ -43,7 +44,7 @@ async function checkScreen(page: Page, device: string, screen: string) {
   });
   expect(problems, `${device} / ${screen}`).toEqual([]);
   if (process.env.SHOT_DIR) {
-    await page.screenshot({ path: `${process.env.SHOT_DIR}/${device}/${screen}.png`, fullPage: true });
+    await liffShot(page, `${process.env.SHOT_DIR}/${device}/${screen}.png`);
   }
 }
 
@@ -64,7 +65,7 @@ for (const d of DEVICES) {
       await page.getByRole('button', { name: '無料券と交換する(10ポイント)' }).waitFor();
       await checkScreen(page, d.name, 'L-07 会員証(交換できるとき)');
       await page.getByRole('button', { name: '無料券と交換する(10ポイント)' }).click();
-      await page.getByRole('group', { name: '無料券との交換の確認' }).waitFor();
+      await page.getByRole('dialog', { name: '無料券と交換します' }).waitFor();
       await checkScreen(page, d.name, 'L-07 会員証(交換の確認)');
       await page.getByRole('button', { name: '交換する' }).click();
       await page.getByRole('status').waitFor();

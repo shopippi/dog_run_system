@@ -6,22 +6,27 @@ import { ErrorNotice } from '../../components/ErrorNotice';
 import { Icon } from '../../components/Icon';
 import { useDogs } from '../../hooks/useDogs';
 import { postJson } from '../../lib/api';
+import { EmptyState } from '../../components/EmptyState';
+import { useToast } from '../../components/Toast';
+import { DogsSkeleton } from '../skeletons';
 
 /** L-09 犬の管理(C-08) */
 export function DogsPage() {
   const { dogs, error, reload } = useDogs();
   const [restoring, setRestoring] = useState<number | null>(null);
   const [restoreError, setRestoreError] = useState<unknown>(null);
+  const toast = useToast();
   if (error) return <main className="screen"><ErrorNotice error={error} onRetry={reload} /></main>;
-  if (!dogs) return <main className="screen"><p className="loading">読み込んでいます…</p></main>;
+  if (!dogs) return <DogsSkeleton />;
   const active = dogs.filter((d) => d.status === 'active');
   // おやすみ中(内部の値は retired)のワンちゃん。「戻す」でチェックインに選べるようにする
   const resting = dogs.filter((d) => d.status === 'retired');
-  const restore = async (id: number) => {
+  const restore = async (id: number, name: string) => {
     setRestoring(id);
     setRestoreError(null);
     try {
       await postJson(`/api/dogs/${id}/restore`, {});
+      toast(`${name}を戻しました`);
       reload();
     } catch (e) {
       setRestoreError(e);
@@ -35,6 +40,9 @@ export function DogsPage() {
         <h2>ワンちゃん</h2>
         <p className="lead">写真や名前を変えるときは、ワンちゃんを選んでください。</p>
       </div>
+      {active.length === 0 ? (
+        <EmptyState icon="paw">登録しているワンちゃんはいません。</EmptyState>
+      ) : (
       <ul className="rows dog-list">
         {active.map((d) => (
           <li key={d.id}>
@@ -52,6 +60,7 @@ export function DogsPage() {
           </li>
         ))}
       </ul>
+      )}
       <Link to="/dogs/new" className="btn sub">
         <Icon name="plus" />
         ワンちゃんを追加する
@@ -72,7 +81,7 @@ export function DogsPage() {
                   className="btn sub dog-rest-back"
                   aria-label={`${d.name}を戻す`}
                   disabled={restoring !== null}
-                  onClick={() => void restore(d.id)}
+                  onClick={() => void restore(d.id, d.name)}
                 >
                   {restoring === d.id ? '戻しています…' : '戻す'}
                 </button>

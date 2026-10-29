@@ -5,6 +5,7 @@ import { DogAvatar } from '../../components/DogAvatar';
 import { ErrorNotice } from '../../components/ErrorNotice';
 import { useClock } from '../../hooks/useClock';
 import { api } from '../../lib/api';
+import { DoneSkeleton } from '../skeletons';
 
 const WEEKDAYS = ['日', '月', '火', '水', '木', '金', '土'];
 
@@ -31,7 +32,7 @@ export function CheckinDonePage() {
   useEffect(load, [load]);
 
   if (error) return <main className="screen"><ErrorNotice error={error} onRetry={load} /></main>;
-  if (!detail) return <main className="screen"><p className="loading">読み込んでいます…</p></main>;
+  if (!detail) return <DoneSkeleton />;
 
   const live = detail.isToday && !detail.cancelled;
   const clock = toJstIso(now).slice(11, 19);
@@ -79,7 +80,7 @@ export function CheckinDonePage() {
 
 
       {live && detail.balance >= detail.pointsPerTicket && (
-        <div className="alert info" role="status">
+        <div className="alert info">
           <p>ポイントが{detail.pointsPerTicket}以上たまっています。会員証の「無料券と交換する」から、無料券と交換できます。</p>
         </div>
       )}

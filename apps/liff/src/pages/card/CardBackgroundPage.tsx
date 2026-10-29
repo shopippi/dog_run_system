@@ -15,6 +15,8 @@ import { useMe } from '../../hooks/useMe';
 import { useFacilityName } from '../../hooks/useFacilityName';
 import { ApiError, api } from '../../lib/api';
 import { resizePhoto } from '../../lib/photo';
+import { useToast } from '../../components/Toast';
+import { CardBackgroundSkeleton } from '../skeletons';
 
 
 type Saved = { cardBackground: CardBackgroundView };
@@ -23,7 +25,7 @@ type Saved = { cardBackground: CardBackgroundView };
 export function CardBackgroundPage() {
   const { me, error, reload } = useMe();
   if (error) return <main className="screen"><ErrorNotice error={error} onRetry={reload} /></main>;
-  if (!me || !me.registered) return <main className="screen"><p className="loading">読み込んでいます…</p></main>;
+  if (!me || !me.registered) return <CardBackgroundSkeleton />;
   return <Editor me={me} />;
 }
 
@@ -33,7 +35,7 @@ function Editor({ me }: { me: MeRegistered }) {
   const [preview, setPreview] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
-  const [saved, setSaved] = useState(false);
+  const toast = useToast();
   const fileId = useId();
   const groupId = useId();
 
@@ -46,11 +48,11 @@ function Editor({ me }: { me: MeRegistered }) {
     if (optimistic) setBg(optimistic);
     setBusy(true);
     setError(null);
-    setSaved(false);
     try {
       const r = await send();
       setBg(r.cardBackground);
-      setSaved(true);
+      // 保存は自動。済んだらトーストで知らせる(11.3)
+      toast('保存しました');
     } catch (e) {
       setBg(before);
       setPreview(null);
@@ -165,9 +167,6 @@ function Editor({ me }: { me: MeRegistered }) {
         <p className="note">写真の上の文字が読めるよう、下のほうを少し暗くして表示します。</p>
       </section>
 
-      <p className="cb-status" role="status">
-        {busy ? '保存しています…' : saved ? '保存しました' : ''}
-      </p>
       {error ? <ErrorNotice error={error} /> : null}
     </main>
   );
