@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { restoreTouch } from './households-helpers';
 import { d1, daysAgo, householdIdOf } from './analytics-helpers';
 import { adminLogin, adminToast, newLineUser, openCheckin, registerViaUi } from './helpers';
 
@@ -29,12 +30,6 @@ async function checkScreen(page: Page, folder: string, screen: string, touch: bo
     ),
   );
   const minHeight = touch ? 44 : 40;
-  // 指の操作のエミュレーション(pointer: coarse)が効いてから測る(全体の写真を撮った直後は、一瞬だけ外れていることがある)
-  if (touch) {
-    await expect
-      .poll(() => page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--control-h').trim()), { timeout: 5000 })
-      .toBe('44px');
-  }
   const problems = await page.evaluate((minHeight) => {
     const out: string[] = [];
     const doc = document.documentElement;
@@ -60,6 +55,8 @@ async function checkScreen(page: Page, folder: string, screen: string, touch: bo
   expect(problems, `${folder} / ${screen}`).toEqual([]);
   if (process.env.SHOT_DIR) {
     await page.screenshot({ path: `${process.env.SHOT_DIR}/${folder}/${screen}.png`, fullPage: true });
+    // 全体の写真を撮ると、指の操作のエミュレーション(pointer: coarse)が外れることがあるので、かけ直す
+    if (touch) await restoreTouch(page);
   }
 }
 

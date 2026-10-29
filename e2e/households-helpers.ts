@@ -21,15 +21,19 @@ async function settle(page: Page) {
  * 1つの画面を確かめる(e2e/admin.layout.spec.ts の checkScreen と同じ)。
  * 横にはみ出さない・押す部品の高さ(指 44px / マウス 40px)・入力欄の文字 16px 以上。SHOT_DIR があれば写真を保存する。
  */
+/**
+ * Chromium で全体の写真(fullPage)を撮ると、そのあと指の操作のエミュレーションが外れ、
+ * (pointer: coarse) が効かなくなる(押す部品が 40px になる)。写真のあとにかけ直す。
+ */
+export async function restoreTouch(page: Page) {
+  const cdp = await page.context().newCDPSession(page);
+  // セッションを閉じると元に戻ってしまうので、開いたままにする(ページを閉じれば一緒に閉じる)
+  await cdp.send('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 1 });
+}
+
 export async function checkScreen(page: Page, folder: string, screen: string, touch: boolean) {
   await settle(page);
   const minHeight = touch ? 44 : 40;
-  // 指の操作のエミュレーション(pointer: coarse)が効いてから測る(全体の写真を撮った直後は、一瞬だけ外れていることがある)
-  if (touch) {
-    await expect
-      .poll(() => page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--control-h').trim()), { timeout: 5000 })
-      .toBe('44px');
-  }
   const problems = await page.evaluate((minHeight) => {
     const out: string[] = [];
     const doc = document.documentElement;
@@ -55,6 +59,8 @@ export async function checkScreen(page: Page, folder: string, screen: string, to
   expect(problems, `${folder} / ${screen}`).toEqual([]);
   if (process.env.SHOT_DIR) {
     await page.screenshot({ path: `${process.env.SHOT_DIR}/${folder}/${screen}.png`, fullPage: true });
+    // 全体の写真を撮ると、指の操作のエミュレーション(pointer: coarse)が外れることがあるので、かけ直す
+    if (touch) await restoreTouch(page);
     // 縦に長い画面を丸ごと撮ると、指で操作する端末のまね(pointer: coarse)が外れるため、かけ直す
     if (touch) {
       const cdp = await page.context().newCDPSession(page);

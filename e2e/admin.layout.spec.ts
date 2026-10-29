@@ -1,4 +1,5 @@
 import { expect, test, type Browser, type Page } from '@playwright/test';
+import { restoreTouch } from './households-helpers';
 import { adminLogin, adminToast, answerSurvey, makePhoto, newLineUser, openCheckin, openLiff, registerViaUi } from './helpers';
 
 // 受付・管理画面の見え方を確かめる(e2e/liff.layout.spec.ts と同じ考え方)。
@@ -29,13 +30,6 @@ async function checkScreen(page: Page, folder: string, screen: string, touch: bo
     ),
   );
   const minHeight = touch ? 44 : 40;
-  // 指の操作のエミュレーション(pointer: coarse)が効いていることを先に確かめる。
-  // 全体の写真を撮った直後は一瞬だけ外れていて、すべての部品が 40px と出ることがあったため(画面の不具合ではない)
-  if (touch) {
-    await expect
-      .poll(() => page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--control-h').trim()), { timeout: 5000 })
-      .toBe('44px');
-  }
   const problems = await page.evaluate((minHeight) => {
     const out: string[] = [];
     const doc = document.documentElement;
@@ -61,6 +55,8 @@ async function checkScreen(page: Page, folder: string, screen: string, touch: bo
   expect(problems, `${folder} / ${screen}`).toEqual([]);
   if (process.env.SHOT_DIR) {
     await page.screenshot({ path: `${process.env.SHOT_DIR}/${folder}/${screen}.png`, fullPage: true });
+    // 全体の写真を撮ると、指の操作のエミュレーション(pointer: coarse)が外れることがあるので、かけ直す
+    if (touch) await restoreTouch(page);
   }
 }
 
