@@ -64,7 +64,7 @@ const IMAGE_TYPES = [
 ] as const;
 
 /**
- * 会員証の背景の写真を保存する。JPEG・PNG・WebP で 2MB 以下(スマホで縮小してから送られてくる)。
+ * 会員証の背景の写真を保存する。JPEG・PNG・WebP で 1.8MB 以下(スマホで縮小してから送られてくる)。
  * キーは cards/<おうちのID>/<uuid>.<拡張子>。
  */
 export async function saveCardPhoto(
@@ -77,11 +77,11 @@ export async function saveCardPhoto(
     throw errors.badRequest('写真を受け取れませんでした。写真を選び直して、もう一度お試しください。');
   }
   if (photo.size > CARD_PHOTO_MAX_BYTES) {
-    throw errors.badRequest('写真が大きすぎます(2MB まで)。画面を読み込み直して、もう一度写真を選んでください。');
+    throw errors.badRequest('写真が大きすぎます(1.8MB まで)。画面を読み込み直して、もう一度写真を選んでください。');
   }
   const bytes = new Uint8Array(await photo.arrayBuffer());
   if (bytes.length > CARD_PHOTO_MAX_BYTES) {
-    throw errors.badRequest('写真が大きすぎます(2MB まで)。画面を読み込み直して、もう一度写真を選んでください。');
+    throw errors.badRequest('写真が大きすぎます(1.8MB まで)。画面を読み込み直して、もう一度写真を選んでください。');
   }
   const kind = bytes.length >= 12 ? IMAGE_TYPES.find((t) => t.test(bytes)) : undefined;
   if (!kind) {

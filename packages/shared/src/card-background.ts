@@ -23,7 +23,7 @@ export const CARD_PRESET_LABELS: Record<CardPresetColor, string> = {
 export const CARD_LIGHT_PRESETS: readonly CardPresetColor[] = ['sand', 'white'];
 
 /** 写真の大きさの上限(サーバーで確かめる)。スマホでは長い辺 1200px 以下に縮小して送る */
-export const CARD_PHOTO_MAX_BYTES = 2 * 1024 * 1024;
+export const CARD_PHOTO_MAX_BYTES = 1_800_000;
 export const CARD_PHOTO_MAX_EDGE = 1200;
 
 /** データベースに保存する形 */

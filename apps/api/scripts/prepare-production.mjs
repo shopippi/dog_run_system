@@ -30,7 +30,9 @@ const toml = readFileSync('wrangler.toml', 'utf8');
 const i = toml.indexOf('[env.production]');
 writeFileSync('wrangler.toml', toml.slice(0, i) + toml.slice(i).replace(/database_id = "[^"]*"/, `database_id = "${id}"`));
 
-if (createIfMissing) {
+// R2 は wrangler.toml の本番の設定で使うときだけ用意する(いまは使わず、写真はデータベースに保存する)
+const usesR2 = /^\[\[env\.production\.r2_buckets\]\]/m.test(readFileSync('wrangler.toml', 'utf8'));
+if (createIfMissing && usesR2) {
   const buckets = wrangler(['r2', 'bucket', 'list']);
   if (!buckets.includes(BUCKET)) {
     console.log(`R2 の保存先 ${BUCKET} を作ります(公開はしない)`);
