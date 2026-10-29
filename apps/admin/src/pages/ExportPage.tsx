@@ -8,8 +8,9 @@ import { useToast } from '../components/Toast';
 import { ApiError } from '../lib/api';
 
 /** CSV を受け取る(エラーのときは、API のエラーの文を出す) */
-async function download(name: ExportName, from: string, to: string): Promise<string> {
+async function download(name: ExportName, from: string, to: string, plain: boolean): Promise<string> {
   const q = new URLSearchParams();
+  if (plain) q.set('plain', '1');
   if (EXPORTS[name].period) {
     if (from) q.set('from', from);
     if (to) q.set('to', to);
@@ -52,7 +53,9 @@ async function download(name: ExportName, from: string, to: string): Promise<str
  * LINE の名前やアンケートの回答が入るので、ファイルの扱いに気をつける。
  */
 export function ExportPage() {
-  const [name, setName] = useState<ExportName>('visits');
+  const [name, setName] = useState<ExportName>('analysis');
+  const [plain, setPlain] = useState(false);
+  const plainId = useId();
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
   const [busy, setBusy] = useState(false);
@@ -74,7 +77,7 @@ export function ExportPage() {
     }
     setBusy(true);
     try {
-      const file = await download(name, from, to);
+      const file = await download(name, from, to, plain);
       toast(`「${file}」をダウンロードしました。`);
     } catch (e) {
       setError(e);
@@ -87,7 +90,7 @@ export function ExportPage() {
     <div className="page cfg-page">
       <PageHead
         title="CSV出力"
-        howto="出したい内容を選んで「ダウンロード」を押してください。Excelでそのまま開けます。LINEの名前やアンケートの回答が入るので、ファイルは外に渡さないでください。出力したことは操作ログに残ります。"
+        howto="出したい内容を選んで「ダウンロード」を押してください。Excelでそのまま開けます。「AIに渡す」2つは名前や会員IDが入らないので、そのままAIに渡せます。ほかはLINEの名前などが入るので、外に渡さないでください。出力したことは操作ログに残ります。"
       />
       <section className="panel cfg-add" aria-label="CSVを作る">
         <div className="field">
@@ -114,11 +117,22 @@ export function ExportPage() {
               <label htmlFor={toId}>期間の終わり</label>
               <input id={toId} type="date" className="cfg-date" value={to} onChange={(e) => setTo(e.target.value)} />
             </div>
-            <p className="hint cfg-period-hint">空欄のときは、すべての期間を出します。</p>
+            <p className="hint cfg-period-hint">
+              {info.ai ? '空欄のときは、利用が始まった日から今日までを出します。' : '空欄のときは、すべての期間を出します。'}
+            </p>
           </div>
         ) : (
           <p className="sub-text">この内容は、いまの状態をすべて出します(期間の指定はありません)。</p>
         )}
+        {info.ai && (
+          <p className="sub-text">
+            ファイルの先頭に、施設名・期間・各列の意味・使い方を書いた説明(「#」で始まる行)が入ります。AIにそのまま渡し、「曜日と天気ごとの来場の傾向を教えて」のように聞いてください。
+          </p>
+        )}
+        <label className="check" htmlFor={plainId}>
+          <input id={plainId} type="checkbox" checked={plain} onChange={(e) => setPlain(e.target.checked)} />
+          説明行を付けない(表計算ソフトで集計したいとき)
+        </label>
         {error ? <ErrorNotice error={error} /> : null}
         <div className="cfg-acts">
           <button type="button" className="btn" disabled={busy} onClick={() => void submit()}>

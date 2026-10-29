@@ -1,6 +1,8 @@
-import { CANCEL_REASONS, type AdminVisit, type TodayResponse, type WithAuditId } from '@dr/shared';
+import { CANCEL_REASONS, toJstDate, type AdminVisit, type DayVisitsResponse, type TodayResponse, type WithAuditId } from '@dr/shared';
 import { useEffect, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
+import { DayNotes } from '../components/DayNotes';
+import '../dashboard.css';
 import { Dialog } from '../components/Dialog';
 import { DogFace } from '../components/DogFace';
 import { ErrorNotice } from '../components/ErrorNotice';
@@ -22,23 +24,47 @@ function formatDate(ymd: string) {
 
 /** M-02 今日の来場(S-02)。管理画面のトップ。30秒ごとに自動で更新する */
 export function TodayPage() {
-  const { data, error, reload } = usePolling(() => adminApi<TodayResponse>('/today'), 30_000);
+  // ?date=2026-10-24 のときは、その日の来場の一覧(ダッシュボードの日の詳細から開く。2026-10-29)
+  const [params] = useSearchParams();
+  const asked = params.get('date');
+  const otherDay = asked && /^\d{4}-\d{2}-\d{2}$/.test(asked) && asked !== toJstDate(new Date()) ? asked : null;
+  const { data: loaded, error, reload } = usePolling<TodayResponse>(
+    () =>
+      otherDay
+        ? adminApi<DayVisitsResponse>(`/dashboard/day/${otherDay}/visits`).then((r) => ({ ...r, pendingRequests: null }))
+        : adminApi<TodayResponse>('/today'),
+    30_000,
+  );
+  const firstDay = useRef(otherDay);
+  useEffect(() => {
+    if (firstDay.current === otherDay) return;
+    firstDay.current = otherDay;
+    void reload();
+  }, [otherDay, reload]);
+  const shown = loaded && (!otherDay || loaded.date === otherDay) ? loaded : null;
   const { readOnly } = useAuth();
   const seen = useRef<Set<number> | null>(null);
   const fresh = new Set<number>();
-  if (data) {
-    if (seen.current) for (const v of data.visits) if (!seen.current.has(v.id)) fresh.add(v.id);
+  if (shown && !otherDay) {
+    if (seen.current) for (const v of shown.visits) if (!seen.current.has(v.id)) fresh.add(v.id);
   }
   useEffect(() => {
-    if (data) seen.current = new Set(data.visits.map((v) => v.id));
-  }, [data]);
+    if (shown) seen.current = new Set(shown.visits.map((v) => v.id));
+  }, [shown]);
+  const data = shown;
+  const noteDate = otherDay ?? data?.date ?? toJstDate(new Date());
 
   return (
     <div className="page">
       <PageHead
-        title="今日の来場"
-        sub={data ? formatDate(data.date) : undefined}
-        howto="今日チェックインしたお客さんの一覧です。30秒ごとに新しい来場が上に出ます。無料券を使ったおうちは、料金を調整してください。"
+        title={otherDay ? '来場の一覧' : '今日の来場'}
+        sub={otherDay ? formatDate(otherDay) : data ? formatDate(data.date) : undefined}
+        crumbs={otherDay ? [{ label: 'ダッシュボード', to: '/dashboard' }, { label: `${formatDate(otherDay)}の来場` }] : undefined}
+        howto={
+          otherDay
+            ? 'この日にチェックインしたお客さんの一覧です。取り消しは今日の来場と同じようにできます。'
+            : '今日チェックインしたお客さんの一覧です。30秒ごとに新しい来場が上に出ます。無料券を使ったおうちは、料金を調整してください。'
+        }
         aside={
           data?.pendingRequests ? (
             <p className="pending" role="status">
@@ -49,25 +75,29 @@ export function TodayPage() {
           ) : null
         }
       />
+      <section className="panel dnote-panel" aria-label="この日のメモ">
+        <h2>この日のメモ</h2>
+        <DayNotes date={noteDate} compact />
+      </section>
       {error ? <ErrorNotice error={error} onRetry={reload} /> : null}
       {!data ? (
-        error ? null : <TodaySkeleton walkin={!readOnly} />
+        error ? null : <TodaySkeleton walkin={!readOnly && !otherDay} />
       ) : (
         <>
-          <section className="panel summary" aria-label="今日の集計">
+          <section className="panel summary" aria-label={otherDay ? 'この日の集計' : '今日の集計'}>
             <div className="kpis">
               <Kpi label="来場組数" value={data.totals.groups} unit="組" />
               <Kpi label="ワンちゃん" value={data.totals.memberDogs + data.totals.walkinDogs} unit="頭" />
               <Kpi label="うち会員以外" value={data.totals.walkinDogs} unit="頭" />
               <Kpi label="無料券の使用" value={data.totals.ticketsUsed} unit="枚" />
             </div>
-            {!readOnly && <WalkinForm onDone={reload} />}
+            {!readOnly && !otherDay && <WalkinForm onDone={reload} />}
           </section>
           <section className="panel list-panel">
             {data.visits.length === 0 ? (
               <p className="empty">まだ来場はありません。</p>
             ) : (
-              <ul className="visits" aria-label="今日の来場">
+              <ul className="visits" aria-label={otherDay ? 'この日の来場' : '今日の来場'}>
                 <VisitsHead />
                 {data.visits.map((v) => (
                   <VisitRow key={v.id} v={v} fresh={fresh.has(v.id)} canEdit={!readOnly} onChanged={reload} />
