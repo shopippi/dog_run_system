@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { addFamily, adminCall, call, createStaff, dog, fakeJpeg, login, registerUser } from './helpers';
 
 // C-06 会員証の背景(docs/design.md 5章 L-07・L-07b、docs/changes-2026-10-28.md 8章)。
-// おうちで共通。単色 8 色か、自分の写真(スマホで縮小して送る。2MB まで)。写真は認証つきの API からだけ返す。
+// おうちで共通。単色 8 色か、自分の写真(スマホで縮小して送る。1.8MB まで)。写真は認証つきの API からだけ返す。
 
 const PAPA = 'U001:パパ';
 const MAMA = 'U002:ママ';
@@ -123,16 +123,16 @@ describe('C-06 会員証の背景', () => {
     expect(stranger.body.error.message).toContain('ほかのおうちの写真は開けません');
   });
 
-  it('登録していない人は変えられない。2MB を超える写真と、写真でないファイルは 400', async () => {
+  it('登録していない人は変えられない。1.8MB を超える写真と、写真でないファイルは 400', async () => {
     expect((await putPreset('U050:まだの人', 'navy')).status).toBe(409);
     await registerUser(PAPA);
-    const big = new Uint8Array(2 * 1024 * 1024 + 1);
+    const big = new Uint8Array(1_800_001);
     big.set(fakeJpeg(1200, 800));
     const tooBig = await postPhoto(PAPA, photoForm(big));
     expect(tooBig.status).toBe(400);
-    expect(tooBig.body.error.message).toContain('2MB');
-    // ちょうど 2MB は受け取る
-    const just = new Uint8Array(2 * 1024 * 1024);
+    expect(tooBig.body.error.message).toContain('1.8MB');
+    // ちょうど 1.8MB は受け取る
+    const just = new Uint8Array(1_800_000);
     just.set(fakeJpeg(1200, 800));
     expect((await postPhoto(PAPA, photoForm(just))).status).toBe(200);
 

@@ -74,7 +74,11 @@ export function runWeatherJob(env: Bindings, now: Date, source?: WeatherSource) 
 
 /** B-04 バックアップ(毎晩 3:10 と、管理画面の手動の実行から呼ぶ) */
 export function runBackupJob(env: Bindings, now: Date) {
-  return runJob(env.DB, 'backup', now, () => backupDatabase(env.DB, env.MEDIA, now));
+  return runJob(env.DB, 'backup', now, async () =>
+    env.MEDIA_BACKEND === 'd1'
+      ? { message: 'スキップしました(写真の保存先 R2 を使っていないため。データベースは Cloudflare が過去7日分を自動で残しています)。' }
+      : backupDatabase(env.DB, env.MEDIA, now),
+  );
 }
 
 /** B-05 有効期限の処理(毎晩 3:10) */

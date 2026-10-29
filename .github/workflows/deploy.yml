@@ -1,0 +1,118 @@
+# Cloudflare への配信(本番)。
+# - 動くとき: main か deploy/demo(クライアントに見せるデモ用)に push したとき、または Actions の画面の「Run workflow」で手で動かしたとき
+# - 必要な Secrets: CLOUDFLARE_API_TOKEN(Workers・D1・R2 を編集できるトークン)
+# - 任意の Secrets: STAFF_INITIAL_PASSWORD があれば、管理画面のアカウントがまだ1つもないときに、最初の管理者を作る
+#   (メールアドレスは Secret か Variable の ADMIN_EMAIL。なければ admin@greendome.example)
+# アカウント ID と LIFF ID は公開してよい値なので、ここに書く(Variables の CLOUDFLARE_ACCOUNT_ID / LIFF_ID で上書きできる)。
+name: Deploy
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, deploy/demo]
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+env:
+  CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+  CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID || '1750afed104e032d623e116c11c29b4d' }}
+  LIFF_ID: ${{ vars.LIFF_ID || '2012268866-TDSM6zyj' }}
+
+defaults:
+  run:
+    # 各ステップの出力を1つのファイルにも残す(失敗したときに、最後の部分を注釈に出して、外からも原因が読めるようにする)
+    shell: bash -o pipefail -c "exec > >(tee -a \"$RUNNER_TEMP/deploy.log\") 2>&1; bash -eo pipefail {0}"
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    # Cloudflare のトークン(CLOUDFLARE_API_TOKEN)は GitHub の Environment「Secret」に入っている
+    environment: ${{ vars.DEPLOY_ENVIRONMENT || 'Secret' }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      - name: 設定の確認
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
+            echo "::error::GitHub の Secrets に CLOUDFLARE_API_TOKEN がありません。Settings → Secrets and variables → Actions の Environment「Secret」に登録してください。"
+            exit 1
+          fi
+          pnpm --filter @dr/api exec wrangler whoami
+
+      - name: データベース(D1)と写真の保存先(R2)を用意する(なければ作る)
+        working-directory: apps/api
+        run: node scripts/prepare-production.mjs
+
+      - name: 画面をビルドする(LIFF ID 入り)
+        run: VITE_LIFF_ID="$LIFF_ID" pnpm build
+
+      - name: データベースのマイグレーションを当てる
+        working-directory: apps/api
+        run: pnpm exec wrangler d1 migrations apply DB --remote --env production
+
+      - name: LIFF ID を設定に入れる(まだ入っていないときだけ。受付の QR コードと招待の URL に使う)
+        working-directory: apps/api
+        run: |
+          pnpm exec wrangler d1 execute DB --remote --env production --command \
+            "INSERT INTO settings (key, value, updated_at) VALUES ('liff_id', '\"${LIFF_ID}\"', strftime('%Y-%m-%dT%H:%M:%S+09:00', 'now', '+9 hours')) ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at WHERE settings.value = '\"\"'"
+
+      - name: Worker を配信する
+        working-directory: apps/api
+        run: |
+          pnpm exec wrangler deploy --env production 2>&1 | tee deploy.log
+          URL=$(grep -oE 'https://[a-z0-9.-]+\.workers\.dev' deploy.log | head -1)
+          echo "DEPLOY_URL=$URL" >> "$GITHUB_ENV"
+          # 外(GitHub の画面以外)からも読めるよう、注釈にも出す
+          echo "::notice title=配信先::${URL}/liff/ と ${URL}/admin/"
+
+      - name: 最初の管理者を作る(まだ1人もいないときだけ)
+        working-directory: apps/api
+        env:
+          STAFF_PASSWORD: ${{ secrets.STAFF_INITIAL_PASSWORD }}
+          ADMIN_EMAIL: ${{ secrets.ADMIN_EMAIL || vars.ADMIN_EMAIL || 'admin@greendome.example' }}
+        run: |
+          if [ -z "$STAFF_PASSWORD" ]; then
+            echo "::warning::Secrets に STAFF_INITIAL_PASSWORD がないので、最初の管理者は作りません。登録してからもう一度配信してください。"
+            exit 0
+          fi
+          COUNT=$(pnpm exec wrangler d1 execute DB --remote --env production --json --command "SELECT COUNT(*) AS n FROM staff_users" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const j=JSON.parse(s);console.log(j[0].results[0].n)})')
+          if [ "$COUNT" = "0" ]; then
+            pnpm staff:create --email "$ADMIN_EMAIL" --name 管理者 --role admin --remote --env production
+            echo "ADMIN_CREATED=1" >> "$GITHUB_ENV"
+            echo "::notice title=最初の管理者::${ADMIN_EMAIL} を作りました"
+          else
+            echo "管理画面のアカウントがすでにあるので、作りません。"
+          fi
+
+      - name: 配信先のまとめ
+        run: |
+          {
+            echo "## 配信しました"
+            echo
+            echo "- お客さん向け(LIFF のエンドポイント URL に設定する): \`${DEPLOY_URL}/liff/\`"
+            echo "- 受付・管理画面: \`${DEPLOY_URL}/admin/\`"
+            echo "- LINE から開く URL(リッチメニュー用): \`https://liff.line.me/${LIFF_ID}/\`"
+            echo "- 受付の QR コードの中身: \`https://liff.line.me/${LIFF_ID}/checkin?k=<合言葉>\`(合言葉は管理画面のルールの設定)"
+            if [ "${ADMIN_CREATED:-}" = "1" ]; then echo "- 最初の管理者を作りました(メールは ADMIN_EMAIL、パスワードは STAFF_INITIAL_PASSWORD)"; fi
+            echo
+            echo "LINE Developers の LIFF の「エンドポイント URL」を、上の \`/liff/\` の URL にしてください。"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: 失敗したときの記録(注釈に出す)
+        if: failure()
+        shell: bash
+        run: |
+          f="$RUNNER_TEMP/deploy.log"
+          [ -f "$f" ] || { echo "::error::記録がありません(ステップの準備で失敗)"; exit 0; }
+          tail -n 60 "$f" | sed -e 's/\x1b\[[0-9;]*m//g' > "$RUNNER_TEMP/tail.log"
+          msg=$(sed -e 's/%/%25/g' "$RUNNER_TEMP/tail.log" | awk 'BEGIN{ORS="%0A"}{print}')
+          echo "::error title=配信の失敗(最後の60行)::${msg}"
