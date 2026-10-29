@@ -34,7 +34,7 @@ export type MemberCard = {
   tickets: { id: number; issuedAt: string; expiresAt: string | null }[];
   /** 今日のチェックイン(済んでいれば) */
   todayVisitId: number | null;
-  /** 今日使った無料券(使っていれば、いちばん新しいもの)。「使用しました」の画面をもう一度開くため */
+  /** 今日使った無料券(使っていれば、いちばん新しいもの)。「使用できました」の画面をもう一度開くため */
   todayUsedTicketId: number | null;
 };
 

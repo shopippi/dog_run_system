@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { adminLogin, newLineUser, openCheckin, openLiff, registerViaUi } from './helpers';
-import { checkinToday, earnPoints } from './tickets-helpers';
+import { checkinToday, earnPoints, slideToUse } from './tickets-helpers';
 
 test('C-06 10ポイントたまると会員証に「無料券と交換する」が出て、確認してから交換できる。足りないときは出ない', async ({ page, request }) => {
   const user = newLineUser('ママ');
@@ -40,7 +40,7 @@ test('C-06 10ポイントたまると会員証に「無料券と交換する」�
   await expect(page.getByText('無料券を使う')).toHaveCount(0);
 });
 
-test('C-06 無料券の「使用する」を確認して押すと「無料券を使用しました」の画面が出て、受付の今日の来場に印が付く', async ({ browser, page, request }) => {
+test('C-06 無料券を右へスライドすると「使用できました」の画面が出て、受付の今日の来場に印が付く。途中で離すと使わない', async ({ browser, page, request }) => {
   test.setTimeout(90_000);
   const user = newLineUser('パパ');
   const memberNo = await registerViaUi(page, user, ['ハチ']);
@@ -52,14 +52,18 @@ test('C-06 無料券の「使用する」を確認して押すと「無料券を
   await openLiff(page, user);
 
   const row = page.getByRole('list', { name: '未使用の無料券' }).getByRole('listitem').first();
-  await row.getByRole('button', { name: '使用する' }).click();
-  const confirm = page.getByRole('group', { name: '無料券の使用の確認' });
-  await expect(confirm).toContainText('受付で見せながら押してください。使用すると元に戻せません。');
-  await confirm.getByRole('button', { name: '使用する' }).click();
+  await expect(page.getByText('受付で見せながら、右へスライドして使います。使うと元に戻せません。')).toBeVisible();
+  // 途中で離すと左へ戻り、使われない
+  await slideToUse(page, row, 0.5);
+  await expect(row.getByRole('slider', { name: 'スライドして使用する' })).toHaveAttribute('aria-valuenow', '0');
+  await expect(page).not.toHaveURL(/\/liff\/tickets\/\d+$/);
+  await expect(page.getByText('未使用 1枚')).toBeVisible();
+  // 右端まで動かすと使う
+  await slideToUse(page, row);
 
   await expect(page).toHaveURL(/\/liff\/tickets\/\d+$/);
-  const done = page.getByRole('region', { name: '無料券を使用しました' });
-  await expect(done.getByText('無料券を使用しました')).toBeVisible();
+  const done = page.getByRole('region', { name: '無料券を使用できました' });
+  await expect(done.getByText('使用できました', { exact: true })).toBeVisible();
   await expect(done.getByText('ハチのおうち')).toBeVisible();
   await expect(done.getByText(memberNo)).toBeVisible();
   // 時計は動いている(スクリーンショットと見分ける)
@@ -72,7 +76,7 @@ test('C-06 無料券の「使用する」を確認して押すと「無料券を
   await page.getByRole('link', { name: '会員証にもどる' }).click();
   await expect(page.getByText('使える無料券はありません')).toBeVisible();
   await page.getByRole('link', { name: '今日使った無料券の画面を見る' }).click();
-  await expect(page.getByRole('region', { name: '無料券を使用しました' })).toBeVisible();
+  await expect(page.getByRole('region', { name: '無料券を使用できました' })).toBeVisible();
 
   // 受付の「今日の来場」に「無料券を使用」の印
   const admin = await browser.newPage();

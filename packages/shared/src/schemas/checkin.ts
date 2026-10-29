@@ -5,7 +5,7 @@ const dogIdsSchema = z
   .min(1, { error: '今日来たワンちゃんを1頭以上選んでください。' })
   .max(30);
 
-/** チェックイン(POST /api/checkins)の入力(C-04)。無料券はチェックインでは使わない(会員証の「使用する」から使う) */
+/** チェックイン(POST /api/checkins)の入力(C-04)。無料券はチェックインでは使わない(会員証で右へスライドして使う) */
 export const checkinSchema = z.object({
   /** 受付の固定QRコードの合言葉 */
   passphrase: z.string().max(100),

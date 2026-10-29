@@ -467,16 +467,17 @@ a { color: var(--accent-text); }
 .mg-confirm-text .mono { font-size: var(--fs-15); color: var(--text); }
 
 /* ================================================================
- * 担当G: 無料券の交換と使用(C-06。会員証の無料券の欄・「無料券を使用しました」の画面・来場履歴の無料券の記録)
+ * 担当G: 無料券の交換と使用(C-06。会員証の無料券の欄・「使用できました」の画面・来場履歴の無料券の記録)
  * ================================================================ */
 .tk-section { gap: var(--sp-3); }
 .tk-head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--sp-3); }
 .tk-count { font-size: var(--fs-14); color: var(--text-secondary); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .tk-done { font-size: var(--fs-14); color: var(--text); }
 .tk-row {
-  display: flex; align-items: center; gap: var(--sp-3);
-  min-height: 64px; padding: var(--sp-3) var(--sp-3) var(--sp-3) var(--sp-4);
+  display: flex; flex-direction: column; align-items: stretch; gap: var(--sp-3);
+  padding: var(--sp-4);
 }
+.tk-howto { margin: 0; font-size: var(--fs-13); color: var(--text-secondary); }
 .tk-body { display: flex; flex-direction: column; flex: 1; min-width: 0; gap: 2px; }
 .tk-body b { font-size: var(--fs-15); font-weight: var(--fw-strong); }
 .tk-row .btn.tk-use { width: auto; flex: none; min-height: 44px; padding: 0 var(--sp-4); }
@@ -607,3 +608,40 @@ a { color: var(--accent-text); }
 }
 .stamp-panel .tk-confirm { padding-top: var(--sp-4); border-top: 1px solid var(--border); }
 .tk-empty { font-size: var(--fs-14); color: var(--text-secondary); }
+
+/* ================================================================
+ * 右へスライドして使う(SlideToUse。C-06 無料券の使用)。昔の iPhone の「スライドでロック解除」と同じ操作
+ * 溝は surface-sunk、つまみは墨色(ink)。文字はゆっくり光が流れる(動きを減らす設定では止める)
+ * ================================================================ */
+.slide {
+  position: relative; display: flex; align-items: center; height: 56px; padding: 4px;
+  border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--surface-sunk);
+  overflow: hidden; user-select: none; -webkit-user-select: none;
+}
+.slide-text {
+  position: absolute; inset: 0 0 0 56px; display: flex; align-items: center; justify-content: center;
+  padding-right: 8px; font-size: var(--fs-15); color: var(--text-secondary); pointer-events: none;
+  transition: opacity var(--ease);
+  -webkit-mask-image: linear-gradient(100deg, rgba(0, 0, 0, .62) 35%, #000 50%, rgba(0, 0, 0, .62) 65%);
+  mask-image: linear-gradient(100deg, rgba(0, 0, 0, .62) 35%, #000 50%, rgba(0, 0, 0, .62) 65%);
+  -webkit-mask-size: 250% 100%; mask-size: 250% 100%;
+  animation: slide-shine 2.6s linear infinite;
+}
+.slide.busy .slide-text { -webkit-mask-image: none; mask-image: none; animation: none; color: var(--text); }
+@keyframes slide-shine {
+  from { -webkit-mask-position: 100% 0; mask-position: 100% 0; }
+  to { -webkit-mask-position: 0% 0; mask-position: 0% 0; }
+}
+.slide-knob {
+  position: relative; z-index: 1; display: flex; align-items: center; justify-content: center;
+  width: 48px; height: 48px; flex: none; border-radius: var(--radius);
+  background: var(--ink); color: var(--on-ink); cursor: grab; touch-action: none;
+  transition: transform 220ms ease-out;
+}
+.slide.dragging .slide-knob { transition: none; cursor: grabbing; }
+.slide-knob:focus-visible { outline: 2px solid var(--focus-color); outline-offset: 2px; }
+.slide[aria-disabled] .slide-knob { cursor: default; }
+@media (prefers-reduced-motion: reduce) {
+  .slide-text { -webkit-mask-image: none; mask-image: none; animation: none; }
+  .slide-knob { transition: none; }
+}

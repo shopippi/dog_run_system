@@ -14,7 +14,7 @@ function formatDate(ymd: string) {
 }
 
 /**
- * 「無料券を使用しました」の画面(C-06)。会員証の「使用する」を押したあとに出る。受付はこの画面を見て料金を調整する。
+ * 「使用できました」の画面(C-06)。会員証の無料券を右へスライドして使ったあとに出る。受付はこの画面を見て料金を調整する。
  * チェックイン完了(L-06)と同じ考え方で、現在時刻(秒まで)と流れ続ける細いバーで、スクリーンショットと見分けられるようにする。
  * 時計はサーバーの時刻に合わせる(スマホの時計がずれていても、受付で見分けられるように)。
  */
@@ -46,7 +46,7 @@ export function TicketUsedPage() {
   return (
     <main className="screen done-screen">
       {detail.isToday ? (
-        <section className="done live" aria-label="無料券を使用しました">
+        <section className="done live" aria-label="無料券を使用できました">
           <div className="done-head">
             <p className="done-status">
               <span className="pulse" aria-hidden="true" />
@@ -58,7 +58,7 @@ export function TicketUsedPage() {
             </p>
           </div>
           <div className="done-body">
-            <p className="used-ticket">無料券を使用しました</p>
+            <p className="used-ticket">使用できました</p>
             <p className="done-names">{detail.householdName}</p>
             <p className="done-meta">
               <span className="mono">{detail.memberNo}</span>
@@ -73,7 +73,7 @@ export function TicketUsedPage() {
       ) : (
         <section className="done past">
           <h2>{formatDate(detail.usedDate)}に使った無料券です</h2>
-          <p className="lead">今日の来場には使えません。未使用の無料券は、会員証の「使用する」から使ってください。</p>
+          <p className="lead">今日の来場には使えません。未使用の無料券は、会員証の無料券を右へスライドして使ってください。</p>
         </section>
       )}
 

@@ -6,7 +6,7 @@ import { ErrorNotice } from '../../components/ErrorNotice';
 import { ApiError, api, postJson } from '../../lib/api';
 import { canScan, scanCheckinCode } from '../../lib/liff';
 
-/** L-05 チェックイン(C-04)。受付のQRコードから開く → 来た犬を選ぶ → 確定。無料券は会員証の「使用する」から使う(8章) */
+/** L-05 チェックイン(C-04)。受付のQRコードから開く → 来た犬を選ぶ → 確定。無料券は会員証で右へスライドして使う(8章) */
 export function CheckinPage() {
   const [params, setParams] = useSearchParams();
   const passphrase = params.get('k');

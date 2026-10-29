@@ -109,13 +109,18 @@ test('お客さん: 会員証・チェックイン・無料券', async ({ browse
   await expect(page.getByRole('status')).toHaveText('無料券と交換しました。');
 
   const row = page.getByRole('list', { name: '未使用の無料券' }).getByRole('listitem').first();
-  await row.getByRole('button', { name: '使用する' }).click();
-  const confirm = page.getByRole('group', { name: '無料券の使用の確認' });
-  await expect(confirm).toBeVisible();
+  // スライドの途中(右へ半分ほど動かしたところ)を撮る。キーボードで 2 段階動かす
+  const knob = row.getByRole('slider', { name: 'スライドして使用する' });
+  await knob.focus();
+  await page.keyboard.press('ArrowRight');
+  await page.keyboard.press('ArrowRight');
+  await expect(knob).toHaveAttribute('aria-valuenow', '50');
+  await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
   await scrollToTop(page.locator('section.tk-section'));
   await shot(page, 'customer-ticket-use');
-  await confirm.getByRole('button', { name: '使用する' }).click();
-  await expect(page.getByRole('region', { name: '無料券を使用しました' })).toBeVisible();
+  await knob.focus();
+  await page.keyboard.press('End');
+  await expect(page.getByRole('region', { name: '無料券を使用できました' })).toBeVisible();
   await shot(page, 'customer-ticket-used');
   await context.close();
 });
