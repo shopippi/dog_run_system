@@ -2,11 +2,12 @@ import richmenu from './assets/richmenu.jpg';
 
 /** リッチメニューの押せる場所(画像 2500×1686 の割合)と、開く画面。docs/line/richmenu.md と同じ */
 export const RICH_MENU_AREAS = [
-  { label: '会員証', route: '/', x: 0, y: 0, w: 1666, h: 843 },
-  { label: 'チェックイン', route: 'checkin', x: 1666, y: 0, w: 834, h: 843 },
-  { label: '来場履歴', route: '/history', x: 0, y: 843, w: 833, h: 843 },
-  { label: 'ワンちゃん', route: '/dogs', x: 833, y: 843, w: 833, h: 843 },
-  { label: '使い方', route: '/help', x: 1666, y: 843, w: 834, h: 843 },
+  // LINE の「大」6 マス(列の区切り x=833・1667、段の区切り y=843)。会員証は上の左 2 マス(A・B)
+  { label: '会員証', route: '/', x: 0, y: 0, w: 1667, h: 843 },
+  { label: 'チェックイン', route: 'checkin', x: 1667, y: 0, w: 833, h: 843 },
+  { label: '来場の記録', route: '/history', x: 0, y: 843, w: 833, h: 843 },
+  { label: 'ワンちゃん', route: '/dogs', x: 833, y: 843, w: 834, h: 843 },
+  { label: '使い方', route: '/help', x: 1667, y: 843, w: 833, h: 843 },
 ] as const;
 
 const pct = (v: number, total: number) => `${(v / total) * 100}%`;

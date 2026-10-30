@@ -1,85 +1,161 @@
 <!doctype html>
 <!--
-  LINE 公式アカウントのリッチメニューの画像(2500×1686、大)。写真は photos/(施設の写真)。
-  作り直すとき: node docs/line/make-richmenu.mjs(Playwright でこの HTML を撮って richmenu.jpg にする)
-  押せる場所(左上が 0,0):
-    A 会員証       x=0    y=0   w=1666 h=843
-    B チェックイン x=1666 y=0   w=834  h=843
-    C 来場履歴     x=0    y=843 w=833  h=843
-    D ワンちゃん   x=833  y=843 w=833  h=843
-    E 使い方       x=1666 y=843 w=834  h=843
+  リッチメニュー(いま使っている案「雑誌」)。2500×1686。作り直し: node docs/line/make-richmenu.mjs
+  ほかの案は alt/(dark: 夜・墨と朱、warm: ぬくもり・生成りと肉球)
+  LINE の「大」6 マス(3 列 × 2 段)。列の区切り x=833・1667、段の区切り y=843。
+    A+B 会員証(上の左 2 マス)  C チェックイン(上の右)
+    D 来場の記録(下の左)        E ワンちゃん(下のまん中)  F 使い方(下の右)
 -->
 <html lang="ja">
 <head>
 <meta charset="utf-8" />
+<meta name="fonts" content="600 100px 'Shippori Mincho B1' | 500 50px 'Zen Kaku Gothic New' | italic 500 64px 'Cormorant Garamond'" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@1,500&family=Shippori+Mincho+B1:wght@600&family=Zen+Kaku+Gothic+New:wght@500&display=block" rel="stylesheet" />
 <style>
+  :root {
+    --paper: #F4F1EB; --ink: #16191D; --ink-2: #4A515B; --rule: #D8D2C6; --shu: #B4532A;
+    --c1: 833px; --c2: 1667px; --r1: 843px;
+    --pad: 104px;
+  }
   * { box-sizing: border-box; margin: 0; }
   html, body { width: 2500px; height: 1686px; overflow: hidden; }
-  body {
-    position: relative;
-    font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Noto Sans JP", "Noto Sans CJK JP", sans-serif;
-    -webkit-font-smoothing: antialiased; background: #1b2a1e;
-  }
-  /* 下の段の背景: ドッグランの写真(ぼかして、少し暗く) */
-  .run-bg { position: absolute; left: 0; top: 843px; width: 2500px; height: 843px; overflow: hidden; }
-  .run-bg img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 62%; filter: blur(14px) saturate(115%); transform: scale(1.08); }
-  .run-bg::after { content: ""; position: absolute; inset: 0; background: rgba(10, 20, 12, .30); }
-  .cell { position: absolute; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 40px; overflow: hidden; }
-  /* A 会員証: 小屋と看板の写真 */
-  .card { left: 0; top: 0; width: 1666px; height: 843px; color: #FFFFFF; align-items: flex-start; justify-content: flex-end; padding: 0 110px 92px; }
-  .card img { position: absolute; inset: 0; z-index: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 42%; }
-  .card::before { content: ""; position: absolute; inset: 0; z-index: 1;
-    background: linear-gradient(to top, rgba(0,0,0,.74) 0%, rgba(0,0,0,.38) 42%, rgba(0,0,0,0) 72%),
-                linear-gradient(to right, rgba(0,0,0,.35) 0%, rgba(0,0,0,0) 55%); }
-  .card > *:not(img) { position: relative; z-index: 2; }
-  .card .main { display: flex; align-items: flex-end; justify-content: space-between; width: 100%; }
-  .card h1 { font-size: 160px; font-weight: 600; letter-spacing: .03em; line-height: 1.05; text-shadow: 0 2px 8px rgba(0,0,0,.35); }
-  .card p { font-size: 70px; opacity: .92; margin-top: 22px; text-shadow: 0 1px 4px rgba(0,0,0,.45); }
-  .card .go { display: flex; align-items: center; gap: 18px; padding: 26px 46px 26px 56px; border-radius: 999px; background: rgba(255,255,255,.94); color: #16191D; font-size: 64px; font-weight: 600; }
-  /* B チェックイン: ドッグランの写真 */
-  .checkin { left: 1672px; top: 0; width: 828px; height: 843px; color: #FFFFFF; }
-  .checkin img { position: absolute; inset: 0; z-index: 0; width: 100%; height: 100%; object-fit: cover; object-position: 38% 55%; }
-  .checkin::before { content: ""; position: absolute; inset: 0; z-index: 1; background: rgba(8, 16, 10, .50); }
-  .checkin > *:not(img) { position: relative; z-index: 2; text-shadow: 0 1px 4px rgba(0,0,0,.4); }
-  /* 下の段: すりガラスのタイル */
-  .tile { top: 873px; width: 773px; height: 783px; border-radius: 40px; background: rgba(255,255,255,.90); color: #16191D; box-shadow: 0 10px 40px rgba(0,0,0,.18); }
-  .t1 { left: 30px; } .t2 { left: 863px; } .t3 { left: 1697px; }
-  .label { font-size: 100px; font-weight: 600; letter-spacing: .04em; }
-  .sub { font-size: 62px; margin-top: -20px; opacity: .9; }
+  body { position: relative; background: var(--paper); color: var(--ink); font-family: 'Zen Kaku Gothic New', sans-serif; -webkit-font-smoothing: antialiased; font-feature-settings: "palt"; }
   svg { display: block; }
+  .mincho { font-family: 'Shippori Mincho B1', serif; font-weight: 600; }
+  .num { font-family: 'Cormorant Garamond', serif; font-style: italic; font-weight: 500; letter-spacing: .02em; line-height: 1; }
+  .cell { position: absolute; overflow: hidden; }
+  .photo { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  .grain { position: absolute; inset: 0; opacity: .10; mix-blend-mode: overlay; background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='300' height='300'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 .5  0 0 0 0 .5  0 0 0 0 .5  0 0 0 1.2 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>"); }
+
+  /* A+B 会員証: 小屋の写真を全面に。下から墨のスクリム */
+  .card { left: 0; top: 0; width: var(--c2); height: var(--r1); color: #FFFFFF; }
+  .card .photo { inset: auto; left: 0; top: -250px; width: 1960px; height: auto; filter: saturate(.9) contrast(1.05); }
+  .card::after { content: ""; position: absolute; inset: 0;
+    background:
+      linear-gradient(to right, rgba(14,16,19,.78) 0%, rgba(14,16,19,.5) 40%, rgba(14,16,19,0) 66%),
+      linear-gradient(to top, rgba(14,16,19,.78) 0%, rgba(14,16,19,.2) 45%, rgba(14,16,19,0) 70%),
+      linear-gradient(to bottom, rgba(14,16,19,.45) 0%, rgba(14,16,19,0) 30%); }
+  .card > .in { position: absolute; inset: 0; z-index: 2; padding: 88px var(--pad) 96px; display: flex; flex-direction: column; justify-content: space-between; }
+  .brand { display: flex; align-items: baseline; gap: 26px; }
+  .brand .mincho { font-size: 58px; letter-spacing: .08em; }
+  .brand .num { font-size: 52px; opacity: .85; }
+  .hero { display: flex; align-items: flex-end; justify-content: space-between; }
+  .hero .num { font-size: 64px; opacity: .8; margin-bottom: 20px; }
+  .hero h1 { font-size: 156px; letter-spacing: .01em; white-space: nowrap; line-height: 1; text-shadow: 0 2px 24px rgba(0,0,0,.25); }
+  .hero p { font-size: 56px; margin-top: 36px; color: rgba(255,255,255,.9); letter-spacing: .04em; }
+  .go { width: 216px; height: 216px; border-radius: 50%; flex: none; display: grid; place-items: center;
+    background: rgba(255,255,255,.16); border: 2.5px solid rgba(255,255,255,.62);
+    backdrop-filter: blur(22px) saturate(140%); -webkit-backdrop-filter: blur(22px) saturate(140%); }
+
+  /* C チェックイン: ドッグランの写真を墨のダブルトーンに */
+  .checkin { left: var(--c2); top: 0; width: calc(2500px - var(--c2)); height: var(--r1); color: #FFFFFF; background: var(--ink); }
+  .checkin .photo { object-position: 28% 55%; filter: grayscale(1) sepia(.18) contrast(1.2); opacity: .42; }
+  .checkin::after { content: ""; position: absolute; inset: 0; background: linear-gradient(to top, rgba(14,16,19,.7), rgba(14,16,19,.2)); }
+
+  /* 下の段: 紙の上に、細い罫線で区切った目次のような 3 マス */
+  .rule { position: absolute; top: calc(var(--r1) + 96px); bottom: 96px; width: 2px; background: var(--rule); }
+  .tile { top: var(--r1); height: calc(1686px - var(--r1)); }
+  .d { left: 0; width: var(--c1); } .e { left: var(--c1); width: calc(var(--c2) - var(--c1)); } .f { left: var(--c2); width: calc(2500px - var(--c2)); }
+
+  .in2 { position: absolute; inset: 0; z-index: 2; padding: 96px var(--pad) 100px; display: flex; flex-direction: column; justify-content: space-between; }
+  .top { display: flex; justify-content: space-between; align-items: flex-start; }
+  .top .num { font-size: 76px; }
+  .tile .num { color: var(--shu); }
+  .checkin .num { color: rgba(255,255,255,.8); }
+  .label { font-size: 100px; letter-spacing: 0; line-height: 1.1; white-space: nowrap; }
+  .sub { font-size: 50px; margin-top: 28px; letter-spacing: .03em; color: var(--ink-2); white-space: nowrap; }
+  .bottom svg { margin-bottom: 52px; }
+  .arrow { opacity: .55; margin-top: 8px; }
+  .checkin .sub { color: rgba(255,255,255,.84); }
 </style>
 </head>
 <body>
-  <div class="run-bg"><img src="photos/run.webp" alt="" /></div>
+  <!-- A+B 会員証 -->
   <div class="cell card">
-    <img src="photos/cabin.webp" alt="" />
-    <div class="main">
-      <div>
-        <h1>会員証</h1>
-        <p>ポイント・無料券・ワンちゃん</p>
-      </div>
-      <div class="go">ひらく
-        <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="#16191D" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9.5 18 6-6-6-6"/></svg>
+    <img class="photo" src="photos/cabin.webp" alt="" />
+    <div class="grain"></div>
+    <div class="in">
+      <div class="brand"><span class="mincho">グリーンドーム</span><span class="num">Dog Run Members</span></div>
+      <div class="hero">
+        <div>
+          <div class="num">No. 01</div>
+          <h1 class="mincho">会員証をひらく</h1>
+          <p>ポイント・無料券・ワンちゃん</p>
+        </div>
+        <div class="go">
+          <svg width="96" height="96" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </div>
       </div>
     </div>
   </div>
+
+  <!-- C チェックイン -->
   <div class="cell checkin">
-    <img src="photos/run.webp" alt="" />
-    <svg width="230" height="230" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8V5.5A1.5 1.5 0 0 1 5.5 4H8M16 4h2.5A1.5 1.5 0 0 1 20 5.5V8M20 16v2.5a1.5 1.5 0 0 1-1.5 1.5H16M8 20H5.5A1.5 1.5 0 0 1 4 18.5V16"/><rect x="8" y="8" width="3" height="3"/><rect x="13" y="8" width="3" height="3"/><rect x="8" y="13" width="3" height="3"/><path d="M13 13h3v3M13 16h1"/></svg>
-    <div class="label">チェックイン</div>
-    <div class="sub">受付の QR を読む</div>
+    <img class="photo" src="photos/run.webp" alt="" />
+    <div class="in2">
+      <div class="top">
+        <span class="num">02</span>
+        <svg width="168" height="168" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8V5.5a2 2 0 0 1 2-2H8M16 3.5h2.5a2 2 0 0 1 2 2V8M20.5 16v2.5a2 2 0 0 1-2 2H16M8 20.5H5.5a2 2 0 0 1-2-2V16"/><rect x="7.5" y="7.5" width="3.5" height="3.5" rx=".5"/><rect x="13" y="7.5" width="3.5" height="3.5" rx=".5"/><rect x="7.5" y="13" width="3.5" height="3.5" rx=".5"/><path d="M13 13h3.5v3.5M13 16.5h.01"/></svg>
+      </div>
+      <div>
+        <div class="label mincho">チェックイン</div>
+        <div class="sub">受付の QR を読む</div>
+      </div>
+    </div>
   </div>
-  <div class="cell tile t1">
-    <svg width="190" height="190" viewBox="0 0 24 24" fill="none" stroke="#16191D" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 9.5h17M8 3v4M16 3v4"/><path d="m8.5 14.5 2.2 2.2 4.8-4.7"/></svg>
-    <div class="label">来場履歴</div>
+
+  <!-- 下の段 -->
+  <div class="rule" style="left: 832px"></div>
+  <div class="rule" style="left: 1666px"></div>
+
+  <div class="cell tile d">
+    <div class="in2">
+      <div class="top">
+        <span class="num">03</span>
+        <svg class="arrow" width="72" height="72" viewBox="0 0 24 24" fill="none" stroke="#16191D" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M9 7h8v8"/></svg>
+      </div>
+      <div class="bottom">
+        <svg width="150" height="150" viewBox="0 0 24 24" fill="none" stroke="#16191D" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15.5" rx="2"/><path d="M3.5 9.5h17M8 3v4M16 3v4"/><path d="m8.8 14.6 2.2 2.2 4.4-4.4"/></svg>
+        <div class="label mincho">来場の記録</div>
+        <div class="sub">これまでの来場と無料券</div>
+      </div>
+    </div>
   </div>
-  <div class="cell tile t2">
-    <svg width="190" height="190" viewBox="0 0 24 24" fill="none" stroke="#16191D" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M10 5.2 8.2 3.5 4.5 5v4.2c0 .9.6 1.6 1.4 1.8M14 5.2l1.8-1.7L19.5 5v4.2c0 .9-.6 1.6-1.4 1.8"/><path d="M6 10.5c0 5.4 2.6 9.5 6 9.5s6-4.1 6-9.5C18 7 15.3 5 12 5S6 7 6 10.5z"/><circle cx="9.6" cy="11.5" r=".6" fill="#16191D"/><circle cx="14.4" cy="11.5" r=".6" fill="#16191D"/><path d="M11 15.2h2l-1 1.1z"/></svg>
-    <div class="label">ワンちゃん</div>
+
+  <div class="cell tile e">
+    <div class="in2">
+      <div class="top">
+        <span class="num">04</span>
+        <svg class="arrow" width="72" height="72" viewBox="0 0 24 24" fill="none" stroke="#16191D" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M9 7h8v8"/></svg>
+      </div>
+      <div class="bottom">
+        <svg width="150" height="150" viewBox="0 0 24 24" fill="none" stroke="#16191D" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.2 6.4C6.6 5.2 4.2 5.6 3.4 7.6c-.7 1.8-.3 4.5 1.3 5.6.8.5 1.6.2 1.9-.5"/><path d="M15.8 6.4c1.6-1.2 4-.8 4.8 1.2.7 1.8.3 4.5-1.3 5.6-.8.5-1.6.2-1.9-.5"/><path d="M6.6 10.6C6.6 7.6 9 5.5 12 5.5s5.4 2.1 5.4 5.1v3.2c0 3.6-2.4 6.2-5.4 6.2s-5.4-2.6-5.4-6.2z"/><circle cx="9.9" cy="11.6" r=".55" fill="#16191D"/><circle cx="14.1" cy="11.6" r=".55" fill="#16191D"/><path d="M11 14.6h2c.3 0 .4.3.2.5l-1 .9-1-.9c-.2-.2-.1-.5.2-.5zM12 16v.9M10.6 17.4c.8.5 2 .5 2.8 0"/></svg>
+        <div class="label mincho">ワンちゃん</div>
+        <div class="sub">うちの子の写真と情報</div>
+      </div>
+    </div>
   </div>
-  <div class="cell tile t3">
-    <svg width="190" height="190" viewBox="0 0 24 24" fill="none" stroke="#16191D" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M9.6 9.4a2.5 2.5 0 0 1 4.8 1c0 1.7-2.4 2.2-2.4 3.6"/><circle cx="12" cy="17" r=".7" fill="#16191D"/></svg>
-    <div class="label">使い方</div>
+
+  <div class="cell tile f">
+    <div class="in2">
+      <div class="top">
+        <span class="num">05</span>
+        <svg class="arrow" width="72" height="72" viewBox="0 0 24 24" fill="none" stroke="#16191D" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M9 7h8v8"/></svg>
+      </div>
+      <div class="bottom">
+        <svg width="150" height="150" viewBox="0 0 24 24" fill="none" stroke="#16191D" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6.5C10.3 5 7.6 4.5 3.5 4.8v13.4c4.1-.3 6.8.2 8.5 1.8 1.7-1.6 4.4-2.1 8.5-1.8V4.8c-4.1-.3-6.8.2-8.5 1.7zM12 6.5V20"/></svg>
+        <div class="label mincho">使い方</div>
+        <div class="sub">よくある質問</div>
+      </div>
+    </div>
   </div>
+<script>
+  // Google Fonts の和文は「palt」(かなを詰める)が効かないので、小さいかなと中黒だけ手で詰める
+  document.querySelectorAll('h1, p, .label, .sub, .brand .mincho').forEach((el) => {
+    el.innerHTML = el.innerHTML.replace(/([ぁぃぅぇぉっゃゅょァィゥェォッャュョ])/g, '<span style="margin:0 -.09em">$1</span>').replace(/・/g, '<span style="margin:0 -.22em">・</span>');
+  });
+</script>
 </body>
 </html>
