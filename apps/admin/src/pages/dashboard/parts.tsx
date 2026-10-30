@@ -111,7 +111,9 @@ export function BarTable({
           <tr key={b.label} className={b.label === '未回答' || b.label === 'そのほか' ? 'dsb-muted' : undefined}>
             <th scope="row">
               <span className="dsb-bar" style={{ width: `${max ? (b.count / max) * 100 : 0}%` }} aria-hidden="true" />
-              <span className="dsb-bar-label">{b.label}</span>
+              <span className="dsb-bar-label" title={b.label}>
+                {b.label}
+              </span>
             </th>
             <td className="n">
               {fmt(b.count)}

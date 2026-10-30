@@ -46,23 +46,24 @@
 
 /* ページの頭: 右上の期間 */
 .dsb-page .page-head { flex-wrap: wrap; }
-.dsb-range {
+.dsb-range, .dsb-seg {
   display: inline-flex; flex-wrap: wrap; border: 1px solid var(--border); border-radius: var(--radius);
-  background: var(--surface-sunk); padding: 2px; gap: 2px;
+  background: var(--surface-sunk);
 }
+/* 押せる高さいっぱいをボタンにして、選択中の白い面は内側に描く(styles.css の .segment と同じ作り) */
 .dsb-range button, .dsb-seg button {
-  min-height: calc(var(--control-h) - 6px); padding: 0 var(--sp-3); border: 0; border-radius: var(--radius-sm);
-  background: transparent; color: var(--text-secondary); font-size: var(--fs-13); white-space: nowrap;
-  transition: background-color var(--ease), color var(--ease);
+  position: relative; isolation: isolate; min-height: var(--control-h); padding: 0 14px; border: 0; border-radius: var(--radius);
+  background: transparent; color: var(--text-secondary); font-size: var(--fs-13); white-space: nowrap; transition: color var(--ease);
 }
-/* 押せる高さは枠の外も含めて 40(タッチ 44)にする */
-.dsb-range, .dsb-seg { min-height: var(--control-h); align-items: stretch; }
-.dsb-range button[aria-checked="true"], .dsb-seg button[aria-checked="true"] {
-  background: var(--surface); color: var(--text); font-weight: var(--fw-strong); box-shadow: var(--shadow-seg);
+.dsb-range button::before, .dsb-seg button::before {
+  content: ""; position: absolute; inset: 3px; z-index: -1; border-radius: var(--radius-sm);
+  transition: background-color var(--ease), box-shadow var(--ease);
 }
-.dsb-range button:focus-visible, .dsb-seg button:focus-visible { outline: 2px solid var(--focus-color); outline-offset: 1px; }
+.dsb-range button[aria-checked="true"], .dsb-seg button[aria-checked="true"] { color: var(--text); font-weight: var(--fw-strong); }
+.dsb-range button[aria-checked="true"]::before, .dsb-seg button[aria-checked="true"]::before { background: var(--surface); box-shadow: var(--shadow-seg); }
+.dsb-range button:focus-visible, .dsb-seg button:focus-visible { outline: none; }
+.dsb-range button:focus-visible::before, .dsb-seg button:focus-visible::before { box-shadow: 0 0 0 2px var(--focus-color); }
 @media (hover: hover) { .dsb-range button:hover:not([aria-checked="true"]), .dsb-seg button:hover:not([aria-checked="true"]) { color: var(--text); } }
-.dsb-seg { display: inline-flex; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface-sunk); padding: 2px; gap: 2px; }
 .dsb-custom { display: flex; flex-wrap: wrap; gap: var(--sp-3) var(--sp-4); padding: var(--sp-4) var(--sp-5); }
 .dsb-custom input { width: 200px; max-width: 100%; }
 .dsb-period { margin: 0 0 var(--sp-3); font-size: var(--fs-13); color: var(--text-secondary); font-variant-numeric: tabular-nums; min-height: 20px; }
@@ -107,12 +108,13 @@
 .dsb-grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 @media (max-width: 1000px) { .dsb-grid-2 { grid-template-columns: minmax(0, 1fr); } }
 .dsb-panel { display: flex; flex-direction: column; gap: var(--sp-3); padding: var(--sp-4) var(--sp-5) var(--sp-5); min-width: 0; }
-.dsb-panel-head { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--sp-2) var(--sp-3); flex-wrap: wrap; }
-.dsb-panel-title { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1 1 220px; padding-top: 8px; }
+.dsb-panel-head { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--sp-2) var(--sp-3); }
+.dsb-wide .dsb-panel-head, .dsb-grid-2 .dsb-panel-head { flex-wrap: wrap; }
+.dsb-panel-title { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1 1 160px; padding-top: 8px; }
 .dsb-panel-title h2 { font-size: var(--fs-14); font-weight: var(--fw-strong); }
 .dsb-note { font-size: var(--fs-13); color: var(--text-secondary); }
 .dsb-panel-acts { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; margin-left: auto; }
-.dsb-csv { gap: 4px; font-size: var(--fs-13); padding: 0 var(--sp-2); }
+.dsb-csv { gap: 4px; font-size: var(--fs-13); padding: 0 var(--sp-2); flex: none; white-space: nowrap; }
 .dsb-compare { font-size: var(--fs-13); color: var(--text-secondary); }
 .dsb-panel .empty { padding: var(--sp-6) var(--sp-3); }
 
@@ -165,9 +167,9 @@ line.dsb-gridline { stroke: var(--border); stroke-dasharray: 3 3; }
 .dsb-bars tbody th { position: relative; text-align: left; font-weight: var(--fw-regular); overflow: hidden; }
 .dsb-bar { position: absolute; left: 0; top: 4px; bottom: 4px; border-radius: 4px; background: var(--chart-bar); }
 .dsb-bar-label { position: relative; display: block; padding: 0 var(--sp-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text); }
-.dsb-bars td.n { width: 72px; text-align: right; white-space: nowrap; color: var(--text); }
+.dsb-bars td.n { width: 64px; text-align: right; white-space: nowrap; color: var(--text); }
 .dsb-bars td.n small { margin-left: 1px; font-size: var(--fs-12); color: var(--text-secondary); }
-.dsb-bars .dsb-pct { width: 48px; color: var(--text-secondary); }
+.dsb-bars .dsb-pct { width: 44px; color: var(--text-secondary); }
 .dsb-bars td.dsb-pct { color: var(--text-secondary); }
 .dsb-bars tr.dsb-muted .dsb-bar-label { color: var(--text-secondary); }
 .dsb-bars thead th { height: 28px; font-size: var(--fs-12); font-weight: var(--fw-strong); color: var(--text-secondary); text-align: left; padding: 0 var(--sp-2); }
@@ -190,6 +192,7 @@ line.dsb-gridline { stroke: var(--border); stroke-dasharray: 3 3; }
 .dsb-areas-foot { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--sp-2) var(--sp-3); padding-top: var(--sp-1); }
 
 /* 天気と来場 */
+.dsb-wx-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--sp-2) var(--sp-3); }
 .dsb-wx { list-style: none; margin: 0; padding: 0; }
 .dsb-wx-row { display: grid; grid-template-columns: 120px minmax(0, 1fr) 72px; align-items: center; gap: var(--sp-3); padding: var(--sp-3) 0; border-bottom: 1px solid var(--border); }
 .dsb-wx-row:last-child { border-bottom: 0; }

@@ -89,10 +89,12 @@ export function TrendPanel({ data, metric }: { data: DashboardResponse; metric: 
   const t = data.trend;
   const g = t.granularity;
   const withYear = data.from.slice(0, 4) !== data.to.slice(0, 4);
+  // 前の期間が去年にかかるときは、年も入れる(12か月の「10月31日〜10月30日」が分かりにくいため)
+  const yd = (d: string) => (t.previous.from.slice(0, 4) !== data.to.slice(0, 4) ? `${d.slice(0, 4)}年${md(d)}` : md(d));
   const prevLabel =
     g === 'hour'
       ? `${md(t.previous.from.slice(0, 10))} ${Number(t.previous.from.slice(11, 13))}時〜${md(t.previous.to.slice(0, 10))} ${Number(t.previous.to.slice(11, 13))}時台`
-      : `${md(t.previous.from)}〜${md(t.previous.to)}`;
+      : `${yd(t.previous.from)}〜${yd(t.previous.to)}`;
 
   if (metric === 'repeat') {
     const months = data.repeat.months;
