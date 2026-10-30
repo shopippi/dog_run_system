@@ -788,6 +788,28 @@ input::placeholder { color: var(--text-tertiary); }
   .mi-end { grid-column: 1 / -1; justify-content: flex-start; }
 }
 .hh-end .btn.tk-mark { padding: 0 var(--sp-3); }
+/* 旧カードの引き継ぎ: 移行期間のまとめ・入力欄の並び・一覧の検索 */
+.mi-sum-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--sp-2) var(--sp-4); }
+.mi-kpis { border: 1px solid var(--border); border-radius: var(--radius-row); }
+@media (max-width: 600px) { .mi-kpis .kpi:nth-child(3) { border-left: 0; } .mi-kpis .kpi:nth-child(n + 3) { border-top: 1px solid var(--border); } }
+.mi-fields { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: var(--sp-3) var(--sp-5); align-items: start; }
+.mi-fields .rq-points input { width: 160px; }
+.mi-search { flex: 0 1 360px; min-width: 0; }
+.mi-points { display: flex; flex-direction: column; align-items: flex-end; }
+.mi-points .sub-text { font-size: var(--fs-12); }
+.mi-badges { justify-content: flex-start; margin-top: 2px; }
+/* M-19 切り替えの手順 */
+.sw-list { list-style: none; margin: 0; padding: 0; }
+.sw-list > li + li { border-top: 1px solid var(--border); }
+.sw-step { display: flex; flex-direction: column; gap: var(--sp-1); padding: var(--sp-3) 0; }
+.sw-check b { font-size: var(--fs-15); font-weight: var(--fw-strong); }
+.sw-step.done .sw-check b { color: var(--text-secondary); }
+.sw-body { display: flex; flex-direction: column; gap: var(--sp-2); padding-left: 30px; }
+.sw-link { align-self: flex-start; display: inline-flex; align-items: center; min-height: var(--control-h); }
+.sw-text {
+  margin: 0; padding: var(--sp-4); white-space: pre-wrap; overflow-wrap: anywhere; font-family: inherit; font-size: var(--fs-14); line-height: 1.7;
+  background: var(--surface-sunk); border: 1px solid var(--border); border-radius: var(--radius);
+}
 
 /* ---- 飼い主とワンちゃんの情報(担当J) ---- */
 /* M-06 おうちのアンケート: 見出しの横に「おうちの回答を変える」 */

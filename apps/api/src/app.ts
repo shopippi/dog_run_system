@@ -29,6 +29,7 @@ import { exportRoutes } from './routes/admin/export';
 import { dashboardRoutes } from './routes/admin/dashboard';
 import { systemRoutes } from './routes/admin/system';
 import { historyRoutes } from './routes/customer/history';
+import { oldCardRoutes } from './routes/customer/oldcard';
 import { profileRoutes } from './routes/customer/profile';
 import { familyRoutes } from './routes/customer/family';
 import { ticketRoutes } from './routes/customer/tickets';
@@ -92,6 +93,7 @@ export function createApp() {
   customer.route('/', inviteRoutes);
   customer.route('/', joinRoutes);
   customer.route('/', historyRoutes);
+  customer.route('/', oldCardRoutes);
   customer.route('/', profileRoutes);
   customer.route('/', familyRoutes);
   customer.route('/', ticketRoutes);

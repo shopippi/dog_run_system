@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { MIGRATION_SOURCES } from '../constants';
-import { MIGRATION_POINTS_LIMIT } from '../migration';
+import { MIGRATION_CARD_POINTS_LIMIT, MIGRATION_POINTS_LIMIT, MIGRATION_TICKETS_LIMIT } from '../migration';
 
 // 入力チェック(merge)。おうちの統合(A-07)・確認待ち(A-08)・旧カードの移行(A-05)
 
@@ -77,9 +77,32 @@ const CARD_CHECK_MESSAGE = '旧カードの確認に印を付けてください�
  */
 export const migrationInputSchema = z.object({
   source: migrationSourceSchema,
+  /** 引き継ぐポイント(台帳に書く数)。設定の上限まで */
   points: migrationPointsSchema,
   confirmed_card: z.literal(true, { error: CARD_CHECK_MESSAGE }),
   collected_card: z.literal(true, { error: CARD_CHECK_MESSAGE }),
+  /** 旧カードに残っていたポイント(上限で切る前の数。上限を超えたときだけ points と違う)。任意 */
+  card_points: z
+    .number({ error: '旧カードのポイント数を数字で入れてください。' })
+    .int({ error: '旧カードのポイント数は整数で入れてください。' })
+    .min(0, { error: '旧カードのポイント数は0以上の数で入れてください。' })
+    .max(MIGRATION_CARD_POINTS_LIMIT, { error: `旧カードのポイント数は${MIGRATION_CARD_POINTS_LIMIT}以下の数で入れてください。` })
+    .optional(),
+  /** 旧カードの使っていない特典(LINEのショップカードの特典チケット、ゴールまでたまって使っていない紙のカード)の枚数。無料券にする */
+  tickets: z
+    .number({ error: '特典の枚数を数字で入れてください。' })
+    .int({ error: '特典の枚数は整数で入れてください。' })
+    .min(0, { error: '特典の枚数は0以上の数で入れてください。' })
+    .max(MIGRATION_TICKETS_LIMIT, { error: `特典の枚数は${MIGRATION_TICKETS_LIMIT}枚以下で入れてください。` })
+    .default(0),
+  /** 紙のカードの番号など(任意)。同じカードがほかのおうちで引き継がれていないかを確かめる */
+  card_ref: z.string().trim().max(40, { error: 'カードの番号は40文字までで入れてください。' }).optional(),
+  /** 受付のメモ(任意) */
+  note: z.string().trim().max(200, { error: 'メモは200文字までで入れてください。' }).optional(),
+  /** 同じカードの番号がほかのおうちにあると分かったうえで引き継ぐとき true */
+  duplicate_ok: z.boolean().optional(),
+  /** 移行期間のあとに受け付けるときの理由(設定 migration_late_entry が「受け付ける」のときだけ使える) */
+  late_reason: z.string().trim().max(200, { error: '理由は200文字までで入れてください。' }).optional(),
 });
 export type MigrationInput = z.infer<typeof migrationInputSchema>;
 

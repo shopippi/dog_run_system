@@ -214,7 +214,7 @@ function WaitingToSend({ status, dogs }: { status: Extract<OutboxStatus, { kind:
       <div className="page-head">
         <h2>チェックイン</h2>
       </div>
-      <div className="alert warning waiting-send" role="status" aria-live="polite">
+      <div className="waiting-send" role="status" aria-live="polite">
         <p>
           <b>電波が弱いため、送信を待っています。</b>
         </p>

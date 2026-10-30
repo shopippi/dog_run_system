@@ -56,7 +56,7 @@ describe('A-05 旧カードの移行(受付での直接入力・対面だけ)', 
     const id = await householdIdOf(r.memberNo);
     const res = await migrate(admin, id, { source: 'paper_card', points: 7 });
     expect(res.status).toBe(201);
-    expect(res.body).toEqual({ auditId: expect.any(Number), householdId: id, memberNo: r.memberNo, source: 'paper_card', points: 7, balance: 10 });
+    expect(res.body).toEqual({ auditId: expect.any(Number), householdId: id, memberNo: r.memberNo, source: 'paper_card', points: 7, tickets: 0, cardPoints: 7, balance: 10 });
     const card = (await me(PAPA)).body.card;
     expect(card).toMatchObject({ balance: 10, toNextTicket: 0, tickets: [] });
     const ledger = await env.DB.prepare(
@@ -269,6 +269,12 @@ describe('A-05 引き継ぎ済みの一覧', () => {
           householdName: 'ニコのおうち',
           source: 'paper_card',
           points: 9,
+          cardPoints: 9,
+          tickets: 0,
+          cardRef: null,
+          note: null,
+          lateReason: null,
+          sameCardMemberNos: [],
           undone: null,
         },
         expect.objectContaining({ at: '2026-10-28T10:00:00+09:00', memberNo: papa.memberNo, source: 'line_card', points: 4, undone: null }),

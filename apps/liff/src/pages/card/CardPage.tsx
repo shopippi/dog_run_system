@@ -7,8 +7,10 @@ import { Icon } from '../../components/Icon';
 import { MemberCard } from '../../components/MemberCard';
 import { PressButton } from '../../components/PressButton';
 
+import { OldCardNotice } from '../../components/OldCardNotice';
 import { ProfileNudge } from '../../components/ProfileNudge';
 import { useMe } from '../../hooks/useMe';
+import { useOldCard } from '../../hooks/useOldCard';
 import { useFacilityName } from '../../hooks/useFacilityName';
 import { canScan, scanCheckinCode } from '../../lib/liff';
 import { CardSkeleton } from '../skeletons';
@@ -79,6 +81,7 @@ function Card({
   const { card, household } = me;
   const navigate = useNavigate();
   const facilityName = useFacilityName();
+  const oldCard = useOldCard();
   const canExchange = card.balance >= card.pointsPerTicket;
   const pendingCheckin = usePendingCheckin();
 
@@ -122,6 +125,8 @@ function Card({
 
       <TicketPanel card={card} onChanged={reload} />
 
+      <OldCardNotice notice={oldCard.notice} onClose={oldCard.close} />
+
       <ProfileNudge pending={me.optionalSurveyPending} />
 
       {/* まとまりの一覧(iOS の「設定」と同じ形。docs/design.md 11.3) */}
@@ -141,7 +146,7 @@ function Card({
         </div>
       </nav>
       <p className="note">
-        1日1ポイント。{card.pointsPerTicket}ポイントで無料券1枚(来場1回分)と交換できます。前のポイントカードは、受付で見せると引き継げます。
+        1日1ポイント。{card.pointsPerTicket}ポイントで無料券1枚(来場1回分)と交換できます。
       </p>
     </main>
   );
