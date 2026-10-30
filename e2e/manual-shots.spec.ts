@@ -459,14 +459,14 @@ test('管理者: ダッシュボード', async ({ browser }) => {
   const context = await desktopContext(browser);
   const page = await context.newPage();
   await adminLogin(page, 'admin', '/dashboard');
-  await expect(page.getByRole('region', { name: '来場の推移' }).locator('canvas')).toBeVisible();
+  await expect(page.locator('.dsb-area.ready')).toBeVisible();
   await page.waitForTimeout(1500);
   await shot(page, 'admin-dashboard');
   // グラフとイベントの効果は、過去3か月で見せる(今月はイベントがない日もあるため)
-  await page.getByRole('radiogroup', { name: '期間' }).getByRole('radio', { name: '過去3か月' }).check({ force: true });
+  await page.getByRole('radiogroup', { name: '期間' }).getByRole('radio', { name: '90日' }).click();
   await expect(page.locator('[aria-busy="true"]')).toHaveCount(0);
   await page.waitForTimeout(1000);
-  await scrollToTop(page.getByRole('region', { name: '天気ごとの1日あたりの頭数' }), 24);
+  await scrollToTop(page.getByRole('region', { name: '天気と来場' }), 24);
   await page.waitForTimeout(800);
   await shot(page, 'admin-dashboard-more');
   await scrollToTop(page.getByRole('region', { name: 'イベントの効果' }), 24);

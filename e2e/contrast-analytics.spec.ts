@@ -104,10 +104,27 @@ for (const scheme of ['light', 'dark'] as const) {
       const page = await browser.newPage({ ...TABLET, colorScheme: scheme });
       await adminLogin(page, 'admin', '/dashboard');
       await page.getByRole('region', { name: '期間の集計' }).waitFor();
+      await page.locator('.dsb-cal-cell.today').waitFor();
+      await page.locator('.dsb[aria-busy="false"]').waitFor();
       await check(page, 'M-05 ダッシュボード');
-      await page.getByRole('radiogroup', { name: '期間' }).getByRole('radio', { name: '期間を選ぶ' }).check();
+      if (process.env.SHOT_DIR) await page.screenshot({ path: `${process.env.SHOT_DIR}/contrast/M-05 ダッシュボード(${scheme === 'light' ? 'ライト' : 'ダーク'}).png`, fullPage: true });
+      // グラフの吹き出し・地域の町域・日の詳細
+      await page.getByRole('group', { name: /来場組数の推移/ }).focus();
+      await page.keyboard.press('ArrowLeft');
+      await page.locator('.dsb-tip').waitFor();
+      await check(page, 'M-05 ダッシュボード(吹き出し)');
+      await page.locator('.dsb-cal-cell.today').click();
+      await page.getByRole('dialog', { name: /の様子$/ }).getByRole('button', { name: 'メモを残す' }).waitFor();
+      await check(page, 'M-05 ダッシュボード(日の詳細)');
+      await page.keyboard.press('Escape');
+      await page.getByRole('radiogroup', { name: '期間' }).getByRole('radio', { name: '期間を選ぶ' }).click();
       await page.getByLabel('始まり').waitFor();
+      // 読み直しの途中(半透明)ではなく、読み込んだあとで測る
+      await page.locator('.dsb[aria-busy="false"]').waitFor();
       await check(page, 'M-05 ダッシュボード(期間を選ぶ)');
+      await page.goto('/admin/');
+      await page.getByRole('button', { name: 'メモを残す' }).waitFor();
+      await check(page, 'M-02 今日の来場(この日のメモ)');
       await page.close();
     });
 

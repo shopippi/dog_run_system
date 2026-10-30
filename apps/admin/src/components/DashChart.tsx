@@ -2,7 +2,7 @@ import type { Chart, ChartConfiguration, Plugin } from 'chart.js';
 import { useEffect, useRef, useState } from 'react';
 
 // ダッシュボード(M-05)のグラフ。Chart.js を canvas に直接描く(react-chartjs-2 は使わない)。
-// 色は docs/design.md のトークンを CSS 変数から読む。墨(主な系列)・灰(比べる系列)・青(3つ目)の落ち着いた3色だけ。
+// 色は docs/design.md のトークンを CSS 変数から読む。系列の色は 12.1 の表(--chart-1〜4。落ち着いた青を主に)。
 // Chart.js は、ダッシュボードを開いたときにだけ読み込む(chart-lib.ts)。
 
 let chartLib: Promise<typeof import('./chart-lib')> | null = null;
@@ -19,7 +19,11 @@ export type ChartColors = {
   border: string;
   surface: string;
   font: string;
+  /** 系列の色(docs/design.md 12.1。1 = 落ち着いた青、2 = 青みの灰、3 = くすんだ黄土、4 = 灰) */
+  series: [string, string, string, string];
 };
+
+const SERIES_FALLBACK: [string, string, string, string] = ['#2F5FA8', '#7A8BA6', '#B98A2E', '#6B7280'];
 
 function readColors(): ChartColors {
   const css = getComputedStyle(document.documentElement);
@@ -33,6 +37,7 @@ function readColors(): ChartColors {
     border: v('--border'),
     surface: v('--surface'),
     font: v('--font-sans'),
+    series: SERIES_FALLBACK.map((f, i) => v(`--chart-${i + 1}`) || f) as ChartColors['series'],
   };
 }
 
@@ -113,11 +118,13 @@ export function DashChart({
           plugins: {
             ...config.options?.plugins,
             tooltip: {
-              backgroundColor: colors.text,
-              titleColor: colors.surface,
-              bodyColor: colors.surface,
-              padding: 8,
-              cornerRadius: 6,
+              backgroundColor: colors.surface,
+              titleColor: colors.text,
+              bodyColor: colors.text,
+              borderColor: colors.border,
+              borderWidth: 1,
+              padding: 10,
+              cornerRadius: 8,
               displayColors: false,
               ...config.options?.plugins?.tooltip,
             },

@@ -28,7 +28,9 @@ import { errors } from '../../lib/errors';
 import { requireRole } from '../../lib/staff-auth';
 import { parseInput } from '../../lib/validate';
 import { auditStatement } from '../../services/audit';
-import { toCsv, type CsvValue } from '../../services/csv';
+import { csvPreamble, toCsv, type CsvColumn, type CsvValue } from '../../services/csv';
+import { analysisHouseholds, analysisPack, resolveAnalysisPeriod } from '../../services/analysis-pack';
+import { loadSettings } from '../../lib/settings';
 import { ticketUsedOnVisitSql } from '../../services/tickets';
 import { HOUSEHOLD_FIXED_COLUMNS, householdColumnText } from '../../services/profile-fields';
 import { surveyKindOf } from '../../services/survey';
@@ -48,7 +50,9 @@ const DOG_STATUS: Record<string, string> = { active: '登録中', retired: 'お�
 const label = (map: Record<string, string>, v: string | null | undefined) => (v == null ? '' : (map[v] ?? v));
 
 type Period = { from?: string; to?: string };
-type Table = { header: string[]; rows: CsvValue[][] };
+/** 表。columns は列の名前(日本語・単位つき)と意味(説明行に出す) */
+type Table = { columns: CsvColumn[]; rows: CsvValue[][]; notes?: string[] };
+const col = (name: string, desc: string): CsvColumn => ({ name, desc });
 
 async function households(db: D1Database, now: Date): Promise<Table> {
   const { results } = await db
@@ -69,11 +73,28 @@ async function households(db: D1Database, now: Date): Promise<Table> {
     .bind(toJstIso(now))
     .all<Record<string, string | number | null>>();
   return {
-    header: [
-      '会員ID', 'おうちの呼び名', '登録日時', '登録のしかた', '状態', '統合先の会員ID', '郵便番号', '知ったきっかけ', '来場手段',
-      '家族の人数', 'ワンちゃんの数', 'ポイント', '使える無料券', '来場回数', '最初の来場日', '最後の来場日',
+    columns: [
+      col('会員ID', 'おうちの番号(DR-000001 の形)'),
+      col('おうちの呼び名', '画面に出るおうちの名前'),
+      col('登録日時', '会員IDを発行した日時(日本時間)'),
+      col('登録のしかた', '新規 / 旧カードから移行'),
+      col('状態', '有効 / 統合済み / 退会'),
+      col('統合先の会員ID', 'ほかのおうちにまとめたときの、まとめ先'),
+      col('郵便番号', 'お客さんが答えた郵便番号(7桁)'),
+      col('知ったきっかけ', 'アンケートの回答'),
+      col('来場手段', 'アンケートの回答'),
+      col('家族の人数(人)', 'LINEでつながっている家族の数'),
+      col('ワンちゃんの数(頭)', '登録中のワンちゃんの数(おやすみ中を除く)'),
+      col('ポイント(ポイント)', 'いまのポイント(台帳の合計)'),
+      col('使える無料券(枚)', '未使用で期限内の無料券'),
+      col('来場回数(回)', 'これまでの来場の回数(取り消しを除く)'),
+      col('最初の来場日', '取り消しを除いた最初の来場日'),
+      col('最後の来場日', '取り消しを除いた最後の来場日'),
       // 2026-10-28 に足した項目(担当J)。列は後ろに足す(前の列の位置を変えない)
-      '来たい時間帯', '興味のあるイベント', 'ほかのドッグランの利用', 'お知らせの受け取り',
+      col('来たい時間帯', 'アンケートの回答(いくつでも。・でつなぐ)'),
+      col('興味のあるイベント', 'アンケートの回答(いくつでも。・でつなぐ)'),
+      col('ほかのドッグランの利用', '使う / 使わない'),
+      col('お知らせの受け取り', '受け取る / 受け取らない'),
     ],
     rows: results.map((r) => [
       r.member_no, r.display_name, r.registered_at, label(SOURCE, r.source as string), label(HOUSEHOLD_STATUS, r.status as string),
@@ -93,7 +114,17 @@ async function members(db: D1Database): Promise<Table> {
     )
     .all<Record<string, string | null>>();
   return {
-    header: ['会員ID', 'おうちの呼び名', 'LINEの名前', '年代', '性別', '参加日時', '参加のしかた', '状態', '抜けた日時'],
+    columns: [
+      col('会員ID', 'おうちの番号'),
+      col('おうちの呼び名', '画面に出るおうちの名前'),
+      col('LINEの名前', 'LINEの表示名'),
+      col('年代', 'アンケートの回答'),
+      col('性別', 'アンケートの回答'),
+      col('参加日時', 'おうちに加わった日時(日本時間)'),
+      col('参加のしかた', '初回登録 / 家族の招待 / 受付で追加 / おうちの統合'),
+      col('状態', '参加中 / おうちから抜けた / 退会'),
+      col('抜けた日時', 'おうちから抜けた日時'),
+    ],
     rows: results.map((r) => [
       r.member_no, r.display_name, r.line_display_name, r.age_group, r.gender, r.joined_at,
       label(JOIN_METHOD, r.join_method), label(MEMBER_STATUS, r.status), r.left_at,
@@ -114,10 +145,24 @@ async function dogs(db: D1Database): Promise<Table> {
     )
     .all<Record<string, string | number | null>>();
   return {
-    header: [
-      '犬ID', '会員ID', 'おうちの呼び名', '名前', '犬種', 'サイズ', '性別', '生まれた年月', '状態', '写真', '登録日時', '来場回数',
+    columns: [
+      col('犬ID', 'ワンちゃんの番号(DR-000001-1 の形)'),
+      col('会員ID', 'おうちの番号'),
+      col('おうちの呼び名', '画面に出るおうちの名前'),
+      col('名前', 'ワンちゃんの名前'),
+      col('犬種', '登録の犬種(その他のときは入力した犬種)'),
+      col('サイズ', '小型 / 中型 / 大型'),
+      col('性別', 'オス / メス'),
+      col('生まれた年月', '年-月'),
+      col('状態', '登録中 / おやすみ中 / 統合済み'),
+      col('写真', 'あり / なし'),
+      col('登録日時', '登録した日時(日本時間)'),
+      col('来場回数(回)', 'このワンちゃんが来た回数(取り消しを除く)'),
       // 2026-10-28 に足した項目(担当J)。列は後ろに足す
-      '体重(kg)', 'ほかの犬との相性', '狂犬病の予防注射の年', '混合ワクチンの年',
+      col('体重(kg)', '登録の体重'),
+      col('ほかの犬との相性', '得意 / ふつう / 苦手'),
+      col('狂犬病の予防注射の年', '西暦'),
+      col('混合ワクチンの年', '西暦'),
     ],
     rows: results.map((r) => [
       r.dog_no, r.member_no, r.display_name, r.name, r.breed, DOG_SIZE_LABELS[r.size as DogSize] ?? r.size,
@@ -161,10 +206,21 @@ async function visits(db: D1Database, p: Period): Promise<Table> {
     .bind(...w.args)
     .all<Record<string, string | number | null>>();
   return {
-    header: [
-      '来場日', '時刻', '会員ID', 'おうちの呼び名', '頭数', '来たワンちゃん', '無料券', '登録のしかた', 'チェックインした家族',
-      '入力したスタッフ', '取り消した日時', '取り消しの理由',
+    columns: [
+      col('来場日', '日本時間の日付'),
+      col('時刻', 'チェックインした時刻(時:分)'),
+      col('会員ID', 'おうちの番号(会員以外は空)'),
+      col('おうちの呼び名', '画面に出るおうちの名前(会員以外は空)'),
+      col('頭数(頭)', 'その来場のワンちゃんの数'),
+      col('来たワンちゃん', '名前を・でつなぐ'),
+      col('無料券', 'その来場で無料券を使ったら「使った」'),
+      col('登録のしかた', 'ご本人 / 代理 / 会員以外の入力'),
+      col('チェックインした家族', 'LINEの表示名'),
+      col('入力したスタッフ', '代理・会員以外の入力をしたスタッフ'),
+      col('取り消した日時', '取り消したときだけ'),
+      col('取り消しの理由', '取り消したときだけ'),
     ],
+    notes: ['取り消した来場も行として入っています(取り消した日時の列で見分けます)。'],
     rows: results.map((r) => [
       r.visit_date, String(r.checked_in_at).slice(11, 16), r.member_no, r.display_name, r.dog_count, r.dog_names,
       r.used_ticket ? '使った' : '', VISIT_METHOD_LABELS[r.method as VisitMethod] ?? r.method, r.line_display_name, r.staff_name,
@@ -190,7 +246,18 @@ async function ledger(db: D1Database, p: Period): Promise<Table> {
   const actor = (r: Record<string, string | number | null>) =>
     r.actor_type === 'member' ? 'お客さん' : r.actor_type === 'staff' ? (r.staff_name ?? 'スタッフ') : '自動';
   return {
-    header: ['日時', '会員ID', 'おうちの呼び名', '増減', '種類', '理由', '旧カード', '有効期限', '操作した人'],
+    columns: [
+      col('日時', '増減した日時(日本時間)'),
+      col('会員ID', 'おうちの番号'),
+      col('おうちの呼び名', '画面に出るおうちの名前'),
+      col('増減(ポイント)', '増えたら正の数、減ったら負の数'),
+      col('種類', '来場 / 無料券と交換 / 取り消し / 移行 / 手動 / 統合 / 失効 など'),
+      col('理由', '手動のときに入力した理由'),
+      col('旧カード', '引き継ぎのときの移行元'),
+      col('有効期限', 'そのポイントの期限'),
+      col('操作した人', 'お客さん / スタッフの名前 / 自動'),
+    ],
+    notes: ['残高は、おうちごとに「増減(ポイント)」を合計した数です。'],
     rows: results.map((r) => [
       r.created_at, r.member_no, r.display_name, r.delta, LEDGER_KIND_LABELS[r.kind as LedgerKind] ?? r.kind, r.reason,
       r.migration_source ? MIGRATION_SOURCE_LABELS[r.migration_source as MigrationSource] : '', r.expires_at, actor(r),
@@ -253,23 +320,37 @@ async function survey(db: D1Database): Promise<Table> {
   }
   out.sort((a, b) => a.hid - b.hid || a.order - b.order);
   return {
-    header: ['会員ID', 'おうちの呼び名', '答えた人', '聞く相手', '質問', '回答', '回答日時'],
+    columns: [
+      col('会員ID', 'おうちの番号'),
+      col('おうちの呼び名', '画面に出るおうちの名前'),
+      col('答えた人', 'LINEの表示名(おうちごとの質問は「おうち」)'),
+      col('聞く相手', '家族一人ひとり / おうちごと'),
+      col('質問', '質問の文'),
+      col('回答', '回答(答えないを選んだら「(答えない)」)'),
+      col('回答日時', '答えた日時(日本時間)'),
+    ],
     rows: out.map((o) => o.row),
   };
 }
 
 // CSV を出力する。管理者だけ(製作者は見るだけなので出力できる)
+// 先頭に「#」で始まる説明行(施設名・出力日時・期間・各列の意味・注意・使い方)を付ける。?plain=1 のときは付けない(docs/design.md 12.2)
 exportRoutes.get('/export/:name', requireRole('admin'), async (c) => {
   const name = c.req.param('name') as ExportName;
   if (!EXPORT_NAMES.includes(name)) throw errors.notFound('その種類のCSVはありません。画面を読み込み直してください。');
   const db = c.env.DB;
   const now = c.get('now');
+  const today = toJstDate(now);
   const info = EXPORTS[name];
-  const period: Period = info.period
+  const plain = c.req.query('plain') === '1';
+  let period: Period = info.period
     ? parseInput(exportQuerySchema, { from: c.req.query('from') || undefined, to: c.req.query('to') || undefined })
     : {};
-  const table =
-    name === 'households' ? await households(db, now)
+  if (info.ai) period = await resolveAnalysisPeriod(db, period, today);
+  const table: Table =
+    name === 'analysis' ? await analysisPack(db, period as Required<Period>, today)
+    : name === 'analysis_households' ? await analysisHouseholds(db, period as Required<Period>, today, now)
+    : name === 'households' ? await households(db, now)
     : name === 'members' ? await members(db)
     : name === 'dogs' ? await dogs(db)
     : name === 'visits' ? await visits(db, period)
@@ -285,14 +366,46 @@ exportRoutes.get('/export/:name', requireRole('admin'), async (c) => {
     now,
   }).run();
 
-  const stamp = toJstDate(now);
+  const settings = await loadSettings(db);
+  const periodText = info.period ? (period.from || period.to ? `${period.from ?? 'はじめ'}〜${period.to ?? today}` : 'すべての期間') : null;
+  const preamble = plain
+    ? []
+    : csvPreamble({
+        title: `${info.label}(CSV)`,
+        facilityName: settings.facility_name,
+        exportedAt: toJstIso(now),
+        period: periodText,
+        unit: info.desc.split('。')[0],
+        columns: table.columns,
+        notes: [
+          ...(table.notes ?? []),
+          ...(info.ai
+            ? ['個人を特定できる情報(名前・LINEの名前・会員ID・郵便番号)は入っていません。']
+            : ['名前やLINEの名前が入っています。ファイルは外に渡さないでください。']),
+        ],
+        usage: info.ai
+          ? [
+              'このCSVをそのままAIに渡し、『曜日と天気ごとの来場の傾向を教えて』と聞いてください。',
+              '『イベントやメモのある日は、ふだんの日と比べて来場がどう違う?』『来月の土日の来場を予想して』なども聞けます。',
+            ]
+          : ['表計算ソフトで開くと、この説明は1列目に出ます。説明が要らないときは「説明行を付けない」を選んで出してください。'],
+      });
+
+  const stamp = today;
   const range = period.from || period.to ? `_${period.from ?? ''}〜${period.to ?? ''}` : '';
   const jpName = `${info.label}${range}_${stamp}.csv`;
-  return new Response(toCsv(table.header, table.rows), {
-    headers: {
-      'content-type': 'text/csv; charset=utf-8',
-      'content-disposition': `attachment; filename="${name}_${stamp}.csv"; filename*=UTF-8''${encodeURIComponent(jpName)}`,
-      'cache-control': 'no-store',
+  return new Response(
+    toCsv(
+      table.columns.map((x) => x.name),
+      table.rows,
+      preamble,
+    ),
+    {
+      headers: {
+        'content-type': 'text/csv; charset=utf-8',
+        'content-disposition': `attachment; filename="${name}_${stamp}.csv"; filename*=UTF-8''${encodeURIComponent(jpName)}`,
+        'cache-control': 'no-store',
+      },
     },
-  });
+  );
 });

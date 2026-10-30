@@ -8,6 +8,7 @@ import { fetchWeather, type WeatherSource } from './services/weather';
 import { backupDatabase } from './services/backup';
 import { expirePointsAndTickets } from './services/expiry';
 import { deleteMigrationImages } from './services/migration-images';
+import { lookupPostalAreas } from './services/postal-areas';
 
 /** 日本時間 3:10(UTC 18:10)。日別集計の再計算、有効期限の処理、バックアップ、移行期間終了後の画像削除 */
 export const CRON_NIGHTLY = '10 18 * * *';
@@ -38,6 +39,7 @@ export async function runNightly(env: Bindings, now: Date): Promise<void> {
   await runBackupJob(env, now);
   await runMigrationImagesJob(env, now);
   if (await shouldImportHolidays(env.DB, now)) await runHolidaysJob(env, now);
+  await runPostalAreasJob(env, now);
 }
 
 export async function runMorning(env: Bindings, now: Date): Promise<void> {
@@ -90,5 +92,12 @@ export function runExpiryJob(env: Bindings, now: Date) {
 export function runMigrationImagesJob(env: Bindings, now: Date) {
   return runJob(env.DB, 'migration_images', now, async () =>
     deleteMigrationImages(env.DB, env.MEDIA, now, await loadSettings(env.DB)),
+  );
+}
+
+/** 郵便番号から地域を調べる(毎晩 3:10 と、管理画面の「今すぐ調べる」から呼ぶ。docs/design.md 12.3) */
+export function runPostalAreasJob(env: Bindings, now: Date) {
+  return runJob(env.DB, 'postal_areas', now, async () =>
+    isOffline(env) ? { message: OFFLINE_SKIP_MESSAGE } : lookupPostalAreas(env.DB, now),
   );
 }

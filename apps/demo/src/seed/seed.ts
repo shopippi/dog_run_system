@@ -145,7 +145,28 @@ const PEOPLE = [
 const AGES = ['20代', '30代', '30代', '40代', '40代', '50代', '60代', '70代以上'];
 const REFERRALS = ['Instagram', 'Googleマップ', '知人の紹介', '通りがかり', 'ほかのドッグランで聞いた', 'その他'];
 const TRANSPORTS = ['車', '車', '車', '徒歩', '自転車', '電車やバス'];
-const POSTALS = ['1540001', '1540017', '1520004', '1560043', '1530064', '1580094', '1450062', '1810013', '1820021', '2140014'];
+const POSTALS = [
+  '1540001', '1540017', '1520004', '1560043', '1530064', '1580094', '1450062', '1810013', '1820021', '2140014',
+  '1550031', '1520035', '1580083', '1570062', '1540001', '1540017', '1550031',
+];
+
+/** 郵便番号から調べた地域(デモはインターネットにつながらないので、実在の市区町村・町域を入れておく。docs/design.md 12.3) */
+const POSTAL_AREAS: Record<string, [string, string, string]> = {
+  '1540001': ['東京都', '世田谷区', '池尻'],
+  '1540017': ['東京都', '世田谷区', '世田谷'],
+  '1520004': ['東京都', '目黒区', '鷹番'],
+  '1560043': ['東京都', '世田谷区', '松原'],
+  '1530064': ['東京都', '目黒区', '下目黒'],
+  '1580094': ['東京都', '世田谷区', '玉川'],
+  '1450062': ['東京都', '大田区', '北千束'],
+  '1810013': ['東京都', '三鷹市', '下連雀'],
+  '1820021': ['東京都', '調布市', '調布ケ丘'],
+  '2140014': ['神奈川県', '川崎市多摩区', '登戸'],
+  '1550031': ['東京都', '世田谷区', '北沢'],
+  '1520035': ['東京都', '目黒区', '自由が丘'],
+  '1580083': ['東京都', '世田谷区', '奥沢'],
+  '1570062': ['東京都', '世田谷区', '南烏山'],
+};
 
 /** 東京の月ごとのおおよその気温(最高・最低) */
 const TEMPS: [number, number][] = [
@@ -659,6 +680,31 @@ export async function seedDemo(sql: Database, opts: SeedOptions): Promise<SeedSu
       ]);
     }
 
+    // 郵便番号から調べた地域(B 系のジョブで調べた結果と同じ形)
+    for (const [code, [pref, city, town]] of Object.entries(POSTAL_AREAS)) {
+      run(
+        `INSERT INTO postal_areas (postal_code, prefecture, city, town, status, source, looked_up_at) VALUES (?, ?, ?, ?, 'found', 'zipcloud', ?)`,
+        [code, pref, city, town, at(START, 3 * 60 + 10)],
+      );
+    }
+
+    // 日々のメモ(管理者・受付スタッフが書いたもの)。イベントの日・雨の日・休業日など
+    const noteAt = (d: string, minutes: number) => at(d, minutes);
+    const notes: { date: string; body: string; staff: number }[] = [];
+    for (const e of events.filter((x) => x.date < today)) notes.push({ date: e.date, body: `${e.name}。いつもの土曜より混んで、駐車場が11時に満車。`, staff: 2 });
+    const rainyWeekend = days.filter((d) => weather.get(d)?.w === '雨' && isWeekend(d) && isOpen(d)).slice(-3);
+    for (const d of rainyWeekend) notes.push({ date: d, body: '朝から雨。芝がぬかるんでいたので、奥のエリアは閉めた。', staff: 1 });
+    const recent = days.filter((d) => isOpen(d) && d >= addDays(today, -20));
+    if (recent[2]) notes.push({ date: recent[2], body: '小型犬の飼い主さんの集まり(10組ほど)。\n次回は月末にやりたいとのこと。', staff: 1 });
+    if (recent[9]) notes.push({ date: recent[9], body: '近くの小学校の運動会。午前は静か、午後から増えた。', staff: 2 });
+    if (recent.at(-2)) notes.push({ date: recent.at(-2)!, body: '水飲み場の蛇口を修理した。', staff: 1 });
+    for (const n of notes) {
+      run(
+        `INSERT INTO day_notes (date, body, created_by_staff_id, created_at, updated_by_staff_id, updated_at) VALUES (?, ?, ?, ?, ?, ?)`,
+        [n.date, n.body, n.staff, noteAt(n.date, 17 * 60), n.staff, noteAt(n.date, 17 * 60)],
+      );
+    }
+
     // taka_papa が nico.mama に送った家族の招待(まだ開いていない)。nico.mama が開くと、その場でおうちをまとめられる(C-12)。
     // デモの日付を進めても使えるよう、期限は長めにしておく
     const takaMember = hTaka.members[0]!;
@@ -694,6 +740,7 @@ export async function seedDemo(sql: Database, opts: SeedOptions): Promise<SeedSu
       job('expiry', at(d, 3 * 60 + 10), '期限が切れたポイントと無料券はありませんでした。');
       job('backup', at(d, 3 * 60 + 11), 'バックアップを保存しました(デモ用の値)。');
       job('migration_images', at(d, 3 * 60 + 11), '消す写真はありませんでした。');
+      job('postal_areas', at(d, 3 * 60 + 12), 'スキップしました(インターネットにつながらない環境のため)。');
       if (i === 0 && nowMinutes < 5 * 60 + 10) break;
       job('weather', at(d, 5 * 60 + 10), `${addDays(d, -1)} の天気(東京)を取得しました(デモ用の値)。`);
     }
