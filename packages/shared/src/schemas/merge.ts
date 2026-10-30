@@ -77,6 +77,8 @@ const CARD_CHECK_MESSAGE = '旧カードの確認に印を付けてください�
  */
 export const migrationInputSchema = z.object({
   source: migrationSourceSchema,
+  /** だれのカードか(おうちの家族 = LINE アカウント)。カード1枚ごとに1回(2026-10-30 の決定) */
+  member_id: z.number({ error: 'だれのカードかを選んでください。' }).int({ error: 'だれのカードかを選んでください。' }).positive({ error: 'だれのカードかを選んでください。' }),
   /** 引き継ぐポイント(台帳に書く数)。設定の上限まで */
   points: migrationPointsSchema,
   confirmed_card: z.literal(true, { error: CARD_CHECK_MESSAGE }),

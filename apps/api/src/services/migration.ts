@@ -5,7 +5,9 @@ import {
   expiryFor,
   migrationPhase,
   normalizeCardRef,
+  type MigrationCardView,
   type MigrationDuplicate,
+  type MigrationMember,
   isWithinMigrationPeriod,
   migrationPointsError,
   planMigration,
@@ -26,7 +28,10 @@ import type { AuditRow, UndoContext } from './undo';
  * 旧カードからの移行(A-05、要件定義書 16章)。受付で旧カードを見せてもらい、管理者が直接入力する(対面だけ)。
  * - 台帳に「移行」(kind = migration、migration_source)として記録する。無料券1枚分以上になっても自動では交換しない(8章)
  * - 一度に引き継げるポイントは設定 migration_max_points(初期値 30)まで
- * - 移行元ごとに1おうち1回まで(19.2)。統合でまとめたおうちの分も数える。元に戻した記録は数えない
+ * - カード1枚ごとに1回(2026-10-30 の決定): だれ(家族 = LINE アカウント)のカードかを選び、同じ家族・同じ移行元は1回だけ。
+ *   LINE のショップカードは LINE のアカウントに1枚なので、パパとママが別々にためていれば両方を引き継げる。紙のカードも家族1人につき1回。
+ *   同じ LINE のユーザーが抜けて別のおうちに入り直しても、同じカードは2回引き継げない。元に戻した記録は数えない
+ * - 上限(migration_max_points)と特典の上限(migration_max_tickets)は、カード1枚ごと
  * - 移行期間(settings の migration_period)の外は受け付けない。期間が未設定なら受け付ける
  * - 以前の記録(移行で無料券を発行していたころ)の無料券の行にも migration_source があり、元に戻すときに辿る
  */
@@ -39,18 +44,6 @@ const DATE = (iso: string) => {
 /** まだ元に戻していない移行の記録(そのおうちと、統合でまとめたおうち) */
 export const ACTIVE_MIGRATION = `kind = 'migration' AND reverses_id IS NULL
   AND NOT EXISTS (SELECT 1 FROM point_ledger r WHERE r.reverses_id = point_ledger.id)`;
-
-async function migratedRecords(db: D1Database, householdIds: number[]) {
-  const { results } = await db
-    .prepare(
-      `SELECT id, household_id, migration_source, delta, created_at FROM point_ledger
-        WHERE household_id IN (${householdIds.map(() => '?').join(',')}) AND ${ACTIVE_MIGRATION}
-        ORDER BY id`,
-    )
-    .bind(...householdIds)
-    .all<{ id: number; household_id: number; migration_source: MigrationSource; delta: number; created_at: string }>();
-  return results;
-}
 
 type HouseholdRow = { id: number; member_no: string; display_name: string; status: string; merged_into_id: number | null };
 
@@ -68,17 +61,106 @@ export async function resolveActiveHousehold(db: D1Database, id: number): Promis
   return h;
 }
 
+type CardRow = {
+  family_member_id: number | null;
+  member_name: string | null;
+  source: MigrationSource;
+  points: number;
+  card_points: number | null;
+  tickets: number;
+  created_at: string;
+};
+
+/** そのおうち(統合でまとめたおうちを含む)で引き継いだカード。以前の記録(入力の記録がない台帳の行)も、だれのカードか分からないものとして含める */
+export async function householdCards(db: D1Database, householdIds: number[]): Promise<MigrationCardView[]> {
+  const marks = householdIds.map(() => '?').join(',');
+  const [cards, legacy] = await db.batch([
+    db
+      .prepare(
+        `SELECT c.family_member_id, f.line_display_name AS member_name, c.source, c.points, c.card_points, c.tickets, c.created_at
+           FROM migration_cards c LEFT JOIN family_members f ON f.id = c.family_member_id
+          WHERE c.household_id IN (${marks}) AND c.undone_at IS NULL`,
+      )
+      .bind(...householdIds),
+    db
+      .prepare(
+        `SELECT NULL AS family_member_id, NULL AS member_name, migration_source AS source, delta AS points, NULL AS card_points, 0 AS tickets, created_at
+           FROM point_ledger
+          WHERE household_id IN (${marks}) AND ${ACTIVE_MIGRATION}
+            AND NOT EXISTS (SELECT 1 FROM migration_cards c WHERE c.ledger_id = point_ledger.id
+                             OR (c.ledger_id IS NULL AND c.household_id = point_ledger.household_id
+                                 AND c.source = point_ledger.migration_source AND c.created_at = point_ledger.created_at))`,
+      )
+      .bind(...householdIds),
+  ]);
+  return [...(cards!.results as CardRow[]), ...(legacy!.results as CardRow[])]
+    .sort((x, y) => (x.created_at < y.created_at ? 1 : x.created_at > y.created_at ? -1 : 0))
+    .map((r) => ({
+      memberId: r.family_member_id,
+      memberName: r.member_name,
+      source: r.source,
+      points: r.points,
+      cardPoints: r.card_points ?? r.points,
+      tickets: r.tickets,
+      date: r.created_at,
+    }));
+}
+
+/**
+ * その家族の、同じ移行元のカードをもう引き継いでいるか(元に戻したものは除く)。
+ * 同じ LINE のユーザーが抜けて入り直した家族の記録も数える
+ */
+async function memberCard(db: D1Database, memberId: number, lineUserId: string | null, source: MigrationSource) {
+  return db
+    .prepare(
+      `SELECT created_at, points FROM migration_cards
+        WHERE source = ?1 AND undone_at IS NULL
+          AND (family_member_id = ?2 OR (?3 IS NOT NULL AND family_member_id IN (SELECT id FROM family_members WHERE line_user_id = ?3)))
+        ORDER BY id LIMIT 1`,
+    )
+    .bind(source, memberId, lineUserId)
+    .first<{ created_at: string; points: number }>();
+}
+
+type MemberRow = { id: number; household_id: number; line_user_id: string | null; line_display_name: string | null; status: string };
+
+async function activeMembers(db: D1Database, householdId: number) {
+  const { results } = await db
+    .prepare(
+      `SELECT id, household_id, line_user_id, line_display_name, status FROM family_members WHERE household_id = ? AND status = 'active' ORDER BY id`,
+    )
+    .bind(householdId)
+    .all<MemberRow>();
+  return results;
+}
+
 export async function migrationStatus(db: D1Database, householdId: number, now: Date, settings: Settings): Promise<MigrationStatus> {
   const h = await getHousehold(db, householdId);
   if (!h) throw errors.notFound('おうちが見つかりませんでした。画面を読み込み直して、選び直してください。');
-  const records = await migratedRecords(db, await historyHouseholdIds(db, h.id));
-  const migrated = Object.fromEntries(
-    MIGRATION_SOURCES.map((s) => {
-      const r = records.find((x) => x.migration_source === s);
-      return [s, r ? { date: r.created_at, points: r.delta } : null];
-    }),
-  ) as MigrationStatus['migrated'];
   const today = toJstDate(now);
+  const members = await activeMembers(db, h.id);
+  const ids = members.map((m) => m.id);
+  const done = ids.length
+    ? (
+        await db
+          .prepare(
+            `SELECT family_member_id, source, created_at, points FROM migration_cards
+              WHERE undone_at IS NULL AND family_member_id IN (${ids.map(() => '?').join(',')})`,
+          )
+          .bind(...ids)
+          .all<{ family_member_id: number; source: MigrationSource; created_at: string; points: number }>()
+      ).results
+    : [];
+  // 今日チェックインした家族が、受付の前にいると考える
+  const visitor = await db
+    .prepare(
+      `SELECT checked_in_member_id AS id FROM visits
+        WHERE household_id = ? AND visit_date = ? AND cancelled_at IS NULL AND checked_in_member_id IS NOT NULL
+        ORDER BY id DESC LIMIT 1`,
+    )
+    .bind(h.id, today)
+    .first<{ id: number }>();
+  const defaultMemberId = visitor && ids.includes(visitor.id) ? visitor.id : ids.length === 1 ? ids[0]! : null;
   return {
     householdId: h.id,
     memberNo: h.member_no,
@@ -86,7 +168,18 @@ export async function migrationStatus(db: D1Database, householdId: number, now: 
     points: await pointBalance(db, h.id),
     pointsPerTicket: settings.points_per_ticket,
     maxPoints: settings.migration_max_points,
-    migrated,
+    members: members.map((m) => ({
+      id: m.id,
+      name: m.line_display_name,
+      done: Object.fromEntries(
+        MIGRATION_SOURCES.map((src) => {
+          const r = done.find((x) => x.family_member_id === m.id && x.source === src);
+          return [src, r ? { date: r.created_at, points: r.points } : null];
+        }),
+      ) as MigrationMember['done'],
+    })),
+    defaultMemberId,
+    cards: await householdCards(db, await historyHouseholdIds(db, h.id)),
     period: settings.migration_period,
     inPeriod: isWithinMigrationPeriod(settings.migration_period, today),
     phase: migrationPhase(settings.migration_period, today),
@@ -103,26 +196,26 @@ export function outsidePeriod(period: Settings['migration_period']) {
   );
 }
 
-/** 同じカードの番号で引き継いだ、ほかのおうちの記録(元に戻したものは除く) */
-export async function sameCardRecords(
-  db: D1Database,
-  args: { cardRefSearch: string; source: MigrationSource; excludeHouseholdIds: number[] },
-): Promise<MigrationDuplicate[]> {
-  const ex = args.excludeHouseholdIds;
+/** 同じカードの番号で引き継いだ記録(同じおうちのほかの家族の分も含む。元に戻したものは除く) */
+export async function sameCardRecords(db: D1Database, args: { cardRefSearch: string; source: MigrationSource }): Promise<MigrationDuplicate[]> {
   const { results } = await db
     .prepare(
-      `SELECT h.member_no, h.display_name, c.created_at, c.source FROM migration_cards c JOIN households h ON h.id = c.household_id
+      `SELECT h.member_no, h.display_name, f.line_display_name AS member_name, c.created_at, c.source
+         FROM migration_cards c JOIN households h ON h.id = c.household_id LEFT JOIN family_members f ON f.id = c.family_member_id
         WHERE c.card_ref_search = ? AND c.source = ? AND c.undone_at IS NULL
-          ${ex.length ? `AND c.household_id NOT IN (${ex.map(() => '?').join(',')})` : ''}
         ORDER BY c.id`,
     )
-    .bind(args.cardRefSearch, args.source, ...ex)
-    .all<{ member_no: string; display_name: string; created_at: string; source: MigrationSource }>();
-  return results.map((r) => ({ memberNo: r.member_no, householdName: r.display_name, at: r.created_at, source: r.source }));
+    .bind(args.cardRefSearch, args.source)
+    .all<{ member_no: string; display_name: string; member_name: string | null; created_at: string; source: MigrationSource }>();
+  return results.map((r) => ({ memberNo: r.member_no, householdName: r.display_name, memberName: r.member_name, at: r.created_at, source: r.source }));
 }
+
+const whose = (name: string | null) => (name ? `${name}さんの` : '');
 
 export type MigrationArgs = {
   householdId: number;
+  /** だれのカードか(おうちの家族) */
+  memberId: number;
   source: MigrationSource;
   /** 引き継ぐポイント(台帳に書く数) */
   points: number;
@@ -185,20 +278,28 @@ export async function recordMigration(db: D1Database, args: MigrationArgs): Prom
     });
   }
 
-  const ids = await historyHouseholdIds(db, h.id);
-  const already = (await migratedRecords(db, ids)).find((r) => r.migration_source === source);
-  if (already) throw alreadyMigrated(source, already.created_at);
+  // だれのカードか。このおうちの、いまの家族だけ
+  const member = await db
+    .prepare('SELECT id, household_id, line_user_id, line_display_name, status FROM family_members WHERE id = ?')
+    .bind(args.memberId)
+    .first<MemberRow>();
+  if (!member || member.household_id !== h.id || member.status !== 'active') {
+    throw errors.badRequest('だれのカードかを選び直してください。家族が変わった可能性があるので、画面を読み込み直してから選んでください。');
+  }
+  // カード1枚ごとに1回(同じ家族・同じ移行元)
+  const already = await memberCard(db, member.id, member.line_user_id, source);
+  if (already) throw alreadyMigrated(source, already.created_at, member.line_display_name);
 
-  // 同じカードの番号が、ほかのおうちで引き継がれていないか(同じカードを2つのおうちで使う不正・入力ミスを防ぐ)
+  // 同じカードの番号が、ほかで引き継がれていないか(同じカードを2回使う不正・入力ミスを防ぐ)
   const cardRef = args.cardRef?.trim() || null;
   const cardRefSearch = normalizeCardRef(cardRef);
-  const dups = cardRefSearch ? await sameCardRecords(db, { cardRefSearch, source, excludeHouseholdIds: ids }) : [];
+  const dups = cardRefSearch ? await sameCardRecords(db, { cardRefSearch, source }) : [];
   if (dups.length > 0 && !args.duplicateOk) {
     const d = dups[0]!;
     throw errors.conflict(
       'duplicate_card',
-      `カードの番号「${cardRef}」は、${d.householdName}(${d.memberNo})で${DATE(d.at)}に引き継ぎ済みです。` +
-        '同じカードは、1つのおうちでしか引き継げません。カードを見比べて、別のカードだと確かめられたときだけ、印を付けて引き継いでください。',
+      `カードの番号「${cardRef}」は、${d.householdName}(${d.memberNo})の${whose(d.memberName)}カードとして${DATE(d.at)}に引き継ぎ済みです。` +
+        '同じカードは1回しか引き継げません。カードを見比べて、別のカードだと確かめられたときだけ、印を付けて引き継いでください。',
       { matches: dups },
     );
   }
@@ -208,25 +309,20 @@ export async function recordMigration(db: D1Database, args: MigrationArgs): Prom
   const plan = planMigration(balance, args.points);
   const cut = cardPoints - args.points;
   const reason =
-    `${MIGRATION_SOURCE_LABELS[source]}から引き継ぎ(受付で旧カードを確認)` +
+    `${whose(member.line_display_name)}${MIGRATION_SOURCE_LABELS[source]}から引き継ぎ(受付で旧カードを確認)` +
     (cut > 0 ? `。旧カードは${cardPoints}ポイント、上限の${args.points}ポイントまで` : '') +
     (lateReason ? `。移行期間のあと: ${lateReason}` : '');
-  const marks = ids.map(() => '?').join(',');
-  const opId = `migration:${h.id}:${source}:${nowIso}`;
+  const opId = `migration:${h.id}:${member.id}:${source}:${nowIso}`;
   const ticketExpiry = expiryFor(settings.ticket_expiry, now);
 
   const s: D1PreparedStatement[] = [
-    // 同時に2回押されても1回だけ: すでに同じ移行元の記録があれば household_id が NULL になり、まとめ全体が取り消される
+    // 同時に2回押されても1回だけ: 入力の記録(migration_cards)の一意の索引(家族・移行元)で、まとめ全体が取り消される
     db
       .prepare(
         `INSERT INTO point_ledger (household_id, delta, kind, migration_source, reason, actor_type, actor_id, created_at, expires_at)
-         VALUES (CASE WHEN NOT EXISTS (
-                   SELECT 1 FROM point_ledger WHERE household_id IN (${marks}) AND migration_source = ? AND ${ACTIVE_MIGRATION}
-                 ) THEN ? END, ?, 'migration', ?, ?, 'staff', ?, ?, ?)`,
+         VALUES (?, ?, 'migration', ?, ?, 'staff', ?, ?, ?)`,
       )
       .bind(
-        ...ids,
-        source,
         h.id,
         args.points,
         source,
@@ -254,6 +350,8 @@ export async function recordMigration(db: D1Database, args: MigrationArgs): Prom
       after: {
         points: plan.balanceAfter,
         source,
+        memberId: member.id,
+        ...(member.line_display_name ? { memberName: member.line_display_name } : {}),
         migratedPoints: args.points,
         cardPoints,
         tickets,
@@ -271,8 +369,9 @@ export async function recordMigration(db: D1Database, args: MigrationArgs): Prom
     db
       .prepare(
         `INSERT INTO migration_cards (household_id, source, points, card_points, tickets, card_ref, card_ref_search, note, late_reason,
-                                      duplicate_of, staff_id, created_at, audit_id)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, (SELECT MAX(id) FROM audit_log))`,
+                                      duplicate_of, staff_id, created_at, audit_id,
+                                      family_member_id, ledger_id)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, (SELECT MAX(id) FROM audit_log), ?, (SELECT MAX(id) FROM point_ledger))`,
       )
       .bind(
         h.id,
@@ -287,14 +386,15 @@ export async function recordMigration(db: D1Database, args: MigrationArgs): Prom
         dups.length ? JSON.stringify(dups.map((d) => d.memberNo)) : null,
         args.staffId,
         nowIso,
+        member.id,
       ),
   ];
   try {
     await db.batch(s);
   } catch (e) {
-    if (/NOT NULL constraint failed: point_ledger\.household_id/.test(String((e as Error)?.message))) {
-      // 同時に押された: 同じ移行元の記録が先に入った
-      throw alreadyMigrated(source, nowIso);
+    if (/UNIQUE constraint failed: migration_cards/.test(String((e as Error)?.message))) {
+      // 同時に押された: 同じ家族・同じ移行元の記録が先に入った
+      throw alreadyMigrated(source, nowIso, member.line_display_name);
     }
     throw e;
   }
@@ -302,6 +402,8 @@ export async function recordMigration(db: D1Database, args: MigrationArgs): Prom
     householdId: h.id,
     memberNo: h.member_no,
     source,
+    memberId: member.id,
+    memberName: member.line_display_name,
     points: args.points,
     tickets,
     cardPoints,
@@ -313,10 +415,11 @@ async function householdSource(db: D1Database, id: number) {
   return (await db.prepare('SELECT source FROM households WHERE id = ?').bind(id).first<{ source: string }>())?.source ?? null;
 }
 
-function alreadyMigrated(source: MigrationSource, at: string) {
+function alreadyMigrated(source: MigrationSource, at: string, memberName: string | null) {
   return errors.conflict(
     'already_migrated',
-    `このおうちは、${MIGRATION_SOURCE_LABELS[source]}の引き継ぎが${DATE(at)}に済んでいます。同じカードは1回だけ引き継げます。` +
+    `${memberName ? `${memberName}さん` : 'この家族'}の${MIGRATION_SOURCE_LABELS[source]}は、${DATE(at)}に引き継ぎが済んでいます。同じカードは1回だけ引き継げます。` +
+      'ほかの家族のカードなら、「だれのカード」を選び直してください。' +
       '旧カードはお返しせず、引き継ぎ済みとお伝えください。間違えて入力したときは、「旧カードの引き継ぎ」の一覧から元に戻してから入力し直してください。',
   );
 }
@@ -337,12 +440,18 @@ export async function undoMigration(db: D1Database, log: AuditRow, ctx: UndoCont
     /** 引き継ぐ前の登録経路 */
     householdSource?: string;
   };
-  const row = await db
-    .prepare(
-      `SELECT id, delta FROM point_ledger WHERE household_id = ? AND migration_source = ? AND created_at = ? AND ${ACTIVE_MIGRATION}`,
-    )
-    .bind(info.householdId, info.source, info.createdAt)
-    .first<{ id: number; delta: number }>();
+  const card = await db.prepare('SELECT ledger_id FROM migration_cards WHERE audit_id = ?').bind(log.id).first<{ ledger_id: number | null }>();
+  const row = card?.ledger_id
+    ? await db
+        .prepare(`SELECT id, delta FROM point_ledger WHERE id = ? AND ${ACTIVE_MIGRATION}`)
+        .bind(card.ledger_id)
+        .first<{ id: number; delta: number }>()
+    : await db
+        .prepare(
+          `SELECT id, delta FROM point_ledger WHERE household_id = ? AND migration_source = ? AND created_at = ? AND ${ACTIVE_MIGRATION}`,
+        )
+        .bind(info.householdId, info.source, info.createdAt)
+        .first<{ id: number; delta: number }>();
   if (!row) throw errors.conflict('already_undone', 'この引き継ぎは、すでに元に戻されています。画面を読み込み直してください。');
   const h = await getHousehold(db, info.householdId);
   if (!h || h.status !== 'active') {

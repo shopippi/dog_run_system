@@ -252,6 +252,7 @@ requestsRoutes.post('/households/:id/migrate', requireRole('admin'), async (c) =
   const staffId = c.get('staff').id;
   const result = await recordMigration(db, {
     householdId,
+    memberId: input.member_id,
     source: input.source,
     points: input.points,
     cardPoints: input.card_points,

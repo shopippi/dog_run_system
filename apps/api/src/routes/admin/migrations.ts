@@ -38,12 +38,13 @@ migrationRoutes.get('/migrations', requireRole('admin'), async (c) => {
     .prepare(
       `SELECT a.id, a.created_at, a.target_id, a.after_value, a.undone_at, s.name AS staff_name, u.name AS undone_by,
               h.id AS household_id, h.member_no, h.display_name,
-              mc.card_points, mc.tickets, mc.card_ref, mc.card_ref_search, mc.note, mc.late_reason
+              mc.card_points, mc.tickets, mc.card_ref, mc.card_ref_search, mc.note, mc.late_reason, f.line_display_name AS member_name
          FROM audit_log a
          LEFT JOIN staff_users s ON a.actor_type = 'staff' AND s.id = a.actor_id
          LEFT JOIN staff_users u ON u.id = a.undone_by_staff_id
          JOIN households h ON h.id = CAST(a.target_id AS INTEGER)
          LEFT JOIN migration_cards mc ON mc.audit_id = a.id
+         LEFT JOIN family_members f ON f.id = mc.family_member_id
         WHERE a.action = 'household.migrate' ${filter}
         ORDER BY a.created_at DESC, a.id DESC
         LIMIT 200`,
@@ -66,16 +67,17 @@ migrationRoutes.get('/migrations', requireRole('admin'), async (c) => {
       card_ref_search: string | null;
       note: string | null;
       late_reason: string | null;
+      member_name: string | null;
     }>();
 
   // 同じカードの番号で引き継いだ、ほかのおうち(元に戻したものは除く)
   const refs = [...new Set(results.map((r) => r.card_ref_search).filter((x): x is string => !!x))];
-  const sameCard: { card_ref_search: string; source: MigrationSource; household_id: number; member_no: string }[] = [];
+  const sameCard: { card_ref_search: string; source: MigrationSource; household_id: number; member_no: string; audit_id: number | null }[] = [];
   for (let i = 0; i < refs.length; i += 80) {
     const chunk = refs.slice(i, i + 80);
     const { results: rows } = await db
       .prepare(
-        `SELECT c.card_ref_search, c.source, c.household_id, h.member_no FROM migration_cards c JOIN households h ON h.id = c.household_id
+        `SELECT c.card_ref_search, c.source, c.household_id, h.member_no, c.audit_id FROM migration_cards c JOIN households h ON h.id = c.household_id
           WHERE c.undone_at IS NULL AND c.card_ref_search IN (${chunk.map(() => '?').join(',')})`,
       )
       .bind(...chunk)
@@ -101,6 +103,7 @@ migrationRoutes.get('/migrations', requireRole('admin'), async (c) => {
       householdId: r.household_id,
       memberNo: r.member_no,
       householdName: r.display_name,
+      memberName: r.member_name,
       source,
       points,
       cardPoints: r.card_points ?? points,
@@ -112,7 +115,7 @@ migrationRoutes.get('/migrations', requireRole('admin'), async (c) => {
         ? [
             ...new Set(
               sameCard
-                .filter((x) => x.card_ref_search === r.card_ref_search && x.source === source && x.household_id !== r.household_id)
+                .filter((x) => x.card_ref_search === r.card_ref_search && x.source === source && x.audit_id !== r.id)
                 .map((x) => x.member_no),
             ),
           ]
@@ -136,7 +139,7 @@ migrationRoutes.get('/migrations/summary', requireRole('admin'), async (c) => {
     db.prepare(`SELECT COUNT(*) AS n FROM households WHERE status = 'active'`),
     db.prepare(
       `SELECT COUNT(*) AS n FROM (SELECT 1 FROM migration_cards WHERE undone_at IS NULL AND card_ref_search IS NOT NULL
-         GROUP BY card_ref_search, source HAVING COUNT(DISTINCT household_id) > 1)`,
+         GROUP BY card_ref_search, source HAVING COUNT(*) > 1)`,
     ),
   ]);
   const into = new Map((merged!.results as { id: number; merged_into_id: number }[]).map((r) => [r.id, r.merged_into_id]));
@@ -176,8 +179,9 @@ registerAuditDetail('household.migrate', (_b, a) => {
   const tickets = Number(a.tickets) || 0;
   const card = Number(a.cardPoints);
   const points = Number(a.migratedPoints) || 0;
+  const who = typeof a.memberName === 'string' && a.memberName ? `${a.memberName}さんの` : '';
   return (
-    `${label}から${points}ポイント` +
+    `${who}${label}から${points}ポイント` +
     (Number.isFinite(card) && card > points ? `(旧カードは${card}ポイント)` : '') +
     (tickets > 0 ? `・無料券${tickets}枚` : '')
   );

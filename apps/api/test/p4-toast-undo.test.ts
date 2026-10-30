@@ -60,7 +60,13 @@ describe('トーストの「元に戻す」に使う操作ログの番号', () =
       .run();
     const res = await adminCall(`/admin/api/households/${s.id}/migrate`, {
       cookie: s.admin,
-      body: { source: 'line_card', points: 5, confirmed_card: true, collected_card: true },
+      body: {
+        source: 'line_card',
+        points: 5,
+        confirmed_card: true,
+        collected_card: true,
+        member_id: (await env.DB.prepare('SELECT id FROM family_members WHERE household_id = ? ORDER BY id LIMIT 1').bind(s.id).first<{ id: number }>())!.id,
+      },
       now: NOW,
     });
     expect(res.status).toBe(201);

@@ -13,7 +13,12 @@ export async function migrateViaApi(memberNo: string, body: Record<string, unkno
   expect(login.status(), await login.text()).toBe(200);
   const search = await ctx.get(`/admin/api/households?q=${encodeURIComponent(memberNo)}`);
   const id = ((await search.json()) as { households: { id: number; memberNo: string }[] }).households.find((h) => h.memberNo === memberNo)!.id;
-  const res = await ctx.post(`/admin/api/households/${id}/migrate`, { data: { confirmed_card: true, collected_card: true, ...body } });
+  // だれのカードか(省くと、初めの選択か最初の家族)
+  const status = (await (await ctx.get(`/admin/api/households/${id}/migration`)).json()) as { defaultMemberId: number | null; members: { id: number }[] };
+  const memberId = status.defaultMemberId ?? status.members[0]!.id;
+  const res = await ctx.post(`/admin/api/households/${id}/migrate`, {
+    data: { confirmed_card: true, collected_card: true, member_id: memberId, ...body },
+  });
   expect(res.status(), await res.text()).toBe(201);
   await ctx.dispose();
 }

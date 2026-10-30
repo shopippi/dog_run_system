@@ -61,6 +61,8 @@ export type MigrationRecord = {
   householdId: number;
   memberNo: string;
   householdName: string;
+  /** だれのカードか(以前の記録で分からなければ null) */
+  memberName: string | null;
   source: import('./constants').MigrationSource;
   points: number;
   /** 旧カードに残っていたポイント(上限で切ったときは points より大きい。記録がなければ points と同じ) */
@@ -85,7 +87,14 @@ export type MigrationListResponse = {
 };
 
 /** 同じカードの番号が、ほかのおうちで引き継がれていたとき(POST /admin/api/households/:id/migrate の 409 duplicate_card の details) */
-export type MigrationDuplicate = { memberNo: string; householdName: string; at: string; source: import('./constants').MigrationSource };
+export type MigrationDuplicate = {
+  memberNo: string;
+  householdName: string;
+  /** だれのカードとして引き継いだか */
+  memberName: string | null;
+  at: string;
+  source: import('./constants').MigrationSource;
+};
 
 /** 移行期間のまとめ(GET /admin/api/migrations/summary、16.2) */
 export type MigrationSummary = {

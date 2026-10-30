@@ -36,7 +36,7 @@ test('A-05 受付で旧カードを確かめて直接入力する。確認の印
   await expect(dialog.getByRole('button', { name: 'やめる' })).toBeFocused();
   await expect(dialog).toContainText('0 → 12ポイント');
   await dialog.getByRole('button', { name: '引き継ぐ' }).click();
-  await expect(adminToast(page, '紙のスタンプカードの12ポイントを引き継ぎました。いまのポイントは12ポイントです。')).toBeVisible();
+  await expect(adminToast(page, 'パパさんの紙のスタンプカードの12ポイントを引き継ぎました。いまのポイントは12ポイントです。')).toBeVisible();
   // 10ポイントを超えても、無料券には自動で替えない(お客さんが会員証で交換する)
   await openLiff(customer, user);
   await expect(customer.getByRole('button', { name: '無料券と交換する(10ポイント)' })).toBeVisible();

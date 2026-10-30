@@ -36,14 +36,14 @@ describe('旧カードの移行(16章)', () => {
   });
 
   it('入力チェック: ポイント数は0以上の整数、移行元は2種類、旧カードの確認の印が2つとも必要', () => {
-    const ok = { confirmed_card: true, collected_card: true };
+    const ok = { confirmed_card: true, collected_card: true, member_id: 1 };
     expect(migrationInputSchema.safeParse({ source: 'line_card', points: 0, ...ok }).success).toBe(true);
     expect(migrationInputSchema.safeParse({ source: 'paper_card', points: 99, ...ok }).success).toBe(true);
     expect(migrationInputSchema.safeParse({ source: 'paper_card', points: 201, ...ok }).success).toBe(false);
     expect(migrationInputSchema.safeParse({ source: 'paper_card', points: -1, ...ok }).success).toBe(false);
     expect(migrationInputSchema.safeParse({ source: 'other', points: 1, ...ok }).success).toBe(false);
     for (const checks of [{}, { confirmed_card: true }, { collected_card: true }, { confirmed_card: false, collected_card: true }]) {
-      const r = migrationInputSchema.safeParse({ source: 'line_card', points: 3, ...checks });
+      const r = migrationInputSchema.safeParse({ source: 'line_card', member_id: 1, points: 3, ...checks });
       expect(r.success).toBe(false);
       expect(r.error?.issues[0]?.message).toBe('旧カードの確認に印を付けてください。');
     }
@@ -82,11 +82,14 @@ describe('旧カードの移行: 上限で切る・カードの番号・移行�
   });
 
   it('入力チェック: 旧カードのポイント数・特典の枚数・カードの番号・メモは任意', () => {
-    const ok = { source: 'paper_card', points: 30, confirmed_card: true, collected_card: true };
+    const ok = { source: 'paper_card', member_id: 1, points: 30, confirmed_card: true, collected_card: true };
     expect(migrationInputSchema.parse(ok).tickets).toBe(0);
     expect(migrationInputSchema.safeParse({ ...ok, card_points: 35, tickets: 1, card_ref: 'No.12', note: 'メモ' }).success).toBe(true);
     expect(migrationInputSchema.safeParse({ ...ok, card_points: 1000 }).success).toBe(false);
     expect(migrationInputSchema.safeParse({ ...ok, tickets: 11 }).success).toBe(false);
     expect(migrationInputSchema.safeParse({ ...ok, card_ref: 'x'.repeat(41) }).success).toBe(false);
+    // だれのカードか(家族)は必須(2026-10-30。カード1枚ごとに1回)
+    const { member_id: _omit, ...noMember } = ok;
+    expect(migrationInputSchema.safeParse(noMember).error?.issues[0]?.message).toBe('だれのカードかを選んでください。');
   });
 });

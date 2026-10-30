@@ -8,6 +8,7 @@ import {
   type HouseholdSearchResponse,
   type MigrationDuplicate,
   type MigrationListResponse,
+  type MigrationMember,
   type MigrationRecord,
   type MigrationResult,
   type MigrationSource,
@@ -181,6 +182,9 @@ function SourceChoice({
 
 /** 入力の中身(確認のダイアログに渡す) */
 type Draft = {
+  memberId: number;
+  /** 画面に出す呼び方(「パパさん」など) */
+  memberName: string;
   source: MigrationSource;
   cardPoints: number;
   points: number;
@@ -197,6 +201,7 @@ function DirectMigration({ onDone }: { onDone: () => void }) {
   const [picked, setPicked] = useState<HouseholdHit | null>(null);
   const [status, setStatus] = useState<MigrationStatus | null>(null);
   const [source, setSource] = useState<MigrationSource | null>(null);
+  const [memberId, setMemberId] = useState<number | null>(null);
   const [pointsText, setPointsText] = useState('');
   const [ticketsText, setTicketsText] = useState('0');
   const [cardRef, setCardRef] = useState('');
@@ -231,7 +236,8 @@ function DirectMigration({ onDone }: { onDone: () => void }) {
     try {
       const s = await adminApi<MigrationStatus>(`/households/${id}/migration`);
       setStatus(s);
-      setSource((prev) => (prev && !s.migrated[prev] ? prev : (MIGRATION_SOURCES.find((x) => !s.migrated[x]) ?? null)));
+      // だれのカードか: 選んでいた人がまだ家族にいればそのまま。いなければ初めの選択(今日チェックインした人など)
+      setMemberId((prev) => (prev && s.members.some((m) => m.id === prev) ? prev : s.defaultMemberId));
     } catch (e) {
       setError(e);
     }
@@ -265,8 +271,11 @@ function DirectMigration({ onDone }: { onDone: () => void }) {
   const points = cardPoints === null ? null : capMigrationPoints(cardPoints, max).points;
   const tickets = parseCount(ticketsText);
   const ticketsOver = tickets !== null && status !== null && tickets > status.maxTickets;
-  const doneMap = status ? Object.fromEntries(MIGRATION_SOURCES.map((s) => [s, Boolean(status.migrated[s])])) : {};
-  const allDone = status ? MIGRATION_SOURCES.every((s) => status.migrated[s]) : false;
+  const chosen = status?.members.find((m) => m.id === memberId) ?? null;
+  const doneMap = chosen ? Object.fromEntries(MIGRATION_SOURCES.map((s) => [s, Boolean(chosen.done[s])])) : {};
+  const allDone = chosen ? MIGRATION_SOURCES.every((s) => chosen.done[s]) : false;
+  // 選んだ人のカードで、まだ引き継いでいない種類を選んでおく
+  const sourceNow = source && !doneMap[source] ? source : (MIGRATION_SOURCES.find((x) => !doneMap[x]) ?? null);
   const late = status?.phase === 'after' && status.lateEntry;
   const open = !!status && (status.inPeriod || late);
   const ready =
@@ -274,7 +283,8 @@ function DirectMigration({ onDone }: { onDone: () => void }) {
     (!capped || capTold) &&
     tickets !== null &&
     !ticketsOver &&
-    !!source &&
+    !!sourceNow &&
+    !!chosen &&
     open &&
     (!late || lateReason.trim().length > 0) &&
     confirmedCard &&
@@ -347,11 +357,15 @@ function DirectMigration({ onDone }: { onDone: () => void }) {
               </div>
             </Loading>
           )}
-          {status && allDone ? (
-            <p className="sub-text">このおうちは、両方の旧カードの引き継ぎが済んでいます。同じカードは1回だけ引き継げます。</p>
+          {status && <CardsDone status={status} />}
+          {status && <MemberChoice status={status} value={memberId} onChange={setMemberId} />}
+          {status && !chosen ? null : status && allDone ? (
+            <p className="sub-text">
+              {memberLabel(status, chosen!)}の旧カードは、両方とも引き継ぎが済んでいます。ほかの家族のカードなら、「だれのカード」を選び直してください。
+            </p>
           ) : status ? (
             <>
-              <SourceChoice value={source} onChange={setSource} done={doneMap} />
+              <SourceChoice value={sourceNow} onChange={setSource} done={doneMap} />
               <div className="mi-fields">
                 <div className="field rq-points">
                   <label htmlFor="mi-points">旧カードのポイント数</label>
@@ -453,11 +467,11 @@ function DirectMigration({ onDone }: { onDone: () => void }) {
           {error ? <ErrorNotice error={error} /> : null}
         </>
       )}
-      {confirming && picked && status && source && points !== null && cardPoints !== null && tickets !== null && (
+      {confirming && picked && status && chosen && sourceNow && points !== null && cardPoints !== null && tickets !== null && (
         <DirectConfirm
           household={picked}
           balance={status.points}
-          draft={{ source, cardPoints, points, tickets, cardRef: cardRef.trim(), note: note.trim(), lateReason: lateReason.trim() }}
+          draft={{ memberId: chosen.id, memberName: memberLabel(status, chosen), source: sourceNow, cardPoints, points, tickets, cardRef: cardRef.trim(), note: note.trim(), lateReason: lateReason.trim() }}
           onClose={() => setConfirming(false)}
           onDone={(r) => {
             setConfirming(false);
@@ -466,7 +480,7 @@ function DirectMigration({ onDone }: { onDone: () => void }) {
             onDone();
             toast({
               message:
-                `${MIGRATION_SOURCE_LABELS[r.source]}の${r.points}ポイント${r.tickets ? `と無料券${r.tickets}枚` : ''}を引き継ぎました。` +
+                `${r.memberName ? `${r.memberName}さんの` : ''}${MIGRATION_SOURCE_LABELS[r.source]}の${r.points}ポイント${r.tickets ? `と無料券${r.tickets}枚` : ''}を引き継ぎました。` +
                 `いまのポイントは${r.balance}ポイントです。`,
               undo: {
                 auditId: r.auditId ?? null,
@@ -509,6 +523,7 @@ function DirectConfirm({
     try {
       onDone(
         await adminPost<MigrationResult & WithAuditId>(`/households/${household.id}/migrate`, {
+          member_id: draft.memberId,
           source: draft.source,
           points: draft.points,
           card_points: draft.cardPoints,
@@ -547,7 +562,7 @@ function DirectConfirm({
       }
     >
       <p>
-        <b>{household.displayName}</b>(<span className="mono">{household.memberNo}</span>)に、{label}の<b>{draft.points}ポイント</b>
+        <b>{household.displayName}</b>(<span className="mono">{household.memberNo}</span>)に、<b>{draft.memberName}</b>の{label}から<b>{draft.points}ポイント</b>
         {draft.tickets > 0 && (
           <>
             と<b>無料券{draft.tickets}枚</b>
@@ -565,7 +580,7 @@ function DirectConfirm({
           </li>
         )}
         {draft.cardRef && <li>カードの番号: {draft.cardRef}</li>}
-        <li>{label}の引き継ぎは、このおうちではこの1回だけです</li>
+        <li>{draft.memberName}の{label}の引き継ぎは、この1回だけです(カード1枚ごとに1回)</li>
         <li>間違えたときは、お知らせの「元に戻す」か、下の「引き継ぎ済みの一覧」から元に戻せます</li>
       </ul>
       {error && !dups ? <ErrorNotice error={error} /> : null}
@@ -575,7 +590,7 @@ function DirectConfirm({
           <ul className="plain-list">
             {dups.map((d) => (
               <li key={`${d.memberNo}-${d.at}`}>
-                {d.householdName}(<span className="mono">{d.memberNo}</span>)· {formatDateTime(d.at)}
+                {d.householdName}(<span className="mono">{d.memberNo}</span>){d.memberName ? `・${d.memberName}さんのカード` : ''} · {formatDateTime(d.at)}
               </li>
             ))}
           </ul>
@@ -670,7 +685,8 @@ function MigratedList() {
               <span className="mi-main">
                 <b>{r.householdName}</b>
                 <span className="sub-text">
-                  <span className="mono">{r.memberNo}</span> · {MIGRATION_SOURCE_LABELS[r.source]}
+                  <span className="mono">{r.memberNo}</span> · {r.memberName ? `${r.memberName}さんの` : ''}
+                  {MIGRATION_SOURCE_LABELS[r.source]}
                   {r.cardRef ? ` · 番号 ${r.cardRef}` : ''}
                 </span>
                 {(r.note || r.lateReason) && (
@@ -777,5 +793,59 @@ function MigratedHead() {
       <span>ポイント</span>
       <span />
     </li>
+  );
+}
+
+/** 家族の呼び方。LINE の名前がなければ「家族(1人目)」など */
+function memberLabel(status: MigrationStatus, m: MigrationMember): string {
+  return m.name ? `${m.name}さん` : `家族(${status.members.findIndex((x) => x.id === m.id) + 1}人目)`;
+}
+
+/** だれのカードか(おうちの家族 = LINE アカウント)。カード1枚ごとに1回なので、引き継ぐたびに選ぶ(2026-10-30 の決定) */
+function MemberChoice({ status, value, onChange }: { status: MigrationStatus; value: number | null; onChange: (id: number) => void }) {
+  if (status.members.length === 0) {
+    return <p className="sub-text">このおうちには、いまLINEでつながっている家族がいません。家族を追加してから引き継いでください。</p>;
+  }
+  return (
+    <div className="field">
+      <span className="label" id="mi-member-label">
+        だれのカード
+      </span>
+      <div className="chips" role="radiogroup" aria-labelledby="mi-member-label">
+        {status.members.map((m) => {
+          const done = MIGRATION_SOURCES.filter((s) => m.done[s]).map((s) => MIGRATION_SOURCE_LABELS[s]);
+          return (
+            <label key={m.id}>
+              <input type="radio" name="mi-member" checked={value === m.id} onChange={() => onChange(m.id)} />
+              <span>
+                {memberLabel(status, m)}
+                {done.length > 0 ? `(${done.join('・')}は済み)` : ''}
+              </span>
+            </label>
+          );
+        })}
+      </div>
+      {value === null && <span className="hint">受付の前にいる人のカードを選んでください</span>}
+    </div>
+  );
+}
+
+/** このおうちで、もう引き継いだカード(だれの・どのカード・何ポイント) */
+function CardsDone({ status }: { status: MigrationStatus }) {
+  if (status.cards.length === 0) return null;
+  return (
+    <div className="field">
+      <span className="label" id="mi-cards-label">
+        このおうちで引き継いだカード
+      </span>
+      <ul className="plain-list mi-cards" aria-labelledby="mi-cards-label">
+        {status.cards.map((c) => (
+          <li key={`${c.memberId ?? 'x'}-${c.source}-${c.date}`}>
+            {c.memberName ? `${c.memberName}さん` : c.memberId === null ? 'だれのカードか記録なし' : '家族'}の{MIGRATION_SOURCE_LABELS[c.source]}:{' '}
+            {c.points}ポイント{c.tickets > 0 ? `・無料券${c.tickets}枚` : ''}({formatMonthDay(c.date)})
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }

@@ -564,6 +564,12 @@ export async function seedDemo(sql: Database, opts: SeedOptions): Promise<SeedSu
            VALUES (?, ?, 'migration', ?, '旧カードからの引き継ぎ(受付で確認)', 'staff', 2, ?)`,
           [h.id, h.migration.points, h.migration.source, h.regAt],
         );
+        // 入力の記録(だれのカードか。デモでは最初の家族のカード)
+        run(
+          `INSERT INTO migration_cards (household_id, source, points, card_points, tickets, staff_id, created_at, family_member_id, ledger_id)
+           VALUES (?, ?, ?, ?, 0, 2, ?, ?, (SELECT MAX(id) FROM point_ledger))`,
+          [h.id, h.migration.source, h.migration.points, h.migration.points, h.regAt, h.members[0]?.id ?? null],
+        );
       }
     }
 

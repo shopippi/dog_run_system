@@ -407,6 +407,10 @@ test('管理者: 確認待ち・旧カードの引き継ぎ', async ({ browser }
   await picker.getByRole('searchbox', { name: '探す言葉' }).fill('DR-000004');
   await picker.getByRole('list', { name: '引き継ぐおうちを探すの候補' }).getByRole('button', { name: /DR-000004/ }).click();
   const section = page.getByRole('region', { name: '直接入力' });
+  // だれのカードか(家族が2人以上で、今日の来場がなければ、最初の家族を選ぶ)
+  const who = section.getByRole('radiogroup', { name: 'だれのカード' });
+  await who.getByRole('radio').first().waitFor();
+  if ((await who.getByRole('radio', { checked: true }).count()) === 0) await who.getByRole('radio').first().check({ force: true });
   await section.getByRole('radio', { name: '紙のスタンプカード' }).check({ force: true });
   await section.getByLabel('旧カードのポイント数').fill('7');
   await section.getByLabel('旧カードを目で確かめた').check();

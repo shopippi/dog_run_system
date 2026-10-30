@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { lowContrast } from './households-helpers';
 import { adminLogin, newLineUser, openLiff, registerViaUi } from './helpers';
+import { sql } from './merge-helpers';
 import { migrateViaApi } from './oldcard-helpers';
 
 // 旧カードの引き継ぎ(16章)の新しい画面と部品の、文字と背景のコントラスト(WCAG の 4.5:1。ライトとダーク)。
@@ -31,13 +32,20 @@ for (const scheme of ['light', 'dark'] as const) {
       await check(phone, 'L-08 来場履歴(前のカードからの引き継ぎ)');
       const b = await registerViaUi(phone, newLineUser('ママ'), ['ポコ']);
       await migrateViaApi(b, { source: 'line_card', points: 2, card_ref: ref, duplicate_ok: true });
+      sql(
+        `INSERT INTO family_members (household_id, line_user_id, line_display_name, age_group, gender, consented_at, joined_at, join_method, status, updated_at)
+         SELECT id, 'Ucontrast${scheme}${Date.now()}', 'パパ', '40代', '男性', '2026-10-01T00:00:00+09:00',
+                '2026-10-01T00:00:00+09:00', 'invite', 'active', '2026-10-01T00:00:00+09:00'
+           FROM households WHERE member_no = '${b}'`,
+      );
       await phone.close();
 
       const page = await browser.newPage({ ...TABLET, colorScheme: scheme });
       await adminLogin(page, 'admin', `/migration?member=${encodeURIComponent(b)}`);
       await page.getByRole('region', { name: '引き継ぎ済みの一覧' }).getByText(`同じ番号: ${a}`).waitFor();
       const section = page.getByRole('region', { name: '直接入力' });
-      await section.getByRole('radio', { name: '紙のスタンプカード' }).check();
+      await section.getByRole('radiogroup', { name: 'だれのカード' }).getByRole('radio').first().check();
+      await section.getByRole('radio', { name: '紙のスタンプカード', exact: true }).check();
       await section.getByLabel('旧カードのポイント数').fill('45');
       await section.getByText(/引き継げるのは最大30ポイントです。/).waitFor();
       await check(page, 'M-09 旧カードの引き継ぎ(まとめ・上限の注意・同じ番号)');

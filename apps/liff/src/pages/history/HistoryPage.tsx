@@ -198,7 +198,7 @@ function OldCardTransfers({ transfers }: { transfers: OldCardTransfer[] }) {
           const { day, weekday } = dayOf(date);
           const [, m] = date.split('-').map(Number);
           return (
-            <li key={`${t.source}-${t.at}`} className="tk-hist-row">
+            <li key={`${t.memberName ?? ''}-${t.source}-${t.at}`} className="tk-hist-row">
               <span className="hist-date" aria-label={`${m}月${day}日(${weekday})`}>
                 <b>{day}</b>
                 <span>{m}月</span>
@@ -208,7 +208,10 @@ function OldCardTransfers({ transfers }: { transfers: OldCardTransfer[] }) {
                   前のカードから <span className="cu-nowrap">{t.points}ポイント</span> 引き継ぎ
                 </b>
                 <span className="sub-text">
-                  <span className="cu-nowrap">{MIGRATION_SOURCE_LABELS[t.source]}</span>
+                  <span className="cu-nowrap">
+                    {t.mine ? 'あなたの' : t.memberName ? `${t.memberName}さんの` : ''}
+                    {MIGRATION_SOURCE_LABELS[t.source]}
+                  </span>
                   {t.tickets > 0 && <span className="cu-nowrap">・無料券{t.tickets}枚</span>}
                 </span>
               </span>

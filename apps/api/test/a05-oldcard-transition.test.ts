@@ -1,7 +1,7 @@
 import { env } from 'cloudflare:test';
 import { describe, expect, it } from 'vitest';
 import '../src/routes/admin/requests';
-import { addFamily, adminCall, call, createStaff, dog, login, registerUser, useTicketOf } from './helpers';
+import { addFamily, adminCall, call, checkin, createStaff, dog, login, registerUser, useTicketOf } from './helpers';
 
 /*
  * A-05 旧カードの引き継ぎ(16章)の、移行の全体を通した決まり。
@@ -19,8 +19,23 @@ async function cookieOf(role: 'staff' | 'admin' | 'developer' = 'admin', now = N
 async function householdIdOf(memberNo: string) {
   return (await env.DB.prepare('SELECT id FROM households WHERE member_no = ?').bind(memberNo).first<{ id: number }>())!.id;
 }
-const migrate = (cookie: string, householdId: number, body: Record<string, unknown>, now = NOW) =>
-  adminCall(`/admin/api/households/${householdId}/migrate`, { cookie, body: { confirmed_card: true, collected_card: true, ...body }, now });
+/** 家族を省くと、そのおうちの最初の家族のカードとして入れる */
+const migrate = async (cookie: string, householdId: number, body: Record<string, unknown>, now = NOW) =>
+  adminCall(`/admin/api/households/${householdId}/migrate`, {
+    cookie,
+    body: { confirmed_card: true, collected_card: true, member_id: await firstMemberOf(householdId), ...body },
+    now,
+  });
+async function firstMemberOf(householdId: number) {
+  const r = await env.DB.prepare("SELECT id FROM family_members WHERE household_id = ? AND status = 'active' ORDER BY id LIMIT 1")
+    .bind(householdId)
+    .first<{ id: number }>();
+  // まとめられたおうちには家族がいない(入力は「まとめられています」で止まる)
+  return r?.id ?? 999999;
+}
+async function memberIdOf(lineUserId: string) {
+  return (await env.DB.prepare('SELECT id FROM family_members WHERE line_user_id = ?').bind(lineUserId).first<{ id: number }>())!.id;
+}
 const summary = (cookie: string, now = NOW) => adminCall('/admin/api/migrations/summary', { cookie, now });
 const list = (cookie: string, q = '', now = NOW) => adminCall(`/admin/api/migrations${q ? `?q=${encodeURIComponent(q)}` : ''}`, { cookie, now });
 const balanceOf = async (user: string, now = NOW) => (await call('/api/me', { user, now })).body.card.balance as number;
@@ -48,7 +63,7 @@ describe('A-05 上限を超える旧カード', () => {
     expect((await summary(admin)).body.capped).toEqual({ count: 1, points: 5 });
     const log = await adminCall('/admin/api/audit', { cookie: admin, now: NOW });
     expect(log.body.entries.find((e: { actionLabel: string }) => e.actionLabel === '旧カードの引き継ぎ').detail).toBe(
-      '紙のスタンプカードから30ポイント(旧カードは35ポイント)',
+      'パパさんの紙のスタンプカードから30ポイント(旧カードは35ポイント)',
     );
   });
 
@@ -135,8 +150,10 @@ describe('A-05 同じカードの番号(同じカードを2つのおうちで使
     const dup = await migrate(admin, b, { source: 'paper_card', points: 5, card_ref: '０１２３' });
     expect(dup.status).toBe(409);
     expect(dup.body.error.code).toBe('duplicate_card');
-    expect(dup.body.error.message).toMatch(new RegExp(`カードの番号「０１２３」は、アルのおうち\\(${papa.memberNo}\\)で11月10日に引き継ぎ済みです`));
-    expect(dup.body.error.details.matches).toEqual([{ memberNo: papa.memberNo, householdName: 'アルのおうち', at: '2026-11-10T12:00:00+09:00', source: 'paper_card' }]);
+    expect(dup.body.error.message).toMatch(new RegExp(`カードの番号「０１２３」は、アルのおうち\\(${papa.memberNo}\\)のパパさんのカードとして11月10日に引き継ぎ済みです`));
+    expect(dup.body.error.details.matches).toEqual([
+      { memberNo: papa.memberNo, householdName: 'アルのおうち', memberName: 'パパ', at: '2026-11-10T12:00:00+09:00', source: 'paper_card' },
+    ]);
     expect(await balanceOf(MAMA)).toBe(0);
     // 移行元が違えば別のカード
     expect((await migrate(admin, b, { source: 'line_card', points: 2, card_ref: '0123' })).status).toBe(201);
@@ -221,7 +238,7 @@ describe('A-05 移行期間', () => {
 });
 
 describe('A-05 おうちの統合との関係', () => {
-  it('まとめてもポイントは二重にならず、移行元ごとに1回はまとめた後も守られる。統合を元に戻すとそれぞれに戻る', async () => {
+  it('まとめてもポイントは二重にならず、カードごとに1回はまとめた後も守られる。統合を元に戻すとそれぞれに戻る', async () => {
     const admin = await cookieOf();
     const papa = await registerUser(PAPA);
     const mama = await registerUser(MAMA, [dog('ニコ')]);
@@ -238,10 +255,12 @@ describe('A-05 おうちの統合との関係', () => {
     expect((await call('/api/me', { user: PAPA, now: '2026-11-10T03:11:00Z' })).body.card.tickets).toHaveLength(1);
     const s = await summary(admin, '2026-11-10T03:11:00Z');
     expect(s.body).toMatchObject({ households: 1, points: 8, tickets: 1 });
-    // 両方の移行元が済み(まとめたおうちの分も数える)
-    for (const source of ['line_card', 'paper_card']) {
-      expect((await migrate(admin, keep, { source, points: 1 }, '2026-11-10T03:12:00Z')).body.error.code).toBe('already_migrated');
-    }
+    // カードごとに1回は、まとめた後も守られる(パパの LINE のカード、ママの紙のカード)
+    const mamaId = await memberIdOf('U002');
+    expect((await migrate(admin, keep, { source: 'line_card', points: 1 }, '2026-11-10T03:12:00Z')).body.error.code).toBe('already_migrated');
+    expect((await migrate(admin, keep, { source: 'paper_card', points: 1, member_id: mamaId }, '2026-11-10T03:12:00Z')).body.error.code).toBe(
+      'already_migrated',
+    );
     // お客さんにも、まとめたおうちの分の記録が見える
     expect((await oldcard(PAPA, '2026-11-10T03:12:00Z')).body.transfers.map((t: { source: string }) => t.source).sort()).toEqual(['line_card', 'paper_card']);
     // まとめた側の引き継ぎは、統合のあとは元に戻せない(ポイントの手動登録で調整するよう案内)
@@ -258,7 +277,7 @@ describe('A-05 おうちの統合との関係', () => {
     expect((await undo(admin, mergeLog!.id, '2026-11-10T03:14:00Z')).status).toBe(200);
     expect(await balanceOf(PAPA, '2026-11-10T03:15:00Z')).toBe(5);
     expect(await balanceOf(MAMA, '2026-11-10T03:15:00Z')).toBe(3);
-    // 紙のカードはママのおうちで済んでいるが、パパのおうちではまだ
+    // ママの紙のカードは済み。パパの紙のカードは別のカードなので引き継げる
     expect((await migrate(admin, keep, { source: 'paper_card', points: 1 }, '2026-11-10T03:16:00Z')).status).toBe(201);
     expect((await migrate(admin, absorb, { source: 'paper_card', points: 1 }, '2026-11-10T03:16:00Z')).body.error.code).toBe('already_migrated');
   });
@@ -329,7 +348,7 @@ describe('お客さんへの案内(会員証)と引き継いだ記録', () => {
     await migrate(admin, await householdIdOf(r.memberNo), { source: 'line_card', points: 7, tickets: 1 });
     expect((await oldcard(PAPA)).body).toEqual({
       notice: null,
-      transfers: [{ source: 'line_card', points: 7, tickets: 1, at: '2026-11-10T12:00:00+09:00' }],
+      transfers: [{ source: 'line_card', points: 7, tickets: 1, at: '2026-11-10T12:00:00+09:00', memberName: 'パパ', mine: true }],
     });
   });
 
@@ -355,5 +374,118 @@ describe('お客さんへの案内(会員証)と引き継いだ記録', () => {
     const res = await oldcard('U009:だれか');
     expect(res.status).toBe(409);
     expect(res.body.error.code).toBe('not_registered');
+  });
+});
+
+describe('A-05 カード1枚ごとに1回(2026-10-30 の決定)', () => {
+  it('パパとママのLINEのショップカードは、それぞれ引き継げる。上限と特典の上限はカード1枚ごと', async () => {
+    const admin = await cookieOf();
+    const r = await registerUser(PAPA);
+    await addFamily(r.memberNo, 'U002', 'ママ');
+    const id = await householdIdOf(r.memberNo);
+    const papaId = await memberIdOf('U001');
+    const mamaId = await memberIdOf('U002');
+    expect((await migrate(admin, id, { source: 'line_card', points: 30, card_points: 34, tickets: 1, member_id: papaId })).status).toBe(201);
+    const mama = await migrate(admin, id, { source: 'line_card', points: 30, tickets: 1, member_id: mamaId });
+    expect(mama.status).toBe(201);
+    expect(mama.body).toMatchObject({ memberId: mamaId, memberName: 'ママ', points: 30, balance: 60 });
+    expect((await call('/api/me', { user: PAPA, now: NOW })).body.card).toMatchObject({ balance: 60 });
+    expect((await call('/api/me', { user: PAPA, now: NOW })).body.card.tickets).toHaveLength(2);
+    // 同じ人の同じカードは2回目にならない
+    const again = await migrate(admin, id, { source: 'line_card', points: 1, member_id: mamaId });
+    expect(again.status).toBe(409);
+    expect(again.body.error.message).toMatch(/^ママさんのLINEのショップカードは、11月10日に引き継ぎが済んでいます/);
+    // 紙のカードも家族1人につき1回
+    expect((await migrate(admin, id, { source: 'paper_card', points: 2, member_id: papaId })).status).toBe(201);
+    expect((await migrate(admin, id, { source: 'paper_card', points: 2, member_id: mamaId })).status).toBe(201);
+    expect((await migrate(admin, id, { source: 'paper_card', points: 2, member_id: papaId })).status).toBe(409);
+    const status = await adminCall(`/admin/api/households/${id}/migration`, { cookie: admin, now: NOW });
+    expect(status.body.members.map((m: { name: string; done: Record<string, unknown> }) => [m.name, !!m.done.line_card, !!m.done.paper_card])).toEqual([
+      ['パパ', true, true],
+      ['ママ', true, true],
+    ]);
+    expect(status.body.cards).toHaveLength(4);
+    expect((await summary(admin)).body).toMatchObject({ households: 1, points: 64, tickets: 2, bySource: { line_card: { count: 2 }, paper_card: { count: 2 } } });
+  });
+
+  it('元に戻すのはカード1枚ずつ。ほかの家族のカードはそのまま', async () => {
+    const admin = await cookieOf();
+    const r = await registerUser(PAPA);
+    await addFamily(r.memberNo, 'U002', 'ママ');
+    const id = await householdIdOf(r.memberNo);
+    const a = await migrate(admin, id, { source: 'line_card', points: 5, member_id: await memberIdOf('U001') });
+    await migrate(admin, id, { source: 'line_card', points: 7, member_id: await memberIdOf('U002') });
+    expect((await undo(admin, a.body.auditId)).status).toBe(200);
+    expect(await balanceOf(PAPA)).toBe(7);
+    const status = await adminCall(`/admin/api/households/${id}/migration`, { cookie: admin, now: NOW });
+    expect(status.body.cards).toEqual([expect.objectContaining({ memberName: 'ママ', points: 7 })]);
+    // パパのカードは、もう一度入れられる
+    expect((await migrate(admin, id, { source: 'line_card', points: 5, member_id: await memberIdOf('U001') }, '2026-11-10T05:00:00Z')).status).toBe(201);
+  });
+
+  it('ほかのおうちの家族・いない家族は選べない(400)。家族を選ばないと 400', async () => {
+    const admin = await cookieOf();
+    const papa = await registerUser(PAPA);
+    await registerUser(MAMA, [dog('ニコ')]);
+    const id = await householdIdOf(papa.memberNo);
+    const other = await migrate(admin, id, { source: 'line_card', points: 1, member_id: await memberIdOf('U002') });
+    expect(other.status).toBe(400);
+    expect(other.body.error.message).toMatch(/だれのカードかを選び直してください/);
+    const none = await adminCall(`/admin/api/households/${id}/migrate`, {
+      cookie: admin,
+      body: { source: 'line_card', points: 1, confirmed_card: true, collected_card: true },
+      now: NOW,
+    });
+    expect(none.status).toBe(400);
+    expect(none.body.error.message).toBe('だれのカードかを選んでください。');
+  });
+
+  it('同じLINEのユーザーが抜けて別のおうちに入り直しても、同じカードは2回引き継げない', async () => {
+    const admin = await cookieOf();
+    const papa = await registerUser(PAPA);
+    await migrate(admin, await householdIdOf(papa.memberNo), { source: 'line_card', points: 5 });
+    // パパが抜けて、別のおうちの家族として入り直した(準備のため直接書く)
+    await env.DB.prepare("UPDATE family_members SET status = 'left' WHERE line_user_id = 'U001'").run();
+    const mama = await registerUser(MAMA, [dog('ニコ')]);
+    await addFamily(mama.memberNo, 'U001', 'パパ');
+    const newId = (await env.DB.prepare("SELECT id FROM family_members WHERE line_user_id = 'U001' AND status = 'active'").first<{ id: number }>())!.id;
+    const res = await migrate(admin, await householdIdOf(mama.memberNo), { source: 'line_card', points: 5, member_id: newId });
+    expect(res.status).toBe(409);
+    expect(res.body.error.code).toBe('already_migrated');
+  });
+
+  it('同じおうちの別の家族でも、同じカードの番号なら知らせる', async () => {
+    const admin = await cookieOf();
+    const r = await registerUser(PAPA);
+    await addFamily(r.memberNo, 'U002', 'ママ');
+    const id = await householdIdOf(r.memberNo);
+    await migrate(admin, id, { source: 'paper_card', points: 5, card_ref: 'No.77', member_id: await memberIdOf('U001') });
+    const dup = await migrate(admin, id, { source: 'paper_card', points: 5, card_ref: '77', member_id: await memberIdOf('U002') });
+    expect(dup.status).toBe(409);
+    expect(dup.body.error.code).toBe('duplicate_card');
+  });
+
+  it('受付の前の人: 今日チェックインした家族を、だれのカードかの初めの選択にする', async () => {
+    const admin = await cookieOf();
+    const r = await registerUser(PAPA);
+    await addFamily(r.memberNo, 'U002', 'ママ');
+    const id = await householdIdOf(r.memberNo);
+    const before = await adminCall(`/admin/api/households/${id}/migration`, { cookie: admin, now: NOW });
+    expect(before.body.defaultMemberId).toBeNull();
+    const dogs = (await call('/api/dogs', { user: MAMA, now: NOW })).body.dogs.map((d: { id: number }) => d.id);
+    expect((await checkin(MAMA, dogs, { now: NOW })).status).toBe(201);
+    const after = await adminCall(`/admin/api/households/${id}/migration`, { cookie: admin, now: NOW });
+    expect(after.body.defaultMemberId).toBe(await memberIdOf('U002'));
+  });
+
+  it('お客さんの案内は家族ごと。パパが引き継いでも、まだのママには出る。記録はおうち全体で、だれのカードかが分かる', async () => {
+    const admin = await cookieOf();
+    const r = await registerUser(PAPA);
+    await addFamily(r.memberNo, 'U002', 'ママ');
+    await migrate(admin, await householdIdOf(r.memberNo), { source: 'line_card', points: 4, member_id: await memberIdOf('U001') });
+    expect((await oldcard(PAPA)).body.notice).toBeNull();
+    const mama = await oldcard(MAMA);
+    expect(mama.body.notice).toEqual({ endDate: null });
+    expect(mama.body.transfers).toEqual([expect.objectContaining({ memberName: 'パパ', mine: false, points: 4 })]);
   });
 });

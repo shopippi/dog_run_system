@@ -1,6 +1,7 @@
 import { test } from '@playwright/test';
 import { checkScreen } from './households-helpers';
 import { adminLogin, newLineUser, registerViaUi } from './helpers';
+import { sql } from './merge-helpers';
 import { migrateViaApi } from './oldcard-helpers';
 
 // M-09 旧カードの引き継ぎ(移行期間のまとめ・特典・カードの番号・同じ番号の知らせ)と M-19 切り替えの手順の見え方。
@@ -21,11 +22,21 @@ for (const v of VIEWPORTS) {
     await customer.close();
     await migrateViaApi(a, { source: 'paper_card', points: 30, card_points: 48, tickets: 1, card_ref: ref, note: '角が少し破れていた' });
     await migrateViaApi(b, { source: 'paper_card', points: 3, card_ref: ref, duplicate_ok: true });
+    // もう1人の家族(長い名前)。だれのカードかの選択と、引き継いだカードの一覧を出す
+    sql(
+      `INSERT INTO family_members (household_id, line_user_id, line_display_name, age_group, gender, consented_at, joined_at, join_method, status, updated_at)
+       SELECT id, 'Ulayout${v.viewport.width}${Date.now()}', 'おじいちゃん(ヨシノブ)', '70代以上', '男性', '2026-10-01T00:00:00+09:00',
+              '2026-10-01T00:00:00+09:00', 'invite', 'active', '2026-10-01T00:00:00+09:00'
+         FROM households WHERE member_no = '${b}'`,
+    );
 
     const page = await browser.newPage({ viewport: v.viewport, hasTouch: v.touch });
     await adminLogin(page, 'admin', `/migration?member=${encodeURIComponent(b)}`);
     const section = page.getByRole('region', { name: '直接入力' });
-    await section.getByRole('radio', { name: 'LINEのショップカード' }).waitFor();
+    await section.getByText('受付の前にいる人のカードを選んでください').waitFor();
+    await section.getByRole('radiogroup', { name: 'だれのカード' }).getByRole('radio', { name: /おじいちゃん/ }).check();
+    await section.getByRole('radio', { name: 'LINEのショップカード', exact: true }).waitFor();
+    await section.getByRole('list', { name: 'このおうちで引き継いだカード' }).waitFor();
     await page.getByRole('region', { name: '引き継ぎ済みの一覧' }).getByText(`同じ番号: ${a}`).waitFor();
     await checkScreen(page, v.name, 'M-09 旧カードの引き継ぎ(まとめと一覧)', v.touch);
     await section.getByLabel('旧カードのポイント数').fill('50');
