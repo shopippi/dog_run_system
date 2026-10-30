@@ -68,7 +68,7 @@ for (const scheme of ['light', 'dark'] as const) {
       await picker.getByRole('list', { name: '引き継ぐおうちを探すの候補' }).getByRole('button', { name: new RegExp(memberNo) }).click();
       const section = page.getByRole('region', { name: '直接入力' });
       await section.getByLabel('旧カードのポイント数').fill('40');
-      await section.getByText('引き継げるポイントは最大30ポイントです。').waitFor();
+      await section.getByText(/引き継げるのは最大30ポイントです。/).waitFor();
       await check(page, 'M-09 旧カードの引き継ぎ(上限を超えたとき)');
       await section.getByLabel('旧カードのポイント数').fill('6');
       await section.getByLabel('旧カードを目で確かめた').check();

@@ -22,7 +22,7 @@ test('A-05 受付で旧カードを確かめて直接入力する。確認の印
   const section = page.getByRole('region', { name: '直接入力' });
   await section.getByRole('radio', { name: '紙のスタンプカード' }).check();
   await section.getByLabel('旧カードのポイント数').fill('31');
-  await expect(section.getByText('引き継げるポイントは最大30ポイントです。')).toBeVisible();
+  await expect(section.getByText('引き継げるのは最大30ポイントです。31ポイントのうち30ポイントを引き継ぎ、残りの1ポイントは引き継がれません。')).toBeVisible();
   await expect(section.getByRole('button', { name: '引き継ぐ' })).toBeDisabled();
   await section.getByLabel('旧カードのポイント数').fill('12');
   await expect(section.getByText(/引き継ぎ後 12ポイント/)).toBeVisible();
