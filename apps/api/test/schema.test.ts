@@ -35,6 +35,7 @@ describe('マイグレーション', () => {
         'invites',
         'media_objects',
         'merges',
+        'migration_cards',
         'point_ledger',
         'postal_areas',
         'requests',

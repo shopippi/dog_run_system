@@ -191,7 +191,7 @@ test('管理画面: 写真は API から読んでから出し(404 にならな�
   await expect(list.getByRole('listitem', { name: '天気の取得 正常' })).toBeVisible();
 });
 
-test('LINE のトーク画面: リッチメニューから会員証・来場履歴・チェックインを開き、× でトークに戻る', async ({ page }) => {
+test('LINE のトーク画面: リッチメニューから会員証・来場の記録・チェックインを開き、× でトークに戻る', async ({ page }) => {
   await openDemo(page);
   await page.getByRole('button', { name: 'LINE のトーク画面' }).click();
   const talk = page.getByRole('region', { name: 'LINE のトーク画面' });
@@ -205,7 +205,7 @@ test('LINE のトーク画面: リッチメニューから会員証・来場履�
   await page.getByRole('button', { name: '閉じて LINE のトークに戻る' }).click();
   await expect(talk).toBeVisible();
 
-  await menu.getByRole('button', { name: 'リッチメニューの「来場履歴」' }).click();
+  await menu.getByRole('button', { name: 'リッチメニューの「来場の記録」' }).click();
   await expect(phone(page).getByRole('heading', { name: '来場履歴' })).toBeVisible();
   await page.getByRole('button', { name: '閉じて LINE のトークに戻る' }).click();
 

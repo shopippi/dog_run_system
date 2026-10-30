@@ -1,5 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { isWithinMigrationPeriod, migrationInputSchema, migrationPointsError, planMigration } from '../src';
+import {
+  capMigrationPoints,
+  isWithinMigrationPeriod,
+  migrationCapMessage,
+  migrationDaysLeft,
+  migrationInputSchema,
+  migrationPhase,
+  migrationPointsError,
+  normalizeCardRef,
+  planMigration,
+} from '../src';
 
 describe('旧カードの移行(16章)', () => {
   it('移行したポイントは台帳に足すだけ。10以上になっても無料券には替えない', () => {
@@ -37,5 +47,46 @@ describe('旧カードの移行(16章)', () => {
       expect(r.success).toBe(false);
       expect(r.error?.issues[0]?.message).toBe('旧カードの確認に印を付けてください。');
     }
+  });
+});
+
+describe('旧カードの移行: 上限で切る・カードの番号・移行期間の位置', () => {
+  it('上限を超えるときは上限までを引き継ぎ、切られる数を出す', () => {
+    expect(capMigrationPoints(35, 30)).toEqual({ points: 30, cut: 5 });
+    expect(capMigrationPoints(30, 30)).toEqual({ points: 30, cut: 0 });
+    expect(capMigrationPoints(7, 30)).toEqual({ points: 7, cut: 0 });
+    expect(migrationCapMessage(35, 30)).toBe('引き継げるのは最大30ポイントです。35ポイントのうち30ポイントを引き継ぎ、残りの5ポイントは引き継がれません。');
+  });
+
+  it('カードの番号は、全角・大文字・空白・ハイフン・「No.」「番」をそろえて比べる', () => {
+    expect(normalizeCardRef('No.０１２３')).toBe('0123');
+    expect(normalizeCardRef(' 01-23 ')).toBe('0123');
+    expect(normalizeCardRef('0123番')).toBe('0123');
+    expect(normalizeCardRef('Ａ－１２')).toBe('a12');
+    expect(normalizeCardRef('nori')).toBe('nori');
+    expect(normalizeCardRef('')).toBeNull();
+    expect(normalizeCardRef(' - ')).toBeNull();
+    expect(normalizeCardRef(undefined)).toBeNull();
+  });
+
+  it('移行期間の終わりまでの日数と、今日の位置', () => {
+    const p = { start: '2026-11-01', end: '2026-12-31' };
+    expect(migrationDaysLeft(p, '2026-12-31')).toBe(0);
+    expect(migrationDaysLeft(p, '2026-12-01')).toBe(30);
+    expect(migrationDaysLeft(p, '2027-01-02')).toBe(-2);
+    expect(migrationDaysLeft({ start: null, end: null }, '2026-12-01')).toBeNull();
+    expect(migrationPhase(p, '2026-10-31')).toBe('before');
+    expect(migrationPhase(p, '2026-11-01')).toBe('open');
+    expect(migrationPhase(p, '2027-01-01')).toBe('after');
+    expect(migrationPhase({ start: null, end: null }, '2030-01-01')).toBe('open');
+  });
+
+  it('入力チェック: 旧カードのポイント数・特典の枚数・カードの番号・メモは任意', () => {
+    const ok = { source: 'paper_card', points: 30, confirmed_card: true, collected_card: true };
+    expect(migrationInputSchema.parse(ok).tickets).toBe(0);
+    expect(migrationInputSchema.safeParse({ ...ok, card_points: 35, tickets: 1, card_ref: 'No.12', note: 'メモ' }).success).toBe(true);
+    expect(migrationInputSchema.safeParse({ ...ok, card_points: 1000 }).success).toBe(false);
+    expect(migrationInputSchema.safeParse({ ...ok, tickets: 11 }).success).toBe(false);
+    expect(migrationInputSchema.safeParse({ ...ok, card_ref: 'x'.repeat(41) }).success).toBe(false);
   });
 });

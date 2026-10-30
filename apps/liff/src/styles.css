@@ -601,6 +601,13 @@ a { color: var(--accent-text); }
   display: inline-flex; align-items: center; min-height: 44px; padding: 0; border: 0; background: none;
   font: inherit; font-size: var(--fs-14); color: var(--text-secondary); cursor: pointer;
 }
+.oc-notice {
+  display: flex; flex-direction: column; align-items: flex-start; gap: var(--sp-1);
+  padding: var(--sp-4); border: 1px solid var(--border); border-radius: var(--radius-xl); background: var(--surface); box-shadow: var(--shadow-card);
+}
+.oc-notice h3 { margin: 0; font-size: var(--fs-15); font-weight: var(--fw-strong); }
+.oc-notice p { margin: 0; font-size: var(--fs-14); color: var(--text-secondary); line-height: 1.6; }
+.oc-row-body { display: flex; flex-direction: column; flex: 1; min-width: 0; gap: 2px; }
 .pf-nudge-later:focus-visible { outline: 2px solid var(--focus-color); outline-offset: 2px; border-radius: var(--radius-sm); }
 
 /* ================================================================

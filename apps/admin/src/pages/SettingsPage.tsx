@@ -489,7 +489,7 @@ function RegenerateDialog({ onClose, onDone }: { onClose: () => void; onDone: On
 }
 
 function MigrationSection({ settings, onSaved }: { settings: Settings; onSaved: OnSaved }) {
-  const s = useSettingsDraft(settings, ['migration_period', 'migration_max_points'], onSaved);
+  const s = useSettingsDraft(settings, ['migration_period', 'migration_max_points', 'migration_max_tickets', 'migration_late_entry'], onSaved);
   const p = s.draft.migration_period as { start: string | null; end: string | null };
   const startId = useId();
   const endId = useId();
@@ -530,6 +530,23 @@ function MigrationSection({ settings, onSaved }: { settings: Settings; onSaved: 
         value={s.draft.migration_max_points}
         onChange={(v) => s.set('migration_max_points', v)}
       />
+      <NumField
+        label="旧カードの特典から出せる無料券の上限"
+        unit="枚まで"
+        hint="LINEのショップカードの特典チケットなど、使っていない特典を無料券にできる枚数です。0 にすると無料券にしません(0〜10)"
+        min={0}
+        max={10}
+        value={s.draft.migration_max_tickets}
+        onChange={(v) => s.set('migration_max_tickets', v)}
+      />
+      <label className="check">
+        <input
+          type="checkbox"
+          checked={s.draft.migration_late_entry === true}
+          onChange={(e) => s.set('migration_late_entry', e.target.checked)}
+        />
+        移行期間が終わったあとも、理由を書けば引き継ぎを受け付ける
+      </label>
     </SettingsForm>
   );
 }
