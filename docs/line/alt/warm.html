@@ -1,6 +1,6 @@
 <!doctype html>
 <!--
-  リッチメニュー「ぬくもり(生成りと肉球)」の案。2500×1686。作り直し: node docs/line/make-richmenu.mjs warm
+  リッチメニュー「ぬくもり」の案。2500×1686。作り直し: node docs/line/make-richmenu.mjs warm
   LINE の「大」6 マス(3 列 × 2 段)。列の区切り x=833・1667、段の区切り y=843。
   カードは区切りから 20px ずつ内側に置き、区切りの上に 40px のすき間がくるようにしている。
     A+B 会員証(上の左 2 マス)  C チェックイン(上の右)
@@ -15,18 +15,15 @@
 <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700&display=block" rel="stylesheet" />
 <style>
   :root {
-    --cream: #F5EEE3; --card: #FFFDF9; --ink: #16191D; --ink-2: #5B6470; --shu: #B4532A; --sand: #EDE3D3; --line: #E6DCCB;
+    --cream: #F1F3F5; --card: #FFFFFF; --ink: #16191D; --ink-2: #5B6470; --sunk: #F1F3F5;
     --g: 20px;
   }
   * { box-sizing: border-box; margin: 0; }
   html, body { width: 2500px; height: 1686px; overflow: hidden; }
   body { position: relative; background: var(--cream); color: var(--ink); font-family: 'Zen Maru Gothic', sans-serif; -webkit-font-smoothing: antialiased; }
   svg { display: block; }
-  .card { position: absolute; border-radius: 52px; overflow: hidden; background: var(--card); box-shadow: 0 2px 0 rgba(120,90,50,.06), 0 18px 44px rgba(120,90,50,.10); }
+  .card { position: absolute; border-radius: 52px; overflow: hidden; background: var(--card); box-shadow: 0 1px 0 rgba(16,24,40,.04), 0 16px 40px rgba(16,24,40,.08); }
 
-  .defs { position: absolute; width: 0; height: 0; }
-  /* 足あと: ワンちゃんのカードの右上に、うすく歩いていく */
-  .trail { position: absolute; right: 56px; top: 56px; }
 
   /* A+B 会員証: 左に言葉、右に小屋の写真 */
   .hero { left: 40px; top: 40px; width: calc(1667px - 40px - var(--g)); height: calc(843px - 40px - var(--g)); background: var(--ink); color: #FFFFFF; }
@@ -34,14 +31,9 @@
   .hero .ph img { position: absolute; left: -330px; top: -330px; width: 1720px; height: auto; filter: saturate(.95) contrast(1.03); }
   .hero .ph::after { content: ""; position: absolute; inset: 0; background: linear-gradient(to right, var(--ink) 0%, rgba(22,25,29,.55) 22%, rgba(22,25,29,0) 48%); }
   .hero .in { position: absolute; left: 0; top: 0; bottom: 0; width: 900px; padding: 80px 0 84px 92px; display: flex; flex-direction: column; justify-content: space-between; z-index: 2; }
-  .brand { display: flex; align-items: center; gap: 22px; font-size: 52px; font-weight: 700; letter-spacing: .04em; }
+  .brand { font-size: 52px; font-weight: 700; letter-spacing: .04em; }
   .hero h1 { font-size: 150px; font-weight: 700; line-height: 1.12; letter-spacing: 0; }
   .hero p { margin-top: 34px; font-size: 54px; font-weight: 500; color: rgba(255,255,255,.86); }
-  /* 朱肉のスタンプ(写真の左下にかかる) */
-  .stamp { position: absolute; right: 70px; bottom: 64px; z-index: 3; width: 260px; height: 260px; border-radius: 50%; background: var(--shu); color: #FFFFFF; display: grid; place-items: center; text-align: center; transform: rotate(-10deg); box-shadow: 0 12px 30px rgba(0,0,0,.28); }
-  .stamp::before { content: ""; position: absolute; inset: 12px; border-radius: 50%; border: 3px solid rgba(255,255,255,.6); }
-  .stamp b { display: block; font-size: 42px; letter-spacing: -.02em; line-height: 1.12; font-weight: 700; }
-  .stamp svg { margin: 0 auto 6px; }
 
   /* C チェックイン: 上に写真、下に言葉 */
   .c { left: calc(1667px + var(--g)); top: 40px; width: calc(2500px - 1667px - var(--g) - 40px); height: calc(843px - 40px - var(--g)); }
@@ -54,29 +46,24 @@
   .e { left: calc(833px + var(--g)); top: calc(843px + var(--g)); width: calc(1667px - 833px - 2 * var(--g)); height: calc(1686px - 843px - var(--g) - 40px); }
   .f { left: calc(1667px + var(--g)); top: calc(843px + var(--g)); width: calc(2500px - 1667px - var(--g) - 40px); height: calc(1686px - 843px - var(--g) - 40px); }
   .tile .in { position: absolute; inset: 0; padding: 76px 72px 80px; display: flex; flex-direction: column; justify-content: space-between; }
-  .ic { width: 188px; height: 188px; border-radius: 50%; background: var(--sand); display: grid; place-items: center; position: relative; }
-  .ic .paw { position: absolute; right: -6px; bottom: -2px; }
+  .ic { width: 188px; height: 188px; border-radius: 50%; background: var(--sunk); display: grid; place-items: center; position: relative; }
   .label { font-size: 96px; font-weight: 700; line-height: 1.12; white-space: nowrap; }
   .sub { margin-top: 22px; font-size: 48px; font-weight: 500; color: var(--ink-2); white-space: nowrap; }
 </style>
 </head>
 <body>
-  <svg class="defs" aria-hidden="true">
-    <defs><g id="p"><ellipse cx="7" cy="8" rx="2" ry="2.6"/><ellipse cx="12" cy="6" rx="2" ry="2.6"/><ellipse cx="17" cy="8" rx="2" ry="2.6"/><ellipse cx="4.6" cy="12.6" rx="1.8" ry="2.3"/><ellipse cx="19.4" cy="12.6" rx="1.8" ry="2.3"/><path d="M12 11c-3.4 0-6.4 3.6-6.4 6.3 0 1.7 1.3 2.7 3 2.7 1.3 0 2.2-.6 3.4-.6s2.1.6 3.4.6c1.7 0 3-1 3-2.7 0-2.7-3-6.3-6.4-6.3z"/></g></defs>
-  </svg>
 
   <div class="card hero">
     <div class="ph"><img src="../photos/cabin.webp" alt="" /></div>
     <div class="in">
       <div class="brand">
-        <svg width="56" height="56" viewBox="0 0 24 24" fill="#D9774F"><use href="#p"/></svg>グリーンドーム
+        グリーンドーム
       </div>
       <div>
         <h1>会員証を<br />ひらく</h1>
         <p>ポイント・無料券・ワンちゃん</p>
       </div>
     </div>
-    <div class="stamp"><div><svg width="74" height="74" viewBox="0 0 24 24" fill="#FFFFFF"><use href="#p"/></svg><b>来場で<br />スタンプ</b></div></div>
   </div>
 
   <div class="card c">
@@ -87,7 +74,7 @@
 
   <div class="card tile d">
     <div class="in">
-      <div class="ic"><svg width="104" height="104" viewBox="0 0 24 24" fill="none" stroke="#16191D" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 9.5h17M8 3v4M16 3v4"/></svg><svg class="paw" style="position:absolute;left:62px;top:84px" width="56" height="56" viewBox="0 0 24 24" fill="#B4532A"><use href="#p"/></svg></div>
+      <div class="ic"><svg width="104" height="104" viewBox="0 0 24 24" fill="none" stroke="#16191D" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 9.5h17M8 3v4M16 3v4"/><path d="m8.8 14.6 2.2 2.2 4.4-4.4"/></svg></div>
       <div><div class="label">来場の記録</div><div class="sub">これまでの来場と無料券</div></div>
     </div>
   </div>
@@ -95,7 +82,6 @@
   <div class="card tile e">
     <div class="in">
       <div class="ic"><svg width="112" height="112" viewBox="0 0 24 24" fill="none" stroke="#16191D" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8.2 6.4C6.6 5.2 4.2 5.6 3.4 7.6c-.7 1.8-.3 4.5 1.3 5.6.8.5 1.6.2 1.9-.5"/><path d="M15.8 6.4c1.6-1.2 4-.8 4.8 1.2.7 1.8.3 4.5-1.3 5.6-.8.5-1.6.2-1.9-.5"/><path d="M6.6 10.6C6.6 7.6 9 5.5 12 5.5s5.4 2.1 5.4 5.1v3.2c0 3.6-2.4 6.2-5.4 6.2s-5.4-2.6-5.4-6.2z"/><circle cx="9.9" cy="11.6" r=".6" fill="#16191D"/><circle cx="14.1" cy="11.6" r=".6" fill="#16191D"/><path d="M11 14.6h2c.3 0 .4.3.2.5l-1 .9-1-.9c-.2-.2-.1-.5.2-.5zM12 16v.9M10.6 17.4c.8.5 2 .5 2.8 0"/></svg></div>
-      <svg class="trail" width="300" height="240" viewBox="0 0 300 240" fill="#E9DDCA" aria-hidden="true"><use href="#p" transform="translate(10 150) rotate(-35 36 36) scale(3)"/><use href="#p" transform="translate(110 60) rotate(-25 36 36) scale(3)"/><use href="#p" transform="translate(210 110) rotate(-35 36 36) scale(3)"/></svg>
       <div><div class="label">ワンちゃん</div><div class="sub">うちの子の写真と情報</div></div>
     </div>
   </div>
