@@ -122,12 +122,12 @@
 .dsb-legend { display: flex; flex-wrap: wrap; gap: var(--sp-1) var(--sp-4); list-style: none; margin: 0; padding: 0; font-size: var(--fs-12); color: var(--text-secondary); }
 .dsb-legend li { display: inline-flex; align-items: center; gap: 6px; }
 .dsb-sw { display: inline-block; width: 16px; height: 0; border-top: 2px solid var(--chart-1); }
-.dsb-sw.dashed { border-top-style: dashed; }
+.dsb-sw.dashed { border-top-style: dashed; border-top-color: var(--chart-4); }
 .dsb-sw.mark { width: 8px; height: 8px; border: 0; border-radius: 2px; background: var(--text-secondary); }
-.dsb-sw.solid { height: 10px; border: 0; border-radius: 2px; background: var(--chart-1); }
-.dsb-sw.solid.c2 { background: var(--chart-2); }
+.dsb-sw.solid { height: 10px; border: 0; border-radius: 2px; background: var(--chart-bar); }
+.dsb-sw.solid.c2 { background: var(--surface-sunk); border: 1px solid var(--border-strong); }
 .dsb-sw.dot { width: 8px; height: 8px; border: 0; border-radius: 50%; background: var(--chart-1); }
-.dsb-sw.dot.c3 { background: var(--chart-3); }
+.dsb-sw.dot.c4 { background: transparent; border: 1.5px solid var(--chart-4); }
 
 /* 大きな面グラフ */
 .dsb-area { position: relative; width: 100%; min-width: 0; touch-action: pan-y; border-radius: var(--radius-sm); }
@@ -139,11 +139,11 @@ line.dsb-gridline { stroke: var(--border); stroke-dasharray: 3 3; }
 .dsb-tick { fill: var(--text-tertiary); font-size: 12px; font-family: var(--font-sans); font-variant-numeric: tabular-nums; }
 .dsb-line { stroke: var(--chart-1); stroke-width: 2; stroke-linejoin: round; }
 .dsb-fill { fill: var(--chart-fill); }
-.dsb-prev { stroke: var(--chart-1); stroke-width: 1.5; stroke-dasharray: 4 4; opacity: .75; }
+.dsb-prev { stroke: var(--chart-4); stroke-width: 1.5; stroke-dasharray: 4 4; }
 .dsb-mark { fill: var(--text-secondary); }
 .dsb-cross { stroke: var(--text-tertiary); stroke-width: 1; }
 .dsb-dot { fill: var(--surface); stroke: var(--chart-1); stroke-width: 2; }
-.dsb-dot-prev { fill: var(--surface); stroke: var(--chart-1); stroke-width: 1.5; stroke-dasharray: 2 2; }
+.dsb-dot-prev { fill: var(--surface); stroke: var(--chart-4); stroke-width: 1.5; }
 .dsb-area-empty { position: absolute; inset: 0 0 40px 44px; display: grid; place-items: center; margin: 0; font-size: var(--fs-14); color: var(--text-secondary); pointer-events: none; }
 .dsb-tip {
   position: absolute; z-index: 3; min-width: 200px; max-width: 280px; padding: var(--sp-3);
@@ -203,8 +203,8 @@ line.dsb-gridline { stroke: var(--border); stroke-dasharray: 3 3; }
 .dsb-wx-bars { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 .dsb-wx-bar { position: relative; display: block; height: 22px; }
 .dsb-wx-fill { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 3px; min-width: 2px; }
-.dsb-wx-fill.c1 { background: var(--chart-bar); box-shadow: inset 3px 0 0 var(--chart-1); }
-.dsb-wx-fill.c2 { background: color-mix(in srgb, var(--chart-2) 22%, transparent); box-shadow: inset 3px 0 0 var(--chart-2); }
+.dsb-wx-fill.c1 { background: var(--chart-bar); }
+.dsb-wx-fill.c2 { background: var(--surface-sunk); border: 1px solid var(--border); }
 .dsb-wx-val { position: relative; display: block; padding: 0 var(--sp-2); line-height: 22px; font-size: var(--fs-12); color: var(--text); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .dsb-wx-total { display: flex; flex-direction: column; align-items: flex-end; }
 .dsb-wx-total-v { font-size: var(--fs-20); font-weight: var(--fw-strong); font-variant-numeric: tabular-nums; line-height: 1.2; }
@@ -240,7 +240,7 @@ line.dsb-gridline { stroke: var(--border); stroke-dasharray: 3 3; }
 .dsb-cal-day { font-size: var(--fs-13); font-weight: var(--fw-strong); }
 .dsb-cal-flags { display: inline-flex; gap: 3px; }
 .dsb-flag { display: inline-block; width: 7px; height: 7px; }
-.dsb-flag.ev { background: var(--chart-3); border-radius: 1px; transform: rotate(45deg); }
+.dsb-flag.ev { width: 6px; height: 6px; border: 1.5px solid var(--text); border-radius: 1px; transform: rotate(45deg); }
 .dsb-flag.note { background: var(--text-secondary); border-radius: 50%; }
 .dsb-cal-wx { display: inline-flex; align-items: center; gap: 3px; font-size: var(--fs-12); color: var(--text); }
 .dsb-cal-wx .wx-icon { color: var(--text); }

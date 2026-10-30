@@ -150,7 +150,8 @@ test.describe('A-01 ダッシュボード', () => {
     // 40日前の来場の一覧(ダッシュボードの日の詳細から開くのと同じ ?date=)
     await page.goto(`/admin/?date=${daysAgo(40)}`);
     await expect(page.getByRole('heading', { name: /来場の一覧/ })).toBeVisible();
-    await expect(page.getByRole('list', { name: 'この日の来場' }).getByRole('listitem')).toHaveCount(1);
+    // ほかのテストの来場も入るので、このテストで入れたおうち(クルミ)の行で確かめる
+    await expect(page.getByRole('list', { name: 'この日の来場' }).getByRole('listitem').filter({ hasText: 'クルミ' })).toHaveCount(1);
     await expect(page.getByRole('navigation', { name: 'いまいる場所' }).getByRole('link', { name: 'ダッシュボード' })).toBeVisible();
   });
 

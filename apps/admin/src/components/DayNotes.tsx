@@ -6,7 +6,6 @@ import { useAuth } from '../lib/auth';
 import { formatDateTime } from '../lib/jst-format';
 import { BusyLabel } from './BusyLabel';
 import { ErrorNotice } from './ErrorNotice';
-import { SkeletonText } from './Skeleton';
 import { useToast } from './Toast';
 
 // その日のメモ(docs/design.md 12.3)。「今日の来場」の上と、ダッシュボードの日の詳細で使う。
@@ -53,14 +52,8 @@ export function DayNotes({
   return (
     <div className={`dnote${compact ? ' dnote-compact' : ''}`}>
       {error ? <ErrorNotice error={error} onRetry={() => void reload()} /> : null}
-      {!data ? (
-        error ? null : (
-          <div aria-busy="true">
-            <span className="sr-only">読み込んでいます</span>
-            <SkeletonText size={14} w="70%" />
-          </div>
-        )
-      ) : data.notes.length === 0 ? (
+      {/* 読み込み中は何も出さない(書く欄はすぐに使える。今日の来場のスケルトンと高さがずれないように) */}
+      {!data ? null : data.notes.length === 0 ? (
         readOnly ? <p className="dnote-empty">この日のメモはありません。</p> : null
       ) : (
         <ul className="dnote-list" aria-label="この日のメモ">
