@@ -33,11 +33,17 @@ initLiff()
     );
   })
   .catch(() => {
+    // LIFF の準備に失敗した(電波が弱くて時間内に終わらない、LINE の不調など)。真っ白にせず、次にすることを出す
     root.render(
       <main className="screen">
         <div className="alert danger" role="alert">
-          <p>LINEとの接続がうまくいきませんでした。</p>
-          <p>画面を閉じて、もう一度開いてください。</p>
+          <p>
+            <b>LINEとの接続がうまくいきませんでした。</b>
+          </p>
+          <p>電波のよい場所で「もう一度読み込む」を押してください。直らないときは、画面を閉じて、もう一度開いてください。</p>
+          <button type="button" className="btn sub" onClick={() => window.location.reload()}>
+            もう一度読み込む
+          </button>
         </div>
       </main>,
     );

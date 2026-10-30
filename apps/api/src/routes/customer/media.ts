@@ -25,5 +25,5 @@ mediaRoutes.get('/media/*', async (c) => {
   if (!allowed) {
     throw errors.notFound('写真が見つかりませんでした。画面を読み込み直してください。');
   }
-  return serveMedia(c.env.MEDIA, key);
+  return serveMedia(c.env.MEDIA, key, c.req.header('if-none-match'));
 });

@@ -25,6 +25,10 @@ async function hold(page: Page, url: RegExp) {
 test('読み込み中はスケルトンが出て、読み込むと消える(高さはほぼ同じ)', async ({ page }) => {
   const user = newLineUser('ママ');
   await registerViaUi(page, user, ['アル']);
+  // 前に開いたときの会員証が端末にあると、スケルトンを出さずにそれを出す(15.3)。はじめて開いたときにする
+  await page.evaluate(() => {
+    for (const k of Object.keys(localStorage)) if (k.startsWith('dr.card.')) localStorage.removeItem(k);
+  });
   // 会員証の情報を 600ms 遅らせる
   await page.route(/\/api\/me$/, async (route) => {
     await new Promise((r) => setTimeout(r, 600));

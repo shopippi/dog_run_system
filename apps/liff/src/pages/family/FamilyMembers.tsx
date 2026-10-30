@@ -2,6 +2,7 @@ import { JOIN_METHOD_LABELS, type FamilyResponse } from '@dr/shared';
 import { useCallback, useEffect, useState } from 'react';
 import { ErrorNotice } from '../../components/ErrorNotice';
 import { api, postJson } from '../../lib/api';
+import { clearCachedCard } from '../../lib/card-cache';
 import { BottomSheet } from '../../components/BottomSheet';
 import { BusyLabel } from '../../components/BusyLabel';
 import { FamilyMembersSkeleton } from '../skeletons';
@@ -35,6 +36,8 @@ export function FamilyMembers() {
     setError(null);
     try {
       await postJson('/api/family/leave', {});
+      // 端末に残した会員証を消す(抜けたおうちの内容を出さない)
+      clearCachedCard();
       // おうちから抜けたので、はじめから開き直す(未登録の人の画面になる)
       window.location.replace(import.meta.env.BASE_URL);
     } catch (e) {

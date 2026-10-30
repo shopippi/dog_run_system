@@ -170,7 +170,7 @@ joinRoutes.get('/invites/:code/photos/:dogId', async (c) => {
     .bind(Number(c.req.param('dogId')) || 0, inv.household_id)
     .first<{ thumb_key: string | null }>();
   if (!dog?.thumb_key) throw errors.notFound('写真が見つかりませんでした。画面を読み込み直してください。');
-  return serveMedia(c.env.MEDIA, dog.thumb_key);
+  return serveMedia(c.env.MEDIA, dog.thumb_key, c.req.header('if-none-match'));
 });
 
 // 招待を受けて参加する(C-12)。別のおうちがある人は、参加ではなく「まとめる」(POST /invites/:code/merge)に進む(5.1)

@@ -160,15 +160,24 @@ export function useStampPlan({
   perTicket,
   owner,
   todayPoints = 0,
+  still = false,
 }: {
   balance: number;
   perTicket: number;
   owner: string;
   todayPoints?: number;
+  /**
+   * 前に開いたときの内容(端末に残した会員証)を出しているあいだ。押していく動きも「ポン」も付けず、
+   * 前回の数も覚え直さない(最新の内容が届いたら、部品を作り直して、そこで決める。15.3)
+   */
+  still?: boolean;
 }) {
   const layout = stampLayout(balance, perTicket, todayPoints);
   const { per, points, tiers } = layout;
   const [plan] = useState<StampPlan>(() => {
+    if (still) {
+      return planStamps({ on: Array.from({ length: Math.min(points, per * tiers) }, (_, i) => i), fresh: null, bone: per - 1, play: false });
+    }
     const seenRaw = read(`${SEEN_KEY}.${owner}`);
     const seen = seenRaw === null ? null : Number(seenRaw);
     let fresh: number | null = null;
@@ -180,8 +189,8 @@ export function useStampPlan({
     return planStamps({ on, fresh, bone: per - 1, play });
   });
   useEffect(() => {
-    write(`${SEEN_KEY}.${owner}`, String(points));
-  }, [owner, points]);
+    if (!still) write(`${SEEN_KEY}.${owner}`, String(points));
+  }, [owner, points, still]);
   // 押し終わったら data-stamps="done" にする(画面の確認用)
   const [done, setDone] = useState(!plan.play);
   useEffect(() => {

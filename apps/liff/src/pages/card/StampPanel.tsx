@@ -12,13 +12,25 @@ import { ExchangeControl } from './TicketPanel';
  * 開いたときはスタンプを「ポポポン」と押していき、新しく付いた 1 個を押した瞬間にパネルがわずかに沈む。
  * 10 個たまっていれば、骨を押したあとに「無料券と交換できます」が下からふわっと出る。
  */
-export function StampPanel({ card, memberNo, onChanged }: { card: MemberCard; memberNo: string; onChanged: () => Promise<void> | void }) {
+export function StampPanel({
+  card,
+  memberNo,
+  onChanged,
+  still = false,
+}: {
+  card: MemberCard;
+  memberNo: string;
+  onChanged: () => Promise<void> | void;
+  /** 前に開いたときの内容を出しているあいだ(動かさない。15.3) */
+  still?: boolean;
+}) {
   const canExchange = card.balance >= card.pointsPerTicket;
   const { plan, layout, done } = useStampPlan({
     balance: card.balance,
     perTicket: card.pointsPerTicket,
     owner: memberNo,
     todayPoints: card.todayPoints ?? 0,
+    still,
   });
   const dip = plan.pressAt !== null;
   const textAfterBone = canExchange && plan.boneAt !== null;

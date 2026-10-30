@@ -1,4 +1,4 @@
-import { addVisitDogsSchema, checkinSchema, toJstDate, type CheckinDetail, type CheckinStatus } from '@dr/shared';
+import { addVisitDogsSchema, checkinSchema, resolveCheckinTime, toJstDate, type CheckinDetail, type CheckinStatus } from '@dr/shared';
 import { Hono } from 'hono';
 import type { AppEnv } from '../../env';
 import { errors } from '../../lib/errors';
@@ -38,7 +38,14 @@ checkinRoutes.post('/checkins', async (c) => {
     );
   }
   const dogIds = await requireActiveDogs(c.env.DB, member.householdId, input.dogIds);
-  const now = c.get('now');
+  // 電波が弱くて送信が遅れたときは、「確定」を押した時刻をチェックインの時刻にする。
+  // ただし 30 分以内・日本時間で同じ日のときだけ。それ以外はサーバーの時刻(要件定義書 15.3)
+  const clientNow = Number(c.req.header('x-client-now'));
+  const { at: now } = resolveCheckinTime({
+    serverNow: c.get('now'),
+    pressedAt: input.pressedAt,
+    clientNow: Number.isFinite(clientNow) ? clientNow : null,
+  });
   const result = await recordCheckin(c.env.DB, {
     householdId: member.householdId,
     memberId: member.memberId,
