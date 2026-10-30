@@ -84,7 +84,7 @@ function SheetBody({
   const reduce = useReducedMotion();
   // 引っ張った量(px)。シートの中身(.sheet)だけを動かす
   const dragY = useMotionValue(0);
-  const drag = useRef<{ startY: number; samples: { y: number; t: number }[] } | null>(null);
+  const drag = useRef<{ startY: number; samples: { y: number; t: number }[]; dy: number } | null>(null);
   const [dragging, setDragging] = useState(false);
 
   const close = useCallback(() => {
@@ -160,7 +160,9 @@ function SheetBody({
     } catch {
       // 指を捕まえられなくても、引っ張る操作はそのまま続ける
     }
-    drag.current = { startY: e.clientY - dragY.get(), samples: [{ y: e.clientY, t: e.timeStamp }] };
+    // 前に離したあとのバネの戻りがまだ動いていれば止める(止めないと、引っ張っている間もバネが位置を 0 へ書き戻す)
+    dragY.stop();
+    drag.current = { startY: e.clientY - dragY.get(), samples: [{ y: e.clientY, t: e.timeStamp }], dy: dragY.get() };
     setDragging(true);
   };
   const onPointerMove = (e: PointerEvent<HTMLDivElement>) => {
@@ -168,7 +170,9 @@ function SheetBody({
     if (!d) return;
     const raw = e.clientY - d.startY;
     // 上へは少しだけ(ゴムのように重く)動く
-    dragY.set(raw >= 0 ? raw : -Math.min(24, Math.sqrt(-raw) * 2.4));
+    d.dy = raw >= 0 ? raw : -Math.min(24, Math.sqrt(-raw) * 2.4);
+    if (dragY.isAnimating()) dragY.stop();
+    dragY.set(d.dy);
     d.samples.push({ y: e.clientY, t: e.timeStamp });
     if (d.samples.length > 6) d.samples.shift();
   };
@@ -184,7 +188,8 @@ function SheetBody({
     const recent = [...d.samples, end].filter((x) => x.t >= now - 100);
     const first = recent[0]!;
     const velocity = recent.length > 1 ? (end.y - first.y) / Math.max(1, end.t - first.t) : 0;
-    const dy = dragY.get();
+    // 閉じるかは指の動いた量で決める(表示の位置は、端末が重いとバネの戻りに書き換えられていることがある)
+    const dy = Math.max(d.dy, e.type === 'pointerup' ? e.clientY - d.startY : d.dy);
     if (dy >= CLOSE_DISTANCE || (dy >= FLICK_DISTANCE && velocity > CLOSE_VELOCITY)) {
       close();
       return;
