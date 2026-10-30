@@ -46,6 +46,16 @@ export const settingsSchema = z.object({
   /** 旧カードから一度に引き継げるポイントの上限(16.1。不正を防ぐため。未決事項) */
   migration_max_points: z.number().int().min(1).max(200),
   /**
+   * 旧カードの使っていない特典(LINEのショップカードの特典チケットなど)から、一度に出せる無料券の枚数の上限(16.1、20章の未決事項。初期案は1枚)。
+   * 0 にすると、特典は無料券にしない
+   */
+  migration_max_tickets: z.number().int().min(0).max(10),
+  /**
+   * 移行期間が終わったあとも、理由を書けば引き継ぎを受け付けるか(16.2、20章の未決事項。初期案は受け付けない)。
+   * 始まる前は、いつも受け付けない
+   */
+  migration_late_entry: z.boolean(),
+  /**
    * おうちの統合で、統合前に同じ日に両方のおうちが来場していた分のポイントを、そのまま残すか(5.3、20章の未決事項。初期案は残す)。
    * false にすると、その日のまとめる側の来場で付いたポイントを、統合のときに差し引く
    */
@@ -81,6 +91,8 @@ export const DEFAULT_SETTINGS: Omit<Settings, 'checkin_passphrase'> = {
   reception_invite_ttl_minutes: 10,
   migration_period: { start: null, end: null },
   migration_max_points: 30,
+  migration_max_tickets: 1,
+  migration_late_entry: false,
   merge_keep_same_day_points: true,
   developer_contact: '',
   terms_text: '(利用規約の本文は準備中です。管理画面の設定から差し替えてください)',

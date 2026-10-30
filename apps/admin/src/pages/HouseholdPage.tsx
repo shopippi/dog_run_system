@@ -539,6 +539,10 @@ function Actions({ d, onChanged }: { d: HouseholdDetail; onChanged: (reload: boo
       <button type="button" className="btn sub" onClick={() => setOpen('family')}>
         家族を追加
       </button>
+      {/* 旧カードの引き継ぎ(A-05)。このおうちを選んだ状態で開く */}
+      <Link className="btn sub" to={`/migration?member=${encodeURIComponent(d.memberNo)}`}>
+        旧カードを引き継ぐ
+      </Link>
       {open === 'family' && (
         <FamilyInviteDialog
           d={d}

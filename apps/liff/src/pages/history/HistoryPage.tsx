@@ -1,10 +1,11 @@
-import type { HistoryVisit, TicketHistoryResponse, VisitHistoryResponse } from '@dr/shared';
+import { MIGRATION_SOURCE_LABELS, type HistoryVisit, type OldCardTransfer, type TicketHistoryResponse, type VisitHistoryResponse } from '@dr/shared';
 import { useCallback, useEffect, useState } from 'react';
 import { DogAvatar } from '../../components/DogAvatar';
 import { ErrorNotice } from '../../components/ErrorNotice';
 import { api } from '../../lib/api';
 import { BusyLabel } from '../../components/BusyLabel';
 import { EmptyState } from '../../components/EmptyState';
+import { useOldCard } from '../../hooks/useOldCard';
 import { HistorySkeleton } from '../skeletons';
 
 const WEEKDAYS = ['日', '月', '火', '水', '木', '金', '土'];
@@ -33,6 +34,8 @@ export function HistoryPage() {
   const [moreError, setMoreError] = useState<unknown>(null);
   const [busy, setBusy] = useState(false);
   const [tickets, setTickets] = useState<TicketHistoryResponse['events']>([]);
+  // 前のカードから引き継いだ記録(16章)。読めなくても来場の記録は出す
+  const { transfers } = useOldCard();
 
   const load = useCallback(() => {
     setError(null);
@@ -83,6 +86,8 @@ export function HistoryPage() {
       </div>
 
       {tickets.length > 0 && <TicketEvents events={tickets} />}
+
+      {transfers.length > 0 && <OldCardTransfers transfers={transfers} />}
 
       {visits.length === 0 && <EmptyState icon="calendar">まだ来場の記録がありません。はじめて遊びに来た日から、ここに残ります。</EmptyState>}
 
@@ -172,6 +177,41 @@ function TicketEvents({ events }: { events: TicketHistoryResponse['events'] }) {
                 </span>
               </span>
               {e.kind === 'use' && <span className="badge warning">使用しました</span>}
+            </li>
+          );
+        })}
+      </ul>
+    </section>
+  );
+}
+
+/** 前のカードから引き継いだ記録(「前のカードから 7ポイント 引き継ぎ」)。来場ではないので、来場の一覧とは分ける */
+function OldCardTransfers({ transfers }: { transfers: OldCardTransfer[] }) {
+  return (
+    <section className="section" aria-labelledby="hist-oldcard">
+      <h3 className="section-label" id="hist-oldcard">
+        前のカードからの引き継ぎ
+      </h3>
+      <ul className="rows hist-list">
+        {transfers.map((t) => {
+          const date = t.at.slice(0, 10);
+          const { day, weekday } = dayOf(date);
+          const [, m] = date.split('-').map(Number);
+          return (
+            <li key={`${t.source}-${t.at}`} className="tk-hist-row">
+              <span className="hist-date" aria-label={`${m}月${day}日(${weekday})`}>
+                <b>{day}</b>
+                <span>{m}月</span>
+              </span>
+              <span className="oc-row-body">
+                <b>
+                  前のカードから <span className="cu-nowrap">{t.points}ポイント</span> 引き継ぎ
+                </b>
+                <span className="sub-text">
+                  <span className="cu-nowrap">{MIGRATION_SOURCE_LABELS[t.source]}</span>
+                  {t.tickets > 0 && <span className="cu-nowrap">・無料券{t.tickets}枚</span>}
+                </span>
+              </span>
             </li>
           );
         })}

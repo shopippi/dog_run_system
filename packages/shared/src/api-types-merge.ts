@@ -220,6 +220,12 @@ export type MigrationStatus = {
   period: { start: string | null; end: string | null };
   /** 今日が移行期間の中か(期間が未設定なら true) */
   inPeriod: boolean;
+  /** 移行期間に対する今日の位置。after で設定 migration_late_entry が true なら、理由を書けば受け付ける */
+  phase: 'before' | 'open' | 'after';
+  /** 移行期間のあとも、理由を書けば受け付けるか(設定 migration_late_entry) */
+  lateEntry: boolean;
+  /** 旧カードの特典から一度に出せる無料券の上限(設定 migration_max_tickets。0 なら出さない) */
+  maxTickets: number;
 };
 
 /** 旧カードの移行の結果(直接入力・申請の承認) */
@@ -228,6 +234,10 @@ export type MigrationResult = {
   memberNo: string;
   source: import('./constants').MigrationSource;
   points: number;
+  /** 旧カードの特典から出した無料券の枚数 */
+  tickets: number;
+  /** 旧カードに残っていたポイント(上限で切ったときは points より大きい) */
+  cardPoints: number;
   /** 引き継ぎ後のポイント残高 */
   balance: number;
 };
