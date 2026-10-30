@@ -63,6 +63,17 @@ export type MigrationRecord = {
   householdName: string;
   source: import('./constants').MigrationSource;
   points: number;
+  /** 旧カードに残っていたポイント(上限で切ったときは points より大きい。記録がなければ points と同じ) */
+  cardPoints: number;
+  /** 旧カードの特典から出した無料券の枚数 */
+  tickets: number;
+  /** 紙のカードの番号など(なければ null) */
+  cardRef: string | null;
+  note: string | null;
+  /** 移行期間のあとに受け付けた理由 */
+  lateReason: string | null;
+  /** 同じカードの番号で引き継いだ、ほかのおうちの会員ID(元に戻したものは含めない) */
+  sameCardMemberNos: string[];
   /** 元に戻した日時と人(戻していなければ null) */
   undone: { at: string; byName: string | null } | null;
 };
@@ -71,4 +82,28 @@ export type MigrationListResponse = {
   records: MigrationRecord[];
   /** 一度に引き継げるポイントの上限(設定 migration_max_points) */
   maxPoints: number;
+};
+
+/** 同じカードの番号が、ほかのおうちで引き継がれていたとき(POST /admin/api/households/:id/migrate の 409 duplicate_card の details) */
+export type MigrationDuplicate = { memberNo: string; householdName: string; at: string; source: import('./constants').MigrationSource };
+
+/** 移行期間のまとめ(GET /admin/api/migrations/summary、16.2) */
+export type MigrationSummary = {
+  period: { start: string | null; end: string | null };
+  phase: 'before' | 'open' | 'after';
+  /** 終わりまでの日数(最終日は 0。終わりが未設定なら null、過ぎていればマイナス) */
+  daysLeft: number | null;
+  /** 引き継いだおうちの数(元に戻したものを除く。統合でまとめたおうちは1つと数える) */
+  households: number;
+  /** 有効なおうちの数(引き継いだ割合の分母) */
+  activeHouseholds: number;
+  /** 引き継いだポイントの合計 */
+  points: number;
+  /** 旧カードの特典から出した無料券の合計 */
+  tickets: number;
+  /** 上限で切った入力の件数と、引き継がなかったポイントの合計 */
+  capped: { count: number; points: number };
+  bySource: Record<import('./constants').MigrationSource, { count: number; points: number }>;
+  /** 同じカードの番号が2つ以上のおうちにあるもの */
+  sameCardGroups: number;
 };

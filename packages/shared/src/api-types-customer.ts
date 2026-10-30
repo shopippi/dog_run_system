@@ -67,3 +67,26 @@ export type FamilyMemberItem = {
 /** GET /api/family の応答 */
 export type FamilyResponse = { members: FamilyMemberItem[] };
 
+
+// ---------------------------------------------------------------
+// 前のカード(旧カード)からの引き継ぎ(16章)。お客さんへの案内と、引き継いだ記録
+// ---------------------------------------------------------------
+
+/** 引き継いだ記録の1件(お客さん向け) */
+export type OldCardTransfer = {
+  source: import('./constants').MigrationSource;
+  /** 引き継いだポイント */
+  points: number;
+  /** 旧カードの特典から出した無料券の枚数 */
+  tickets: number;
+  /** 引き継いだ日時(日本時間) */
+  at: string;
+};
+
+/** GET /api/me/oldcard */
+export type OldCardResponse = {
+  /** 会員証に出す案内。出さないときは null(引き継ぎ済み・移行期間の外・閉じた) */
+  notice: { endDate: string | null } | null;
+  /** 引き継いだ記録(新しい順。元に戻したものは除く。統合でまとめたおうちの分を含む) */
+  transfers: OldCardTransfer[];
+};
