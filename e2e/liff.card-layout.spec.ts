@@ -44,9 +44,10 @@ async function checkScreen(page: Page, device: string, screen: string) {
       const top = box('.mc-top');
       const dogs = box('.mc-dogs');
       const bottom = box('.mc-bottom');
-      if (top.bottom > dogs.top + 0.5) out.push('会員証: 呼び名と犬が重なっている');
-      if (dogs.bottom > bottom.top + 0.5) out.push('会員証: 犬と会員IDが重なっている');
-      for (const [name, r] of [['上段', top], ['下段', bottom]] as const) {
+      // ワンちゃんが主役: 犬(上段) → 呼び名 → 会員ID・ポイント(下段)の順
+      if (dogs.bottom > top.top + 0.5) out.push('会員証: 犬と呼び名が重なっている');
+      if (top.bottom > bottom.top + 0.5) out.push('会員証: 呼び名と会員IDが重なっている');
+      for (const [name, r] of [['上段', dogs], ['呼び名', top], ['下段', bottom]] as const) {
         if (r.left < c.left - 0.5 || r.right > c.right + 0.5 || r.top < c.top - 0.5 || r.bottom > c.bottom + 0.5) {
           out.push(`会員証: ${name}がカードからはみ出している`);
         }

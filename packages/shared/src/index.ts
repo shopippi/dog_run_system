@@ -36,3 +36,4 @@ export * from './csv';
 export * from './api-types-dashboard';
 export * from './schemas/dashboard';
 export * from './dashboard';
+export * from './keepsakes';

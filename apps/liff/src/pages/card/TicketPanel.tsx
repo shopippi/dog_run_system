@@ -6,6 +6,8 @@ import { ErrorNotice } from '../../components/ErrorNotice';
 import { SlideToUse } from '../../components/SlideToUse';
 import { useToast } from '../../components/Toast';
 import { postJson } from '../../lib/api';
+import { PressButton } from '../../components/PressButton';
+import { RollingNumber } from '../../components/RollingNumber';
 
 const ymd = (iso: string) => iso.slice(0, 10).replace(/-/g, '/');
 
@@ -50,7 +52,11 @@ export function TicketPanel({ card, onChanged }: { card: MemberCard; onChanged: 
         <h3 className="section-title" id="tk-title">
           無料券
         </h3>
-        {count > 0 ? <span className="tk-count">未使用 {count}枚</span> : null}
+        {count > 0 ? (
+          <span className="tk-count">
+            未使用 <RollingNumber value={count} />枚
+          </span>
+        ) : null}
       </div>
 
       {count === 0 && <p className="tk-empty">使える無料券はありません</p>}
@@ -115,7 +121,7 @@ export function ExchangeControl({ card, onChanged }: { card: MemberCard; onChang
   return (
     <>
       {canExchange && (
-        <button
+        <PressButton
           type="button"
           className="btn"
           onClick={() => {
@@ -124,7 +130,7 @@ export function ExchangeControl({ card, onChanged }: { card: MemberCard; onChang
           }}
         >
           無料券と交換する({card.pointsPerTicket}ポイント)
-        </button>
+        </PressButton>
       )}
       {error && !opId ? <ErrorNotice error={error} /> : null}
 
@@ -134,7 +140,7 @@ export function ExchangeControl({ card, onChanged }: { card: MemberCard; onChang
         busy={busy}
         title="無料券と交換します"
         actions={
-          <button type="button" className="btn" disabled={busy} onClick={() => opId && void exchange(opId)}>
+          <PressButton type="button" className="btn" disabled={busy} onClick={() => opId && void exchange(opId)}>
             {busy ? (
               <>
                 <span className="spinner" aria-hidden="true" />
@@ -143,7 +149,7 @@ export function ExchangeControl({ card, onChanged }: { card: MemberCard; onChang
             ) : (
               '交換する'
             )}
-          </button>
+          </PressButton>
         }
       >
         <p>

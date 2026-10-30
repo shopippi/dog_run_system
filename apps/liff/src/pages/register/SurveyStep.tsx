@@ -5,6 +5,7 @@ import { Progress } from '../../components/Progress';
 import { ActionBar } from '../../components/ActionBar';
 import { BusyLabel } from '../../components/BusyLabel';
 import { SurveyForm, isLaterQuestion, toAnswers, type SurveyValues } from '../../components/SurveyForm';
+import { PressButton } from '../../components/PressButton';
 
 type Props = {
   questions: SurveyQuestion[];
@@ -55,11 +56,11 @@ export function SurveyStep({ questions, values, onChange, onBack, onNext, busy, 
         ワンちゃんの登録にもどる
       </button>
       <ActionBar>
-        <button type="button" className="btn" disabled={busy} onClick={next}>
+        <PressButton type="button" className="btn" disabled={busy} onClick={next}>
           <BusyLabel busy={busy} busyText="登録しています…">
             登録する
           </BusyLabel>
-        </button>
+        </PressButton>
       </ActionBar>
     </main>
   );

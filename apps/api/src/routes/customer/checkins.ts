@@ -4,7 +4,7 @@ import type { AppEnv } from '../../env';
 import { errors } from '../../lib/errors';
 import { loadSettings } from '../../lib/settings';
 import { parseJson } from '../../lib/validate';
-import { addDogsToVisit, recordCheckin, requireActiveDogs, todayVisit } from '../../services/checkins';
+import { addDogsToVisit, householdVisitCount, recordCheckin, requireActiveDogs, todayVisit, visitPoints } from '../../services/checkins';
 import { listHouseholdDogs, listVisitDogs } from '../../services/dogs';
 import { requireMember } from '../../services/members';
 import { pointBalance, unusedTicketCount } from '../../services/points';
@@ -99,10 +99,6 @@ checkinRoutes.get('/checkins/:id', async (c) => {
   if (!v || v.household_id !== member.householdId) {
     throw errors.notFound('チェックインが見つかりませんでした。会員証から開き直してください。');
   }
-  const awarded = await db
-    .prepare("SELECT COALESCE(SUM(delta), 0) AS n FROM point_ledger WHERE visit_id = ? AND kind = 'visit'")
-    .bind(v.id)
-    .first<{ n: number }>();
   const now = c.get('now');
   const settings = await loadSettings(db);
   const body: CheckinDetail = {
@@ -115,11 +111,12 @@ checkinRoutes.get('/checkins/:id', async (c) => {
     isToday: v.visit_date === toJstDate(now),
     cancelled: v.cancelled_at !== null,
     dogs: await listVisitDogs(db, v.id, MEDIA_BASE),
-    pointsAwarded: awarded?.n ?? 0,
+    pointsAwarded: await visitPoints(db, v.id),
     usedTicket: v.used_ticket === 1,
     balance: await pointBalance(db, member.householdId),
     unusedTickets: await unusedTicketCount(db, member.householdId, now),
     pointsPerTicket: settings.points_per_ticket,
+    visitCount: v.cancelled_at === null ? await householdVisitCount(db, member.householdId, v.visit_date) : 0,
   };
   return c.json(body);
 });

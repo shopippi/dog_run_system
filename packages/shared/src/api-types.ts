@@ -34,6 +34,8 @@ export type MemberCard = {
   tickets: { id: number; issuedAt: string; expiresAt: string | null }[];
   /** 今日のチェックイン(済んでいれば) */
   todayVisitId: number | null;
+  /** 今日の来場で付いたポイント(ふつうは 0 か 1)。会員証で、今日のスタンプの色を変える */
+  todayPoints: number;
   /** 今日使った無料券(使っていれば、いちばん新しいもの)。「使用できました」の画面をもう一度開くため */
   todayUsedTicketId: number | null;
 };
@@ -125,7 +127,15 @@ export type CheckinDetail = {
   balance: number;
   unusedTickets: number;
   pointsPerTicket: number;
+  /** この来場が、おうちの何回目の来場か(取り消した来場は数えない)。節目に一言を出す */
+  visitCount: number;
 };
+
+/** ワンちゃんごとの来場の記録(おうちの来場のうち、その子が一緒に来た回数と最後に来た日) */
+export type DogVisitRecord = { dogId: number; visits: number; lastVisitDate: string | null };
+
+/** GET /api/dogs */
+export type DogsResponse = { dogs: DogSummary[]; records: DogVisitRecord[] };
 
 /** 作った招待(C-11) */
 export type InviteCreated = {

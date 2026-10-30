@@ -110,6 +110,8 @@ for (const scheme of ['light', 'dark'] as const) {
       await check(page, 'L-09 犬の変更(おやすみの確認)');
       await sheet.getByRole('button', { name: 'おやすみする', exact: true }).click();
       await page.getByText('おやすみ中のワンちゃん').waitFor();
+      // 折りたたみを開いた状態で測る
+      await page.getByText('おやすみ中のワンちゃん(1)').click();
       // トーストが出ている状態も測る
       await page.locator('.toast').waitFor();
       await check(page, 'L-09 犬の管理(おやすみ中)');

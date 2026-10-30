@@ -1,4 +1,5 @@
-import { toJstIso, type CheckinDetail } from '@dr/shared';
+import { milestoneText, toJstIso, visitMilestone, type CheckinDetail } from '@dr/shared';
+import { m, useReducedMotion } from 'motion/react';
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { DogAvatar } from '../../components/DogAvatar';
@@ -6,6 +7,8 @@ import { ErrorNotice } from '../../components/ErrorNotice';
 import { useClock } from '../../hooks/useClock';
 import { api } from '../../lib/api';
 import { DoneSkeleton } from '../skeletons';
+import { PawMark } from '../../components/PawStamp';
+import { tapticPon } from '../../lib/motion';
 
 const WEEKDAYS = ['日', '月', '火', '水', '木', '金', '土'];
 
@@ -59,12 +62,29 @@ export function CheckinDonePage() {
               ))}
             </div>
             <p className="done-names">{detail.dogs.map((d) => d.name).join('・')}</p>
+            {/* 小さな記念: 来場の回数の節目(10・30・50・100回)に一言 */}
+            {visitMilestone(detail.visitCount ?? 0) !== null ? (
+              <p className="done-milestone">
+                <PawMark size={16} className="done-milestone-mark" />
+                {milestoneText(
+                  detail.dogs.map((d) => d.name),
+                  detail.visitCount,
+                )}
+              </p>
+            ) : null}
             <p className="done-meta">
               <span>{detail.dogs.length}頭</span>
               <span aria-hidden="true"> · </span>
               <span className="mono">{detail.memberNo}</span>
               <span aria-hidden="true"> · </span>
-              {detail.pointsAwarded > 0 ? <span>+{detail.pointsAwarded}ポイント</span> : <span>ポイントは1日1回</span>}
+              {detail.pointsAwarded > 0 ? (
+                <span className="done-points">
+                  +{detail.pointsAwarded}ポイント
+                  <PointPon />
+                </span>
+              ) : (
+                <span>ポイントは1日1回</span>
+              )}
             </p>
             <p className="note">
               チェックイン <span className="mono">{detail.checkedInAt.slice(11, 16)}</span>・受付でこの画面を見せてください
@@ -105,5 +125,45 @@ export function CheckinDonePage() {
         会員証にもどる
       </Link>
     </main>
+  );
+}
+
+/**
+ * 「+1ポイント」の横に、小さな肉球のハンコを 1 つ「ポン」と押す(docs/design.md 11.6)。
+ * 時計や流れるバーなど、受付で見分けるための動きとは別。動きを減らす設定では、最初から押された形で出す。
+ */
+function PointPon() {
+  const reduce = useReducedMotion();
+  const [pressAt] = useState(() => 380);
+  useEffect(() => {
+    if (reduce) return;
+    const t = window.setTimeout(tapticPon, pressAt + 160);
+    return () => window.clearTimeout(t);
+  }, [reduce, pressAt]);
+  if (reduce) {
+    return (
+      <span className="done-pon" data-pon="still">
+        <PawMark size={22} className="pon-mark" />
+      </span>
+    );
+  }
+  return (
+    <span className="done-pon" data-pon="play">
+      <m.span
+        className="paw-ink"
+        aria-hidden="true"
+        initial={{ opacity: 0, scale: 0.6 }}
+        animate={{ opacity: [0.12, 0], scale: [0.7, 2] }}
+        transition={{ delay: (pressAt + 160) / 1000, duration: 0.42, ease: [0.2, 0.8, 0.2, 1] }}
+      />
+      <m.span
+        style={{ display: 'block' }}
+        initial={{ opacity: 0, scale: 2.2, rotate: -14 }}
+        animate={{ opacity: [0, 1, 1, 1], scale: [2.2, 0.86, 1.04, 1], rotate: [-14, 0, 0, 0] }}
+        transition={{ delay: pressAt / 1000, duration: 0.32, times: [0, 0.5, 0.78, 1], ease: ['easeIn', 'easeOut', 'easeInOut'] }}
+      >
+        <PawMark size={22} className="pon-mark" />
+      </m.span>
+    </span>
   );
 }

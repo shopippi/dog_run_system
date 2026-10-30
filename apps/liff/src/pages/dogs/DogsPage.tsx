@@ -26,7 +26,7 @@ export function DogsPage() {
     setRestoreError(null);
     try {
       await postJson(`/api/dogs/${id}/restore`, {});
-      toast(`${name}を戻しました`);
+      toast(`${name}がもどってきました`);
       reload();
     } catch (e) {
       setRestoreError(e);
@@ -41,13 +41,13 @@ export function DogsPage() {
         <p className="lead">写真や名前を変えるときは、ワンちゃんを選んでください。</p>
       </div>
       {active.length === 0 ? (
-        <EmptyState icon="paw">登録しているワンちゃんはいません。</EmptyState>
+        <EmptyState icon="paw">まだワンちゃんが登録されていません。一緒に来る子を教えてください。</EmptyState>
       ) : (
       <ul className="rows dog-list">
         {active.map((d) => (
           <li key={d.id}>
             <Link to={`/dogs/${d.id}`} className="dog-row">
-              <DogAvatar name={d.name} breedName={d.breedName} url={d.thumbUrl} size={48} />
+              <DogAvatar name={d.name} breedName={d.breedName} url={d.thumbUrl} size={64} />
               <span className="dog-row-body">
                 <b>{d.name}</b>
                 <span className="sub-text">
@@ -65,16 +65,15 @@ export function DogsPage() {
         <Icon name="plus" />
         ワンちゃんを追加する
       </Link>
+      {/* おやすみ中のワンちゃんは、一覧の一番下に小さな文字の折りたたみで置く(ふだんは閉じておく) */}
       {resting.length > 0 && (
-        <section className="section" aria-labelledby="dogs-resting">
-          <p className="section-label" id="dogs-resting">
-            おやすみ中のワンちゃん
-          </p>
+        <details className="dogs-resting" open={restoreError ? true : undefined}>
+          <summary>おやすみ中のワンちゃん({resting.length})</summary>
           {restoreError ? <ErrorNotice error={restoreError} /> : null}
           <ul className="retired-list">
             {resting.map((d) => (
               <li key={d.id}>
-                <DogAvatar name={d.name} breedName={d.breedName} url={d.thumbUrl} size={32} />
+                <DogAvatar name={d.name} breedName={d.breedName} url={d.thumbUrl} size={40} />
                 <span className="dog-rest-name">{d.name}</span>
                 <button
                   type="button"
@@ -88,7 +87,7 @@ export function DogsPage() {
               </li>
             ))}
           </ul>
-        </section>
+        </details>
       )}
     </main>
   );

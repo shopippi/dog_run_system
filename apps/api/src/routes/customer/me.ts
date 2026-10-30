@@ -5,7 +5,7 @@ import type { AppEnv } from '../../env';
 import { loadSettings } from '../../lib/settings';
 import { parseJson } from '../../lib/validate';
 import { findActiveMember, refreshDisplayName } from '../../services/members';
-import { findVisitOn } from '../../services/checkins';
+import { findVisitOn, visitPoints } from '../../services/checkins';
 import { pointBalance, usableTickets } from '../../services/points';
 import { ticketsUsedOn } from '../../services/tickets';
 import { insertDogStatements, listHouseholdDogs, normalizeDogInputs } from '../../services/dogs';
@@ -58,6 +58,7 @@ meRoutes.get('/me', async (c) => {
       toNextTicket: pointsToNextTicket(balance, settings.points_per_ticket),
       tickets: await usableTickets(db, member.householdId, now),
       todayVisitId: today?.id ?? null,
+      todayPoints: today ? await visitPoints(db, today.id) : 0,
       todayUsedTicketId: usedToday[0]?.id ?? null,
     },
   };
