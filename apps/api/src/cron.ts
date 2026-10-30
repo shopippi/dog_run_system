@@ -8,6 +8,7 @@ import { fetchWeather, type WeatherSource } from './services/weather';
 import { backupDatabase } from './services/backup';
 import { expirePointsAndTickets } from './services/expiry';
 import { deleteMigrationImages } from './services/migration-images';
+import { purgeIdempotencyKeys } from './lib/idempotency';
 
 /** 日本時間 3:10(UTC 18:10)。日別集計の再計算、有効期限の処理、バックアップ、移行期間終了後の画像削除 */
 export const CRON_NIGHTLY = '10 18 * * *';
@@ -38,6 +39,8 @@ export async function runNightly(env: Bindings, now: Date): Promise<void> {
   await runBackupJob(env, now);
   await runMigrationImagesJob(env, now);
   if (await shouldImportHolidays(env.DB, now)) await runHolidaysJob(env, now);
+  // 7日より古い送信の印(二重送信を防ぐための一時的な記録。業務の記録ではない)を消す。失敗しても、ほかの処理に影響させない
+  await purgeIdempotencyKeys(env.DB, now).catch((e) => console.error('送信の印の整理に失敗しました', e));
 }
 
 export async function runMorning(env: Bindings, now: Date): Promise<void> {

@@ -834,3 +834,22 @@ html.has-action-bar .toast-region { bottom: calc(var(--action-bar-h, 80px) + var
 .done-pon { position: relative; display: inline-block; width: 22px; height: 22px; flex: none; }
 .done-pon .pon-mark { display: block; width: 22px; height: 22px; fill: var(--stamp-today); transform: rotate(-8deg); }
 .done-pon .paw-ink { inset: -2px; }
+
+/* ================================================================
+ * 電波が弱いとき(docs/design.md 14章。要件定義書 15.3)
+ * ================================================================ */
+/* 送信待ちのチェックイン。送るワンちゃんは選べない行(チェックボックスなし)で並べる */
+.pick-row.static { cursor: default; }
+.pick-row.static:active { transform: none; }
+.waiting-send .btn { align-self: flex-start; width: auto; min-width: 160px; }
+/* 前に開いたときの会員証を出しているときの、静かな一言(13px text-tertiary。枠や色の塗りは付けない) */
+.freshness {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2);
+  min-height: 20px; margin: calc(var(--sp-2) * -1) 0 0; font-size: var(--fs-13); color: var(--text-tertiary);
+}
+.freshness .spinner { width: 12px; height: 12px; border-width: 1.5px; margin-right: 6px; vertical-align: -1px; }
+.freshness .btn.ghost { width: auto; min-height: 44px; margin: -12px 0; padding: 0 var(--sp-2); font-size: var(--fs-13); }
+.card-screen { position: relative; }
+.freshness.overlay { position: absolute; top: 4px; left: var(--sp-5); right: var(--sp-5); margin: 0; pointer-events: none; }
+/* 画面の表示に失敗したとき(エラーの境界)。ふつうの案内と同じ形 */
+.boundary { padding-top: var(--sp-5); }

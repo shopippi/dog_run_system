@@ -10,6 +10,11 @@ export const checkinSchema = z.object({
   /** 受付の固定QRコードの合言葉 */
   passphrase: z.string().max(100),
   dogIds: dogIdsSchema,
+  /**
+   * 「確定」を押した時刻(スマホの時計のミリ秒)。電波が弱く送信が遅れたときに使う。
+   * 送った時刻は x-client-now ヘッダーで別に送り、その差だけを使う(resolveCheckinTime)
+   */
+  pressedAt: z.number().int().positive().max(8.64e15).optional(),
 });
 export type CheckinInput = z.infer<typeof checkinSchema>;
 

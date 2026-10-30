@@ -2,6 +2,8 @@ import { Hono } from 'hono';
 import type { AppEnv } from './env';
 import { AppError, type ErrorBody } from './lib/errors';
 import { nowMiddleware, requireLineUser } from './lib/middleware';
+import { idempotency } from './lib/idempotency';
+import { customerBodyLimit, gzipJson, isTransientDbError, privateRevalidate } from './lib/http';
 import { checkinRoutes } from './routes/customer/checkins';
 import { dogRoutes } from './routes/customer/dogs';
 import { inviteRoutes } from './routes/customer/invites';
@@ -39,6 +41,8 @@ export function createApp() {
   const app = new Hono<AppEnv>();
 
   app.use('*', nowMiddleware);
+  // API の JSON を圧縮する(電波が弱い場所でも少ない通信で済むように。1KB 未満と写真は圧縮しない)
+  app.use('/api/*', gzipJson);
 
   app.onError((err, c) => {
     if (err instanceof AppError) {
@@ -46,6 +50,17 @@ export function createApp() {
       return c.json(body, err.status);
     }
     console.error(err);
+    // データベースの一時的な不調(混雑・接続の切れなど)は 503 にする。画面は少し待って、同じ送信の印で送り直す
+    if (isTransientDbError(err)) {
+      const body: ErrorBody = {
+        error: {
+          code: 'temporarily_unavailable',
+          message: '混み合っているため、うまく処理できませんでした。少し待ってから、もう一度お試しください。',
+        },
+      };
+      c.header('retry-after', '2');
+      return c.json(body, 503);
+    }
     const body: ErrorBody = {
       error: {
         code: 'internal',
@@ -57,12 +72,18 @@ export function createApp() {
 
   app.get('/api/health', (c) => c.json({ ok: true }));
   // 施設の名前(認証なし。ログインの前の画面でも使う)
-  app.get('/api/public-settings', facilityHandler);
+  app.get('/api/public-settings', privateRevalidate, facilityHandler);
   app.get('/admin/api/public-settings', facilityHandler);
 
   // お客さん向け API(LINE の IDトークンで認証)
   const customer = new Hono<AppEnv>();
+  // 送られる内容の大きさの上限(写真は 4MB、それ以外は 64KB)。ログインの確認より前に断る
+  customer.use('*', customerBodyLimit);
   customer.use('*', requireLineUser);
+  // 読み込み(GET)は ETag をつけ、変わっていなければ 304(中身を送らない)
+  customer.use('*', privateRevalidate);
+  // 変更の送信は、送信の印(Idempotency-Key)で二重に処理しない(要件定義書 15.3)
+  customer.use('*', idempotency);
   customer.route('/', meRoutes);
   customer.route('/', dogRoutes);
   customer.route('/', mediaRoutes);
