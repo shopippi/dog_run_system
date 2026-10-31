@@ -9,9 +9,13 @@ import { useEffect, useId, useState, type ReactNode } from 'react';
 import { Dialog } from '../components/Dialog';
 import { ErrorNotice } from '../components/ErrorNotice';
 import { PageHead } from '../components/PageHead';
-import { QrCode, SaveFoot, Section, useLoaded } from '../components/SettingsKit';
+import { BusyLabel } from '../components/BusyLabel';
+import { CfgSectionSkeleton, QrCode, SaveFoot, Section, useLoaded } from '../components/SettingsKit';
+import { Loading } from '../components/Skeleton';
+import { useToast } from '../components/Toast';
 import { ApiError, adminApi, adminPatch, adminPost } from '../lib/api';
 import { useAuth } from '../lib/auth';
+import { publishFacilityName } from '../hooks/useFacilityName';
 
 type Draft = Record<string, unknown>;
 type OnSaved = (r: SettingsResponse) => void;
@@ -30,9 +34,22 @@ export function SettingsPage() {
       />
       {error ? <ErrorNotice error={error} onRetry={reload} /> : null}
       {!data ? (
-        !error && <p className="loading">読み込んでいます…</p>
+        !error && (
+          <Loading>
+            <CfgSectionSkeleton fields={1} title={88} fieldW="min(420px, 100%)" hint />
+            <CfgSectionSkeleton fields={3} title={160} />
+            <CfgSectionSkeleton fields={2} title={120} />
+          </Loading>
+        )
       ) : (
         <>
+          <FacilitySection
+            settings={data.settings}
+            onSaved={(r) => {
+              setData(r);
+              publishFacilityName(r.settings.facility_name);
+            }}
+          />
           <PointsSection settings={data.settings} onSaved={setData} />
           <AnalysisSection settings={data.settings} onSaved={setData} />
           <InviteSection settings={data.settings} onSaved={setData} />
@@ -50,13 +67,14 @@ export function SettingsPage() {
  * まとまりごとの下書きと保存。数の欄は入力中は文字のまま持ち、保存するときに数にする。
  * 入力チェックは API と同じもの(checkSettingsPatch)を先に画面で行う。
  */
-function useSettingsDraft(settings: Settings, keys: SettingKey[], onSaved: OnSaved) {
+export function useSettingsDraft(settings: Settings, keys: SettingKey[], onSaved: OnSaved) {
   const pick = (s: Settings): Draft => Object.fromEntries(keys.map((k) => [k, s[k]]));
   const base = JSON.stringify(pick(settings));
   const [draft, setDraft] = useState<Draft>(() => JSON.parse(base) as Draft);
   const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<unknown>(null);
+  const toast = useToast();
   useEffect(() => {
     setDraft(JSON.parse(base) as Draft);
   }, [base]);
@@ -98,6 +116,7 @@ function useSettingsDraft(settings: Settings, keys: SettingKey[], onSaved: OnSav
     try {
       onSaved(await adminPatch<SettingsResponse>('/settings', checked.data));
       setSaved(true);
+      toast('保存しました。');
     } catch (e) {
       setError(e);
     } finally {
@@ -107,7 +126,7 @@ function useSettingsDraft(settings: Settings, keys: SettingKey[], onSaved: OnSav
   return { draft, set, dirty, busy, saved, error, save };
 }
 
-function SettingsForm({
+export function SettingsForm({
   title,
   desc,
   state,
@@ -137,7 +156,7 @@ function SettingsForm({
 }
 
 /** 数を入れる欄(単位つき) */
-function NumField({
+export function NumField({
   label,
   hint,
   unit,
@@ -451,7 +470,9 @@ function RegenerateDialog({ onClose, onDone }: { onClose: () => void; onDone: On
             やめる
           </button>
           <button type="button" className="btn" disabled={busy} onClick={submit}>
-            {busy ? '作り直しています…' : '作り直す'}
+            <BusyLabel busy={busy} pending="作り直しています…">
+              作り直す
+            </BusyLabel>
           </button>
         </>
       }
@@ -468,14 +489,14 @@ function RegenerateDialog({ onClose, onDone }: { onClose: () => void; onDone: On
 }
 
 function MigrationSection({ settings, onSaved }: { settings: Settings; onSaved: OnSaved }) {
-  const s = useSettingsDraft(settings, ['migration_period', 'migration_max_points'], onSaved);
+  const s = useSettingsDraft(settings, ['migration_period', 'migration_max_points', 'migration_max_tickets', 'migration_late_entry'], onSaved);
   const p = s.draft.migration_period as { start: string | null; end: string | null };
   const startId = useId();
   const endId = useId();
   return (
     <SettingsForm
       title="移行期間"
-      desc="旧カード(LINEのショップカード・紙のスタンプカード)からポイントを、受付で引き継げる期間と、一度に引き継げるポイントの上限です。期間が終わると、以前の引き継ぎの申請の写真は自動で削除されます。"
+      desc="旧カード(LINEのショップカード・紙のスタンプカード)からポイントを、受付で引き継げる期間と、一度に引き継げるポイントの上限です。期間が終わると、以前の引き継ぎの申請の写真は自動で消えます。"
       state={s}
     >
       <div className="cfg-row">
@@ -509,6 +530,23 @@ function MigrationSection({ settings, onSaved }: { settings: Settings; onSaved: 
         value={s.draft.migration_max_points}
         onChange={(v) => s.set('migration_max_points', v)}
       />
+      <NumField
+        label="旧カードの特典から出せる無料券の上限"
+        unit="枚まで"
+        hint="LINEのショップカードの特典チケットなど、使っていない特典を無料券にできる枚数です。0 にすると無料券にしません(0〜10)"
+        min={0}
+        max={10}
+        value={s.draft.migration_max_tickets}
+        onChange={(v) => s.set('migration_max_tickets', v)}
+      />
+      <label className="check">
+        <input
+          type="checkbox"
+          checked={s.draft.migration_late_entry === true}
+          onChange={(e) => s.set('migration_late_entry', e.target.checked)}
+        />
+        移行期間が終わったあとも、理由を書けば引き継ぎを受け付ける
+      </label>
     </SettingsForm>
   );
 }
@@ -562,6 +600,36 @@ function ContactSection({ settings, onSaved }: { settings: Settings; onSaved: On
           placeholder="例: 山田(製作者) 090-0000-0000 / 平日 10時〜18時"
           onChange={(e) => s.set('developer_contact', e.target.value)}
         />
+      </div>
+    </SettingsForm>
+  );
+}
+
+/** 施設の名前(担当I)。お客さんの会員証と、受付・管理画面の見出しに出す */
+function FacilitySection({ settings, onSaved }: { settings: Settings; onSaved: OnSaved }) {
+  const s = useSettingsDraft(settings, ['facility_name'], onSaved);
+  const id = useId();
+  const hintId = useId();
+  return (
+    <SettingsForm
+      title="施設の名前"
+      desc="お客さんの会員証の上(「グリーンドーム 会員証」など)と、この画面の左上に出す名前です。"
+      state={s}
+    >
+      <div className="field">
+        <label htmlFor={id}>施設の名前</label>
+        <input
+          id={id}
+          type="text"
+          className="cfg-wide"
+          maxLength={30}
+          aria-describedby={hintId}
+          value={String(s.draft.facility_name ?? '')}
+          onChange={(e) => s.set('facility_name', e.target.value)}
+        />
+        <p className="hint" id={hintId}>
+          30文字まで
+        </p>
       </div>
     </SettingsForm>
   );

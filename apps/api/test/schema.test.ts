@@ -15,25 +15,36 @@ async function insertHousehold(id: number) {
 }
 
 describe('マイグレーション', () => {
-  it('要件定義書 11章の21テーブルと、ログイン状態のテーブルがある', async () => {
+  it('要件定義書 11章のテーブル(写真をデータベースに保存する media_objects と、送信の印の idempotency_keys を含む)がある', async () => {
     const { results } = await env.DB.prepare(
       "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE '_cf_%' AND name <> 'd1_migrations' ORDER BY name",
     ).all<{ name: string }>();
     expect(results.map((r) => r.name)).toEqual(
       [
         'audit_log',
+        'booking_capacity_overrides',
+        'booking_dogs',
+        'booking_dog_guard',
+        'booking_guard',
+        'booking_notifications',
+        'bookings',
         'breeds',
         'calendar',
         'daily_stats',
         'daily_weather',
+        'day_notes',
         'dog_changes',
         'dogs',
         'events',
         'family_members',
         'households',
+        'idempotency_keys',
         'invites',
+        'media_objects',
         'merges',
+        'migration_cards',
         'point_ledger',
+        'postal_areas',
         'requests',
         'settings',
         'staff_sessions',

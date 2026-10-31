@@ -36,6 +36,10 @@ import {
   type DayType,
   type SurveySummary,
   type WeatherKind,
+  dashboardRangeSchema,
+  granularityOf,
+  resolveRange,
+  weatherVisits,
 } from '@dr/shared';
 import { Hono } from 'hono';
 import type { AppEnv } from '../../env';
@@ -43,6 +47,7 @@ import { errors } from '../../lib/errors';
 import { loadSettings } from '../../lib/settings';
 import { parseInput } from '../../lib/validate';
 import { ADMIN_MEDIA_BASE, canSeePersonal } from '../../services/admin-visits';
+import { buildAreas, buildTrend } from '../../services/dashboard-trend';
 
 // A-01 ダッシュボード(M-05)。指標の定義は要件定義書 13章。
 // - 日別の指標(頭数・組数・天気・曜日・イベント・新規おうち・無料券の利用)は daily_stats・daily_weather・calendar から読む
@@ -70,9 +75,13 @@ dashboardRoutes.get('/dashboard', async (c) => {
   const db = c.env.DB;
   const staff = c.get('staff');
   const today = toJstDate(c.get('now'));
-  const q = parseInput(dashboardQuerySchema, c.req.query());
-  const from = q.from ?? `${today.slice(0, 7)}-01`;
-  const to = q.to ?? (q.from && q.from > today ? q.from : today);
+  const q = parseInput(dashboardQuerySchema, { from: c.req.query('from'), to: c.req.query('to') });
+  // 2026-10-29: 右上の期間の切り替え(?range=24h|7d|30d|90d|12m|custom)。custom と省略のときは from・to を使う
+  const rangeParam = c.req.query('range');
+  const range = rangeParam ? parseInput(dashboardRangeSchema, rangeParam) : 'custom';
+  const resolved = range !== 'custom' ? resolveRange(range, today) : null;
+  const from = resolved?.from ?? q.from ?? `${today.slice(0, 7)}-01`;
+  const to = resolved?.to ?? q.to ?? (q.from && q.from > today ? q.from : today);
   if (from > to) throw errors.badRequest('期間の始まりが終わりより後になっています。期間を選び直してください。');
   if (daysBetween(from, to) + 1 > DASHBOARD_MAX_DAYS) {
     throw errors.badRequest('一度に見られるのは3年分までです。期間を短くして選び直してください。');
@@ -307,6 +316,20 @@ dashboardRoutes.get('/dashboard', async (c) => {
         ]
       : areaBars;
 
+  // ---- 推移(KPI のカード・大きなグラフ)・天気と来場・地域(docs/design.md 12章) ----
+  const { trend, facts } = await buildTrend(db, {
+    range,
+    granularity: granularityOf(range, from, to),
+    from,
+    to,
+    today,
+    now: c.get('now'),
+    visits,
+    repeatDays: settings.repeat_days,
+  });
+  const inPeriod = facts.filter((f) => f.date >= from && f.date <= rangeEnd && hasDays);
+  const areasBlock = hasDays ? await buildAreas(db, from, rangeEnd) : await buildAreas(db, from, addDays(from, -1));
+
   const body: DashboardResponse = {
     from,
     to,
@@ -368,6 +391,9 @@ dashboardRoutes.get('/dashboard', async (c) => {
     dormant: null,
     family: null,
     surveys: null,
+    trend,
+    weatherVisits: weatherVisits(inPeriod),
+    areas: areasBlock,
   };
 
   if (full) {

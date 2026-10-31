@@ -2,6 +2,10 @@ import { JOIN_METHOD_LABELS, type FamilyResponse } from '@dr/shared';
 import { useCallback, useEffect, useState } from 'react';
 import { ErrorNotice } from '../../components/ErrorNotice';
 import { api, postJson } from '../../lib/api';
+import { clearCachedCard } from '../../lib/card-cache';
+import { BottomSheet } from '../../components/BottomSheet';
+import { BusyLabel } from '../../components/BusyLabel';
+import { FamilyMembersSkeleton } from '../skeletons';
 
 function formatDay(iso: string) {
   const [y, m, d] = iso.slice(0, 10).split('-').map(Number);
@@ -23,7 +27,7 @@ export function FamilyMembers() {
   useEffect(load, [load]);
 
   if (loadError) return <ErrorNotice error={loadError} onRetry={load} />;
-  if (!family) return null;
+  if (!family) return <FamilyMembersSkeleton />;
 
   const alone = family.members.length <= 1;
 
@@ -32,6 +36,8 @@ export function FamilyMembers() {
     setError(null);
     try {
       await postJson('/api/family/leave', {});
+      // 端末に残した会員証を消す(抜けたおうちの内容を出さない)
+      clearCachedCard();
       // おうちから抜けたので、はじめから開き直す(未登録の人の画面になる)
       window.location.replace(import.meta.env.BASE_URL);
     } catch (e) {
@@ -77,25 +83,24 @@ export function FamilyMembers() {
               抜けても、ポイントと来場の記録はおうちに残ります。あなたのLINEではこの会員証を使えなくなり、使うときは新しいおうちとして登録し直します。
             </p>
             {error ? <ErrorNotice error={error} /> : null}
-            {confirm ? (
-              <div className="confirm-inline">
-                <p>
-                  <b>このおうちから抜けます。</b>よろしいですか?
-                </p>
-                <div className="actions">
-                  <button type="button" className="btn sub danger" disabled={busy} onClick={leave}>
-                    {busy ? '手続きしています…' : '抜ける'}
-                  </button>
-                  <button type="button" className="btn ghost" disabled={busy} onClick={() => setConfirm(false)}>
-                    やめる
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <button type="button" className="btn sub danger" onClick={() => setConfirm(true)}>
-                このおうちから抜ける
-              </button>
-            )}
+            <button type="button" className="btn sub danger" onClick={() => setConfirm(true)}>
+              このおうちから抜ける
+            </button>
+            <BottomSheet
+              open={confirm}
+              onClose={() => setConfirm(false)}
+              busy={busy}
+              title="このおうちから抜けます"
+              actions={
+                <button type="button" className="btn danger-fill" disabled={busy} onClick={leave}>
+                  <BusyLabel busy={busy} busyText="手続きしています…">
+                    抜ける
+                  </BusyLabel>
+                </button>
+              }
+            >
+              <p>ポイントと来場の記録はおうちに残ります。このLINEでは、この会員証を使えなくなります。</p>
+            </BottomSheet>
           </>
         )}
       </section>

@@ -13,6 +13,7 @@ import {
   type DogSummary,
 } from '@dr/shared';
 import { errors } from '../lib/errors';
+import { etagMatches } from '../lib/http';
 
 type BreedRow = { id: number; name: string; default_size: Breed['defaultSize']; is_other: number; visible: number };
 
@@ -241,17 +242,26 @@ export async function saveDogPhoto(
   return { photoKey, thumbKey };
 }
 
-/** 写真を返す。誰でも開ける URL にはせず、認証つきの API からだけ返す(6.2)。 */
-export async function serveMedia(media: R2Bucket, key: string): Promise<Response> {
+/**
+ * 写真を返す。誰でも開ける URL にはせず、認証つきの API からだけ返す(6.2)。
+ * 写真は一度保存したら中身が変わらない(差し替えは新しいキーになる)ため、スマホの中に長く保存させる
+ * (private: その人のスマホの中だけ。immutable: 開き直しても確かめに来ない)。
+ * ETag はキーから作るので、確かめに来たとき(If-None-Match)は写真を読まずに 304 を返せる。
+ */
+export async function serveMedia(media: R2Bucket, key: string, ifNoneMatch?: string): Promise<Response> {
+  const etag = await mediaEtag(key);
+  const cacheHeaders = { etag, 'cache-control': 'private, max-age=31536000, immutable' };
+  if (ifNoneMatch && etagMatches(ifNoneMatch, etag)) return new Response(null, { status: 304, headers: cacheHeaders });
   const obj = await media.get(key);
   if (!obj) throw errors.notFound('写真が見つかりませんでした。画面を読み込み直してください。');
   return new Response(obj.body, {
-    headers: {
-      'content-type': obj.httpMetadata?.contentType ?? 'image/jpeg',
-      // 写真は一度保存したら中身が変わらない(差し替えは新しいキーになる)
-      'cache-control': 'private, max-age=86400',
-    },
+    headers: { 'content-type': obj.httpMetadata?.contentType ?? 'image/jpeg', ...cacheHeaders },
   });
+}
+
+async function mediaEtag(key: string): Promise<string> {
+  const digest = await crypto.subtle.digest('SHA-1', new TextEncoder().encode(key));
+  return `"${[...new Uint8Array(digest)].slice(0, 12).map((b) => b.toString(16).padStart(2, '0')).join('')}"`;
 }
 
 /** その写真が、指定したおうちの犬の写真かどうか。 */

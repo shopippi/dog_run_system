@@ -5,13 +5,15 @@ import type { AppEnv } from '../../env';
 import { loadSettings } from '../../lib/settings';
 import { parseJson } from '../../lib/validate';
 import { findActiveMember, refreshDisplayName } from '../../services/members';
-import { findVisitOn } from '../../services/checkins';
+import { findVisitOn, visitPoints } from '../../services/checkins';
 import { pointBalance, usableTickets } from '../../services/points';
 import { ticketsUsedOn } from '../../services/tickets';
 import { insertDogStatements, listHouseholdDogs, normalizeDogInputs } from '../../services/dogs';
 import { alreadyRegistered, registerHousehold } from '../../services/register';
 import { customAnswerStatements, loadVisibleQuestions, splitAnswers } from '../../services/survey';
 import { MEDIA_BASE } from './media';
+import { toCardBackgroundView } from '@dr/shared';
+import { loadCardBackground } from '../../services/card-background';
 
 export const meRoutes = new Hono<AppEnv>();
 
@@ -48,6 +50,7 @@ meRoutes.get('/me', async (c) => {
     member: { id: member.memberId, lineDisplayName: member.lineDisplayName },
     household: { memberNo: member.memberNo, displayName: member.householdName },
     optionalSurveyPending: optional?.pending === 1,
+    cardBackground: toCardBackgroundView(await loadCardBackground(db, member.householdId), MEDIA_BASE),
     card: {
       dogs: await listHouseholdDogs(db, member.householdId, MEDIA_BASE),
       balance,
@@ -55,6 +58,7 @@ meRoutes.get('/me', async (c) => {
       toNextTicket: pointsToNextTicket(balance, settings.points_per_ticket),
       tickets: await usableTickets(db, member.householdId, now),
       todayVisitId: today?.id ?? null,
+      todayPoints: today ? await visitPoints(db, today.id) : 0,
       todayUsedTicketId: usedToday[0]?.id ?? null,
     },
   };

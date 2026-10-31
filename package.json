@@ -11,6 +11,7 @@
     "typecheck": "pnpm -r typecheck && tsc -p tsconfig.json",
     "test": "pnpm -r test",
     "test:e2e": "playwright test",
+    "manual:shots": "MANUAL_SHOTS=1 E2E_PORT=${E2E_PORT:-8798} playwright test e2e/manual-shots.spec.ts",
     "db:migrate:local": "pnpm --filter @dr/api db:migrate:local"
   },
   "devDependencies": {

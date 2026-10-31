@@ -2,35 +2,42 @@ import type { Chart, ChartConfiguration, Plugin } from 'chart.js';
 import { useEffect, useRef, useState } from 'react';
 
 // ダッシュボード(M-05)のグラフ。Chart.js を canvas に直接描く(react-chartjs-2 は使わない)。
-// 色は docs/design.md のトークン(アクセント色と灰色の濃淡)を CSS 変数から読む。多色にしない。
+// 色は docs/design.md のトークンを CSS 変数から読む。系列の色は 12.1 の表(--chart-1〜4。落ち着いた青を主に)。
 // Chart.js は、ダッシュボードを開いたときにだけ読み込む(chart-lib.ts)。
 
 let chartLib: Promise<typeof import('./chart-lib')> | null = null;
 const loadChart = () => (chartLib ??= import('./chart-lib'));
 
 export type ChartColors = {
-  accent: string;
-  accent100: string;
+  /** 主な系列(墨) */
+  ink: string;
+  /** 3つ目の系列(落ち着いた青) */
+  blue: string;
   text: string;
   secondary: string;
   tertiary: string;
   border: string;
   surface: string;
   font: string;
+  /** 系列の色(docs/design.md 12.1。1 = 落ち着いた青、2 = 青みの灰、3 = くすんだ黄土、4 = 灰) */
+  series: [string, string, string, string];
 };
+
+const SERIES_FALLBACK: [string, string, string, string] = ['#2F5FA8', '#7A8BA6', '#B98A2E', '#6B7280'];
 
 function readColors(): ChartColors {
   const css = getComputedStyle(document.documentElement);
   const v = (name: string) => css.getPropertyValue(name).trim();
   return {
-    accent: v('--accent'),
-    accent100: v('--accent-100'),
+    ink: v('--ink'),
+    blue: v('--accent'),
     text: v('--text'),
     secondary: v('--text-secondary'),
     tertiary: v('--text-tertiary'),
     border: v('--border'),
     surface: v('--surface'),
     font: v('--font-sans'),
+    series: SERIES_FALLBACK.map((f, i) => v(`--chart-${i + 1}`) || f) as ChartColors['series'],
   };
 }
 
@@ -90,6 +97,8 @@ export function DashChart({
   const ref = useRef<HTMLCanvasElement>(null);
   const colors = useColors();
   const [failed, setFailed] = useState(false);
+  // 描けたら、300ms でふわっと出す(docs/design.md 11.4)
+  const [ready, setReady] = useState(false);
   useEffect(() => {
     let alive = true;
     let chart: Chart | null = null;
@@ -109,11 +118,13 @@ export function DashChart({
           plugins: {
             ...config.options?.plugins,
             tooltip: {
-              backgroundColor: colors.text,
-              titleColor: colors.surface,
-              bodyColor: colors.surface,
-              padding: 8,
-              cornerRadius: 6,
+              backgroundColor: colors.surface,
+              titleColor: colors.text,
+              bodyColor: colors.text,
+              borderColor: colors.border,
+              borderWidth: 1,
+              padding: 10,
+              cornerRadius: 8,
               displayColors: false,
               ...config.options?.plugins?.tooltip,
             },
@@ -121,6 +132,7 @@ export function DashChart({
         };
         chart = new Chart(ref.current, config);
         setFailed(false);
+        setReady(true);
       })
       .catch((e) => {
         // 1つのグラフが描けなくても、画面のほかの部分は使えるようにする
@@ -134,7 +146,7 @@ export function DashChart({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [colors, ...deps]);
   return (
-    <div className="dash-chart" style={{ height }}>
+    <div className={`dash-chart${ready ? ' ready' : ''}`} style={{ height }}>
       <canvas ref={ref} role="img" aria-label={label} />
       {failed && <p className="empty">グラフを表示できませんでした。画面を読み込み直してください。</p>}
     </div>

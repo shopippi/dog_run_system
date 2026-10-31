@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { newLineUser, openLiff, registerViaUi } from './helpers';
-import { checkinToday, earnPoints } from './tickets-helpers';
+import { checkinToday, earnPoints, slideToUse } from './tickets-helpers';
+import { liffShot } from './liff-shot';
 
 // 担当G: 無料券の交換と使用(C-06)の、お客さん向けの画面の見え方。確かめ方は e2e/liff.layout.spec.ts と同じ。
 const IOS_UA =
@@ -43,7 +44,7 @@ async function checkScreen(page: Page, device: string, screen: string) {
   });
   expect(problems, `${device} / ${screen}`).toEqual([]);
   if (process.env.SHOT_DIR) {
-    await page.screenshot({ path: `${process.env.SHOT_DIR}/${device}/${screen}.png`, fullPage: true });
+    await liffShot(page, `${process.env.SHOT_DIR}/${device}/${screen}.png`);
   }
 }
 
@@ -64,25 +65,22 @@ for (const d of DEVICES) {
       await page.getByRole('button', { name: '無料券と交換する(10ポイント)' }).waitFor();
       await checkScreen(page, d.name, 'L-07 会員証(交換できるとき)');
       await page.getByRole('button', { name: '無料券と交換する(10ポイント)' }).click();
-      await page.getByRole('group', { name: '無料券との交換の確認' }).waitFor();
+      await page.getByRole('dialog', { name: '無料券と交換します' }).waitFor();
       await checkScreen(page, d.name, 'L-07 会員証(交換の確認)');
-      await page.getByRole('button', { name: '交換する' }).click();
-      await page.getByRole('status').waitFor();
+      const sheet = page.getByRole('dialog', { name: '無料券と交換します' });
+      await sheet.getByRole('button', { name: '交換する', exact: true }).click();
+      await expect(page.getByRole('status')).toHaveText('無料券と交換しました。');
+      await expect(sheet).toHaveCount(0);
       await page.getByRole('button', { name: '無料券と交換する(10ポイント)' }).click();
-      await page.getByRole('button', { name: '交換する' }).click();
+      await sheet.getByRole('button', { name: '交換する', exact: true }).click();
       await expect(page.getByText('未使用 2枚')).toBeVisible();
       await checkScreen(page, d.name, 'L-07 会員証(無料券あり)');
 
-      // 使用の確認
+      // 右へスライドして使う → 「使用できました」の画面
       const rows = page.getByRole('list', { name: '未使用の無料券' }).getByRole('listitem');
-      await rows.first().getByRole('button', { name: '使用する' }).click();
-      await page.getByRole('group', { name: '無料券の使用の確認' }).waitFor();
-      await checkScreen(page, d.name, 'L-07 会員証(使用の確認)');
-
-      // 「無料券を使用しました」の画面
-      await page.getByRole('group', { name: '無料券の使用の確認' }).getByRole('button', { name: '使用する' }).click();
-      await page.getByRole('region', { name: '無料券を使用しました' }).waitFor();
-      await checkScreen(page, d.name, 'L-07 無料券を使用しました');
+      await slideToUse(page, rows.first());
+      await page.getByRole('region', { name: '無料券を使用できました' }).waitFor();
+      await checkScreen(page, d.name, 'L-07 使用できました');
 
       // 会員証(今日使った券があるとき)と、来場履歴の無料券の記録
       await page.getByRole('link', { name: '会員証にもどる' }).click();

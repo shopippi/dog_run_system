@@ -7,11 +7,11 @@ LINE公式アカウントの標準ショップカードを置き換える、LINE
 - 仕様は `docs/requirements.md` を正とする。矛盾や不明点があれば、推測で実装せず、実装前に質問する。
 - 機能ID(C-04、A-07 など)を単位に作業する。1つの機能IDを1つのプルリクエストにし、テストを必ず付ける。
 - `docs/requirements.md` の「20. 未決事項」に関わる値は、初期案で実装し、管理画面の設定(settings テーブル)から変えられるようにする。
-- 画面の見た目は `docs/design.md` に従う(色・文字・間隔・部品の仕様と、やってはいけないこと)。操作の流れはデモ(`docs/demo.html`)を参考にする。新しい画面を作ったら、e2e の layout と contrast のテストに加える。
+- 画面の見た目は `docs/design.md` に従う(色・文字・間隔・部品の仕様と、やってはいけないこと)。操作の流れはブラウザで動くデモ(`apps/demo`、`docs/demo.md`)を参考にする(`docs/demo.html` は初期の模型で、いまの見た目とは違う)。新しい画面を作ったら、e2e の layout と contrast のテストに加える。
 
 ## 技術構成
 
-- TypeScript。API は Cloudflare Workers + Hono、DB は Cloudflare D1、写真は Cloudflare R2。
+- TypeScript。API は Cloudflare Workers + Hono、DB は Cloudflare D1、写真も D1(media_objects)に保存する(R2 を有効にすれば写真を R2 に置ける)。
 - 画面は React + Vite。お客さん向け(apps/liff)と管理画面(apps/admin)は別アプリ。LIFF SDK を使う。
 - 入力チェックは zod。型・入力チェック・ポイント計算・統合のロジックは packages/shared に置き、API と画面で共有する。
 - スキーマの変更は wrangler のマイグレーションで管理する。

@@ -8,8 +8,11 @@ import {
 import { useId, useState } from 'react';
 import { Dialog } from '../components/Dialog';
 import { ErrorNotice } from '../components/ErrorNotice';
+import { BusyLabel } from '../components/BusyLabel';
 import { PageHead } from '../components/PageHead';
-import { RadioSegment, formatJstDateTime, useLoaded } from '../components/SettingsKit';
+import { useToast } from '../components/Toast';
+import { CfgListSkeleton, RadioSegment, SkeletonField, formatJstDateTime, useLoaded } from '../components/SettingsKit';
+import { Skeleton } from '../components/Skeleton';
 import { adminApi, adminPatch, adminPost } from '../lib/api';
 import { useAuth } from '../lib/auth';
 
@@ -30,7 +33,8 @@ export function StaffPage() {
   const [resetting, setResetting] = useState<AdminStaff | null>(null);
   const [busy, setBusy] = useState(false);
   const [actionError, setActionError] = useState<unknown>(null);
-  const [notice, setNotice] = useState('');
+  const toast = useToast();
+  const setNotice = (m: string) => toast(m);
 
   const resume = async (s: AdminStaff) => {
     setBusy(true);
@@ -67,9 +71,6 @@ export function StaffPage() {
               <ErrorNotice error={actionError} />
             </div>
           ) : null}
-          <p className="sr-only" role="status">
-            {notice}
-          </p>
           <ul className="cfg-list" aria-label="スタッフ">
             {data.staff.map((s) => (
               <li key={s.id} className={`cfg-item cfg-staff${s.status === 'suspended' ? ' cfg-off' : ''}`} aria-label={s.name}>
@@ -117,7 +118,25 @@ export function StaffPage() {
           </ul>
         </section>
       )}
-      {!data && !error && <p className="loading">読み込んでいます…</p>}
+      {!data && !error && (
+        <CfgListSkeleton
+          rows={3}
+          numbered={false}
+          add={
+            readOnly ? undefined : (
+              <div className="cfg-fieldset">
+                <div className="cfg-grid2">
+                  <SkeletonField label={32} />
+                  <SkeletonField label={96} />
+                  <SkeletonField w={240} h="var(--control-h)" label={32} />
+                  <SkeletonField label={112} />
+                </div>
+                <Skeleton w={96} h="var(--control-h)" r={8} />
+              </div>
+            )
+          }
+        />
+      )}
       <p className="note">製作者(見るだけ)のアカウントは、製作者が作ります。</p>
       {suspending && (
         <SuspendDialog
@@ -188,7 +207,9 @@ function AddStaff({ onAdded }: { onAdded: (r: AdminStaffResponse, name: string) 
         </div>
         <div className="cfg-acts">
           <button type="submit" className="btn" disabled={busy || !name.trim() || !email.trim() || !password}>
-            {busy ? '追加しています…' : '追加する'}
+            <BusyLabel busy={busy} pending="追加しています…">
+              追加する
+            </BusyLabel>
           </button>
         </div>
       </form>
@@ -220,7 +241,9 @@ function SuspendDialog({ s, onClose, onDone }: { s: AdminStaff; onClose: () => v
             やめる
           </button>
           <button type="button" className="btn danger-fill" disabled={busy} onClick={submit}>
-            {busy ? '停止しています…' : '停止する'}
+            <BusyLabel busy={busy} pending="停止しています…">
+              停止する
+            </BusyLabel>
           </button>
         </>
       }
@@ -294,7 +317,9 @@ function PasswordDialog({ s, onClose, onDone }: { s: AdminStaff; onClose: () => 
             やめる
           </button>
           <button type="button" className="btn" disabled={busy || (mode === 'manual' && !password)} onClick={submit}>
-            {busy ? '再発行しています…' : '再発行する'}
+            <BusyLabel busy={busy} pending="再発行しています…">
+              再発行する
+            </BusyLabel>
           </button>
         </>
       }

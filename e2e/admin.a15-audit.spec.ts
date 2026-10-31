@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { cancelOnToday, checkinViaLiff } from './households-helpers';
-import { adminLogin, newLineUser, openLiff, registerViaUi } from './helpers';
+import { adminLogin, adminToast, newLineUser, openLiff, registerViaUi } from './helpers';
 
 test('A-15 取り消したチェックインを、操作ログから元に戻せる', async ({ browser }) => {
   const customer = await browser.newPage();
@@ -23,7 +23,7 @@ test('A-15 取り消したチェックインを、操作ログから元に戻せ
   await expect(dialog).toContainText('チェックインの取り消し');
   await expect(dialog.getByRole('button', { name: 'やめる' })).toBeFocused();
   await dialog.getByRole('button', { name: '元に戻す' }).click();
-  await expect(page.getByRole('status')).toContainText('「チェックインの取り消し」を元に戻しました。');
+  await expect(adminToast(page, '「チェックインの取り消し」を元に戻しました。')).toBeVisible();
   await expect(row.getByText('元に戻し済み')).toBeVisible();
   await expect(row.getByRole('button', { name: '元に戻す' })).toHaveCount(0);
   // 元に戻したことも、操作ログに残る

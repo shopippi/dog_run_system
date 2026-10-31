@@ -4,6 +4,10 @@ import { Link } from 'react-router-dom';
 import { DogAvatar } from '../../components/DogAvatar';
 import { ErrorNotice } from '../../components/ErrorNotice';
 import { postJson } from '../../lib/api';
+import { ActionBar } from '../../components/ActionBar';
+import { BottomSheet } from '../../components/BottomSheet';
+import { BusyLabel } from '../../components/BusyLabel';
+import { PressButton } from '../../components/PressButton';
 
 /** 自分のワンちゃんごとの選択。sameAs は招待した側の同じ子(いなければ null) */
 type Choice = { sameAs: number | null; keepPhoto: 'mine' | 'theirs' };
@@ -27,7 +31,7 @@ export function MergeFlow({
   onDone: () => void;
 }) {
   const [choices, setChoices] = useState<Record<number, Choice>>({});
-  const [step, setStep] = useState<'edit' | 'confirm'>('edit');
+  const [confirm, setConfirm] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
   const [done, setDone] = useState<CustomerMergeResult | null>(null);
@@ -92,64 +96,14 @@ export function MergeFlow({
             </p>
           </div>
         </div>
-        <button type="button" className="btn" onClick={onDone}>
+        <PressButton type="button" className="btn" onClick={onDone}>
           会員証を見る
-        </button>
+        </PressButton>
       </main>
     );
   }
 
-  if (step === 'confirm') {
-    const sameDogs = merge.mine.dogs.filter((d) => choiceOf(d.id).sameAs !== null);
-    return (
-      <main className="screen">
-        <div className="page-head">
-          <h2>まとめてよいですか?</h2>
-          <p className="lead mg-confirm-text">
-            {theirLabel}と一つになります。{pointsText}、あなたの会員IDは <span className="mono">{merge.result.memberNo}</span>{' '}
-            になります。
-          </p>
-        </div>
-        {sameDogs.length > 0 && (
-          <section className="section" aria-labelledby="mg-same">
-            <h3 className="section-label" id="mg-same">
-              同じ子として1頭にまとめるワンちゃん
-            </h3>
-            <ul className="rows" aria-labelledby="mg-same">
-              {sameDogs.map((d) => {
-                const c = choiceOf(d.id);
-                const t = theirDog.get(c.sameAs!)!;
-                const photoDog = c.keepPhoto === 'mine' ? d : t;
-                return (
-                  <li key={d.id} className="dog-row">
-                    <DogAvatar name={photoDog.name} breedName={photoDog.breedName} url={photoDog.thumbUrl} size={40} />
-                    <span className="dog-row-body">
-                      <b>{t.name}</b>
-                      <span className="sub-text">
-                        あなたの「{d.name}」と同じ子{photoDog.hasPhoto ? `・写真は${c.keepPhoto === 'mine' ? 'あなたの写真' : `${theirLabel}の写真`}` : ''}
-                      </span>
-                    </span>
-                  </li>
-                );
-              })}
-            </ul>
-          </section>
-        )}
-        <p className="note">
-          今の会員ID({merge.mine.memberNo})は使わなくなります。間違えてまとめたときは、受付にご相談ください(30日以内なら元に戻せます)。
-        </p>
-        {error ? <ErrorNotice error={error} /> : null}
-        <div className="actions">
-          <button type="button" className="btn" disabled={busy} onClick={run}>
-            {busy ? 'まとめています…' : 'まとめる'}
-          </button>
-          <button type="button" className="btn ghost" disabled={busy} onClick={() => setStep('edit')}>
-            もどる
-          </button>
-        </div>
-      </main>
-    );
-  }
+  const sameDogs = merge.mine.dogs.filter((d) => choiceOf(d.id).sameAs !== null);
 
   return (
     <main className="screen">
@@ -212,7 +166,7 @@ export function MergeFlow({
         <ul className="mg-dogs" aria-labelledby="mg-theirs">
           {merge.theirs.dogs.map((d) => (
             <li key={d.id}>
-              <DogAvatar name={d.name} breedName={d.breedName} url={d.thumbUrl} size={40} />
+              <DogAvatar name={d.name} breedName={d.breedName} url={d.thumbUrl} size={56} />
               <span className="dog-row-body">
                 <b>{d.name}</b>
                 <span className="sub-text">{d.breedName}</span>
@@ -242,14 +196,71 @@ export function MergeFlow({
         ))}
       </section>
 
-      <div className="actions">
-        <button type="button" className="btn" onClick={() => setStep('confirm')}>
+      <Link to="/" className="btn ghost" onClick={onDone}>
+        やめる
+      </Link>
+      <ActionBar>
+        <PressButton
+          type="button"
+          className="btn"
+          onClick={() => {
+            setError(null);
+            setConfirm(true);
+          }}
+        >
           まとめる
-        </button>
-        <Link to="/" className="btn ghost" onClick={onDone}>
-          やめる
-        </Link>
-      </div>
+        </PressButton>
+      </ActionBar>
+
+      {/* 確認は下から出るシート(docs/design.md 11.3) */}
+      <BottomSheet
+        open={confirm}
+        onClose={() => setConfirm(false)}
+        busy={busy}
+        title="まとめてよいですか?"
+        cancelLabel="もどる"
+        actions={
+          <PressButton type="button" className="btn" disabled={busy} onClick={run}>
+            <BusyLabel busy={busy} busyText="まとめています…">
+              まとめる
+            </BusyLabel>
+          </PressButton>
+        }
+      >
+        <p className="mg-confirm-text">
+          {theirLabel}と一つになります。{pointsText}、あなたの会員IDは <span className="mono">{merge.result.memberNo}</span>{' '}
+          になります。
+        </p>
+        {sameDogs.length > 0 && (
+          <section className="section" aria-labelledby="mg-same">
+            <h3 className="section-label" id="mg-same">
+              同じ子として1頭にまとめるワンちゃん
+            </h3>
+            <ul className="rows" aria-labelledby="mg-same">
+              {sameDogs.map((d) => {
+                const c = choiceOf(d.id);
+                const t = theirDog.get(c.sameAs!)!;
+                const photoDog = c.keepPhoto === 'mine' ? d : t;
+                return (
+                  <li key={d.id} className="dog-row">
+                    <DogAvatar name={photoDog.name} breedName={photoDog.breedName} url={photoDog.thumbUrl} size={56} />
+                    <span className="dog-row-body">
+                      <b>{t.name}</b>
+                      <span className="sub-text">
+                        あなたの「{d.name}」と同じ子{photoDog.hasPhoto ? `・写真は${c.keepPhoto === 'mine' ? 'あなたの写真' : `${theirLabel}の写真`}` : ''}
+                      </span>
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
+        )}
+        <p className="note">
+          今の会員ID({merge.mine.memberNo})は使わなくなります。間違えてまとめたときは、受付にご相談ください(30日以内なら元に戻せます)。
+        </p>
+        {error ? <ErrorNotice error={error} /> : null}
+      </BottomSheet>
     </main>
   );
 }
@@ -275,7 +286,7 @@ function MyDog({
   return (
     <fieldset className="mg-mine" aria-label={`${dog.name}の同じ子`}>
       <legend className="mg-mine-head">
-        <DogAvatar name={dog.name} breedName={dog.breedName} url={dog.thumbUrl} size={48} />
+        <DogAvatar name={dog.name} breedName={dog.breedName} url={dog.thumbUrl} size={56} />
         <span className="dog-row-body">
           <b>{dog.name}</b>
           <span className="sub-text">{dog.breedName}</span>
@@ -304,7 +315,7 @@ function MyDog({
                 disabled={disabled}
                 onChange={() => onChange({ sameAs: t.id })}
               />
-              <DogAvatar name={t.name} breedName={t.breedName} url={t.thumbUrl} size={40} />
+              <DogAvatar name={t.name} breedName={t.breedName} url={t.thumbUrl} size={56} />
               <span className="pick-body">
                 <b>{t.name}</b>
                 <span className="sub-text">{disabled ? 'ほかの子と同じ子に選んでいます' : '同じ子'}</span>
@@ -326,7 +337,7 @@ function MyDog({
                 checked={choice.keepPhoto === 'theirs'}
                 onChange={() => onChange({ keepPhoto: 'theirs' })}
               />
-              <DogAvatar name={same.name} breedName={same.breedName} url={same.thumbUrl} size={48} />
+              <DogAvatar name={same.name} breedName={same.breedName} url={same.thumbUrl} size={56} />
               <span className="pick-body">
                 <b>{theirLabel}の写真</b>
               </span>
@@ -338,7 +349,7 @@ function MyDog({
                 checked={choice.keepPhoto === 'mine'}
                 onChange={() => onChange({ keepPhoto: 'mine' })}
               />
-              <DogAvatar name={dog.name} breedName={dog.breedName} url={dog.thumbUrl} size={48} />
+              <DogAvatar name={dog.name} breedName={dog.breedName} url={dog.thumbUrl} size={56} />
               <span className="pick-body">
                 <b>あなたの写真</b>
               </span>

@@ -1,4 +1,5 @@
-import { dogInputSchema, dogPatchSchema, normalizeForSearch, toJstIso } from '@dr/shared';
+import { dogInputSchema, dogPatchSchema, normalizeForSearch, toJstIso, type DogsResponse } from '@dr/shared';
+import { dogVisitRecords } from '../../services/checkins';
 import { Hono, type Context } from 'hono';
 import type { AppEnv } from '../../env';
 import { errors } from '../../lib/errors';
@@ -37,7 +38,12 @@ async function requireOwnDog(c: Context<AppEnv>, id: number) {
 // 犬の一覧(C-08)。登録をおやすみしている犬も、過去の記録として返す
 dogRoutes.get('/dogs', async (c) => {
   const member = await requireMember(c.env.DB, c.get('lineUser').userId);
-  return c.json({ dogs: await listHouseholdDogs(c.env.DB, member.householdId, MEDIA_BASE, true) });
+  const body: DogsResponse = {
+    dogs: await listHouseholdDogs(c.env.DB, member.householdId, MEDIA_BASE, true),
+    // ワンちゃんごとの来場の回数と最後に来た日(ワンちゃんの変更画面に出す)
+    records: await dogVisitRecords(c.env.DB, member.householdId),
+  };
+  return c.json(body);
 });
 
 // 犬の追加(C-08)
@@ -154,7 +160,7 @@ dogRoutes.post('/dogs/:id/restore', async (c) => {
   const db = c.env.DB;
   const dog = await db.prepare('SELECT status FROM dogs WHERE id = ?').bind(id).first<{ status: string }>();
   if (dog?.status === 'merged') {
-    throw errors.conflict('dog_merged', 'このワンちゃんは、おうちをまとめたときに別のワンちゃんと1頭にまとめられています。');
+    throw errors.conflict('dog_merged', 'このワンちゃんは、おうちをまとめたときに別のワンちゃんと1頭にまとめられています。「ワンちゃん」の一覧から、まとめた後の子を開いてください。');
   }
   if (dog?.status !== 'retired') return c.json({ dog: await getDog(db, id, MEDIA_BASE) });
   const nowIso = toJstIso(c.get('now'));

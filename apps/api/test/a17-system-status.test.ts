@@ -22,7 +22,7 @@ describe('A-17・D-02 システムの状態', () => {
     const res = await adminCall('/admin/api/system-status', { cookie: admin, now: NOW });
     expect(res.status).toBe(200);
     expect(res.body.overall).toBe('yellow');
-    expect(res.body.jobs.map((j: Job) => j.name)).toEqual(['weather', 'holidays', 'daily_stats', 'backup', 'expiry', 'migration_images']);
+    expect(res.body.jobs.map((j: Job) => j.name)).toEqual(['weather', 'holidays', 'daily_stats', 'backup', 'expiry', 'migration_images', 'postal_areas']);
     expect(res.body.jobs.every((j: Job) => j.level === 'yellow')).toBe(true);
     expect(res.body.detail).toBeNull();
   });

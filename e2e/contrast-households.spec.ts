@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { cancelOnToday, checkinViaLiff, joinByReceptionInvite, lowContrast } from './households-helpers';
-import { adminLogin, newLineUser, registerViaUi } from './helpers';
+import { adminLogin, adminToast, newLineUser, registerViaUi } from './helpers';
 
 // おうちの詳細と記録(M-06、M-07、M-15)の文字と背景のコントラスト(ライトとダーク)
 const TABLET = { viewport: { width: 1024, height: 768 }, hasTouch: true };
@@ -61,7 +61,7 @@ for (const scheme of ['light', 'dark'] as const) {
       await confirm.waitFor();
       await check(page, 'M-06 ポイントの手動登録(確認)');
       await confirm.getByRole('button', { name: '登録する' }).click();
-      await page.getByRole('status').waitFor();
+      await adminToast(page, '登録しました').waitFor();
       await check(page, 'M-06 おうちの詳細(登録後)');
       await page.getByRole('button', { name: '家族を追加' }).click();
       const fi = page.getByRole('dialog', { name: '家族を追加' });
@@ -72,7 +72,7 @@ for (const scheme of ['light', 'dark'] as const) {
       await page.getByRole('dialog', { name: '家族を外す' }).waitFor();
       await check(page, 'M-06 家族を外すの確認');
       await page.getByRole('dialog', { name: '家族を外す' }).getByRole('button', { name: '外す' }).click();
-      await page.getByRole('status').getByText(/外しました/).waitFor();
+      await adminToast(page, /外しました/).waitFor();
       await check(page, 'M-06 おうちの詳細(外れた家族)');
 
       // M-07 犬の編集
@@ -82,7 +82,7 @@ for (const scheme of ['light', 'dark'] as const) {
       await page.getByLabel('犬種・サイズを変える理由').fill('まちがい');
       await check(page, 'M-07 犬の編集(変更中)');
       await page.getByRole('button', { name: '保存する' }).click();
-      await page.getByRole('status').waitFor();
+      await adminToast(page, '保存しました').waitFor();
       await check(page, 'M-07 犬の編集(保存後・履歴)');
       await page.getByRole('button', { name: '登録をおやすみする' }).click();
       await page.getByRole('dialog', { name: 'ワンちゃんの登録をおやすみする' }).waitFor();

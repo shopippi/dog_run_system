@@ -1,6 +1,7 @@
 import type { RegisterResponse } from '@dr/shared';
 import { DogAvatar } from '../../components/DogAvatar';
 import type { DogDraft } from '../../components/DogForm';
+import { PressButton } from '../../components/PressButton';
 
 type Props = {
   result: RegisterResponse;
@@ -44,9 +45,9 @@ export function DoneStep({ result, drafts, photoFailed, onNext }: Props) {
           <p>写真の一部を送れませんでした。会員証の「ワンちゃん」から、あとで登録できます。</p>
         </div>
       )}
-      <button type="button" className="btn" onClick={onNext}>
+      <PressButton type="button" className="btn" onClick={onNext}>
         会員証を見る
-      </button>
+      </PressButton>
     </main>
   );
 }

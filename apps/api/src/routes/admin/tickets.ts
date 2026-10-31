@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import type { AppEnv } from '../../env';
 import { errors } from '../../lib/errors';
 import { requireRole } from '../../lib/staff-auth';
+import { latestAuditId } from '../../services/audit';
 import { registerAuditDetail } from '../../services/audit-view';
 import { markTicketUsed, undoTicketExchange, undoTicketUse } from '../../services/tickets';
 import { registerUndo } from '../../services/undo';
@@ -20,13 +21,16 @@ adminTicketRoutes.post('/households/:id/tickets/:tid/use', requireRole('staff', 
   if (h.status !== 'active') {
     throw errors.conflict('household_inactive', 'このおうちは統合済みか退会済みです。統合先のおうちを開いて操作してください。');
   }
+  const staffId = c.get('staff').id;
   const body = await markTicketUsed(db, {
     householdId,
     ticketId: Number(c.req.param('tid')),
-    staffId: c.get('staff').id,
+    staffId,
     now: c.get('now'),
   });
-  return c.json(body);
+  // 画面のトーストの「元に戻す」のために、操作ログの番号を返す
+  const auditId = await latestAuditId(db, { action: 'ticket.mark_used', targetType: 'household', targetId: householdId, staffId });
+  return c.json({ ...body, auditId });
 });
 
 const md = (iso: string) => {

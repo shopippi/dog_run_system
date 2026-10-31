@@ -41,18 +41,22 @@ name = "dog-run-production"
 
 [env.production.vars]
 ENVIRONMENT = "production"
-LINE_CHANNEL_ID = "（本番のチャネルID）"
+# グリーンドームの LINE ログインチャネル(LIFF ID 2012268866-TDSM6zyj の前半)
+LINE_CHANNEL_ID = "2012268866"
 LINE_LOGIN_MOCK = "0"
 
 [[env.production.d1_databases]]
 binding = "DB"
 database_name = "dog-run-production"
-database_id = "（wrangler d1 create で作ったID）"
+# 配信のとき(.github/workflows/deploy.yml)に、`wrangler d1 info` で調べた本当の ID に置き換える
+database_id = "00000000-0000-0000-0000-000000000000"
 migrations_dir = "migrations"
 
-[[env.production.r2_buckets]]
-binding = "MEDIA"
-bucket_name = "dog-run-production-media"
+# 写真の保存先(R2)は、いまは使わない。R2 がないときは、写真をデータベース(media_objects)に保存する(src/lib/d1-media.ts)。
+# R2 を使うようになったら、次の3行の # を外す(バックアップも R2 に取れるようになる)。
+# [[env.production.r2_buckets]]
+# binding = "MEDIA"
+# bucket_name = "dog-run-production-media"
 
 [env.production.triggers]
 crons = ["10 18 * * *", "10 20 * * *"]

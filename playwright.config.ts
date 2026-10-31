@@ -17,6 +17,9 @@ export default defineConfig({
     locale: 'ja-JP',
     timezoneId: 'Asia/Tokyo',
     trace: 'retain-on-failure',
+    // 動き(Motion)のせいで測る位置や写真がぶれないよう、ふだんは「動きを減らす」で動かす。
+    // 動きそのものを確かめるテストだけ、test.use({ reducedMotion: 'no-preference' }) にする
+    reducedMotion: 'reduce',
   },
   projects: [
     // LINE の中で開く画面は、スマホの大きさで確かめる
@@ -25,6 +28,13 @@ export default defineConfig({
     { name: 'admin', testMatch: /admin\..*\.spec\.ts/, use: { viewport: { width: 1024, height: 768 }, hasTouch: true } },
     // 文字と背景のコントラスト(お客さん向けと管理画面の両方。画面の大きさはテストの中で決める)
     { name: 'contrast', testMatch: /contrast.*\.spec\.ts/ },
+    // マニュアルの写真の撮り直し(MANUAL_SHOTS=1 のときだけ動く。画面の大きさはテストの中で決める)
+    {
+      name: 'manual',
+      testMatch: /manual-shots\.spec\.ts/,
+      // 日付の入力欄も日本語の表示にする(ブラウザの言語は環境変数 LANG で決まる)
+      use: { launchOptions: { args: ['--lang=ja-JP'], env: { ...process.env, LANG: 'ja_JP.UTF-8', LANGUAGE: 'ja' } } },
+    },
     // ブラウザだけで動くデモ(静的なファイルだけで、API とデータベースもブラウザの中で動く)
     {
       name: 'demo',

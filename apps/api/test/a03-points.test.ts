@@ -34,7 +34,7 @@ describe('A-03 ポイントの手動登録', () => {
     const s = await setup();
     const res = await points(s.admin, s.id, { points: 1, reason: 'イベントの特典' });
     expect(res.status).toBe(201);
-    expect(res.body).toEqual({ balanceBefore: 0, balanceAfter: 1, ticketsBefore: 0, ticketsAfter: 0, pointsPerTicket: 10 });
+    expect(res.body).toEqual({ auditId: expect.any(Number), balanceBefore: 0, balanceAfter: 1, ticketsBefore: 0, ticketsAfter: 0, pointsPerTicket: 10 });
     expect((await card()).balance).toBe(1);
     const ledger = await env.DB.prepare("SELECT delta, kind, reason, actor_type, actor_id FROM point_ledger WHERE kind = 'manual'").first();
     expect(ledger).toEqual({ delta: 1, kind: 'manual', reason: 'イベントの特典', actor_type: 'staff', actor_id: 2 });
@@ -62,7 +62,7 @@ describe('A-03 ポイントの手動登録', () => {
     const s = await setup();
     await givePoints(s.r.memberNo, 9);
     const res = await points(s.admin, s.id, { points: 1, reason: 'お詫び', note: '待たせた' });
-    expect(res.body).toEqual({ balanceBefore: 9, balanceAfter: 10, ticketsBefore: 0, ticketsAfter: 0, pointsPerTicket: 10 });
+    expect(res.body).toEqual({ auditId: expect.any(Number), balanceBefore: 9, balanceAfter: 10, ticketsBefore: 0, ticketsAfter: 0, pointsPerTicket: 10 });
     expect(await card()).toMatchObject({ balance: 10, toNextTicket: 0, tickets: [] });
     expect(await env.DB.prepare('SELECT COUNT(*) AS n FROM tickets').first()).toEqual({ n: 0 });
     expect(await env.DB.prepare("SELECT COUNT(*) AS n FROM point_ledger WHERE kind = 'ticket_issue'").first()).toEqual({ n: 0 });

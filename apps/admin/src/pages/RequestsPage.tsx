@@ -10,7 +10,10 @@ import { Link } from 'react-router-dom';
 import { Dialog } from '../components/Dialog';
 import { DogFace } from '../components/DogFace';
 import { ErrorNotice } from '../components/ErrorNotice';
+import { BusyLabel } from '../components/BusyLabel';
 import { PageHead } from '../components/PageHead';
+import { Loading, Skeleton, SkeletonCircle, SkeletonText } from '../components/Skeleton';
+import { useToast } from '../components/Toast';
 import { usePhotoSrc } from '../hooks/usePhotoSrc';
 import { adminApi, adminPost } from '../lib/api';
 import { useAuth } from '../lib/auth';
@@ -78,7 +81,45 @@ function RequestList({ tab }: { tab: Tab }) {
   }, [reload]);
 
   if (error) return <ErrorNotice error={error} onRetry={reload} />;
-  if (!data) return <p className="loading">読み込んでいます…</p>;
+  if (!data) {
+    return (
+      <Loading>
+        <section className="panel list-panel">
+          <ul className="rq-list">
+            {Array.from({ length: 3 }, (_, i) => (
+              <li key={i} className="rq-row">
+                <div className="rq-meta">
+                  <Skeleton w={120} h={22} r={6} />
+                  <SkeletonText size={13} w={160} />
+                </div>
+                <div className="rq-body">
+                  <div className="rq-house">
+                    <SkeletonText size={12} w={40} />
+                    <div className="rq-house-main">
+                      <SkeletonCircle size={40} />
+                      <span className="result-body">
+                        <SkeletonText size={15} w={140} />
+                        <SkeletonText size={13} w={88} />
+                      </span>
+                    </div>
+                  </div>
+                  <div className="rq-house">
+                    <SkeletonText size={12} w={48} />
+                    <div className="rq-house-main">
+                      <Skeleton w={72} h={72} r={8} />
+                      <span className="result-body">
+                        <SkeletonText size={15} w={180} />
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+      </Loading>
+    );
+  }
   if (data.requests.length === 0) {
     return (
       <div className="panel">
@@ -145,6 +186,7 @@ function RequestRow({
   onChanged: () => void;
 }) {
   const [rejecting, setRejecting] = useState(false);
+  const toast = useToast();
   const label = `${KIND_LABELS[r.kind]} ${r.household.displayName} ${r.household.memberNo}`;
   return (
     <li className="rq-row" aria-label={label}>
@@ -205,6 +247,7 @@ function RequestRow({
           onDone={() => {
             setRejecting(false);
             onChanged();
+            toast(`${r.household.displayName}の${KIND_LABELS[r.kind]}を却下しました。`);
           }}
         />
       )}
@@ -239,7 +282,9 @@ function RejectDialog({ r, onClose, onDone }: { r: RequestItem; onClose: () => v
             やめる
           </button>
           <button type="button" className="btn danger-fill" disabled={busy} onClick={submit}>
-            {busy ? '却下しています…' : '却下する'}
+            <BusyLabel busy={busy} pending="却下しています…">
+              却下する
+            </BusyLabel>
           </button>
         </>
       }

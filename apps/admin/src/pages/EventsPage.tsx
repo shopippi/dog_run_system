@@ -9,6 +9,8 @@ import { useCallback, useEffect, useId, useState } from 'react';
 import { ErrorNotice } from '../components/ErrorNotice';
 import { Icon } from '../components/Icon';
 import { PageHead } from '../components/PageHead';
+import { Loading, Skeleton, SkeletonText } from '../components/Skeleton';
+import { useToast } from '../components/Toast';
 import { RadioSegment, formatYmd } from '../components/SettingsKit';
 import { adminApi, adminPost } from '../lib/api';
 import { useAuth } from '../lib/auth';
@@ -144,6 +146,29 @@ export function EventsPage() {
             ))}
           </div>
         </section>
+        {!data && !error && (
+          <Loading>
+            <section className="panel cfg-day">
+              <div className="cfg-day-head">
+                <SkeletonText size={17} lh={1.35} w={180} />
+              </div>
+              <div className="cfg-day-block">
+                <SkeletonText size={15} lh={1.35} w={64} />
+                <div className="cfg-day-form">
+                  <div className="field">
+                    <SkeletonText size={13} w={140} />
+                    <Skeleton h={44} r={8} />
+                  </div>
+                  <Skeleton w={120} h="var(--control-h)" r={8} />
+                </div>
+              </div>
+              <div className="cfg-day-block">
+                <SkeletonText size={15} lh={1.35} w={64} />
+                <SkeletonText size={14} w={200} />
+              </div>
+            </section>
+          </Loading>
+        )}
         {data && selected.startsWith(month) && (
           <DayPanel
             key={selected}
@@ -177,7 +202,7 @@ function DayPanel({
 }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
-  const [notice, setNotice] = useState('');
+  const toast = useToast();
   const [name, setName] = useState('');
   const [kind, setKind] = useState<Kind>('イベント');
   const [memo, setMemo] = useState('');
@@ -193,7 +218,7 @@ function DayPanel({
     try {
       await fn();
       after?.();
-      setNotice(message);
+      toast(message);
       onChanged();
     } catch (e) {
       setError(e);
@@ -208,9 +233,6 @@ function DayPanel({
         <h2 id={headId}>{formatYmd(date, true)}</h2>
         {holiday && <span className="sub-text">{holiday}</span>}
       </div>
-      <p className="sr-only" role="status">
-        {notice}
-      </p>
       {error ? <ErrorNotice error={error} /> : null}
 
       <div className="cfg-day-block">

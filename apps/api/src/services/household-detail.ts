@@ -1,3 +1,4 @@
+import { cardBackgroundLabel, parseCardBackground } from '@dr/shared';
 import {
   HOUSEHOLD_SOURCE_LABELS,
   HOUSEHOLD_STATUS_LABELS,
@@ -25,6 +26,7 @@ import {
 import { errors } from '../lib/errors';
 import { ADMIN_MEDIA_BASE, canSeePersonal } from './admin-visits';
 import { listHouseholdDogs } from './dogs';
+import { experiencedDogIds } from './bookings';
 import { pointBalance, unusedTicketCount } from './points';
 import { ticketUsedOnVisitSql } from './tickets';
 import { HOUSEHOLD_FIXED_COLUMNS, householdColumnText } from './profile-fields';
@@ -48,6 +50,8 @@ type HouseholdRow = {
   event_interests: string | null;
   uses_other_runs: number | null;
   wants_news: number | null;
+  /** 会員証の背景(担当I。JSON) */
+  card_background: string | null;
   status: HouseholdStatus;
   merged_into_id: number | null;
 };
@@ -57,7 +61,7 @@ export async function getHouseholdRow(db: D1Database, id: number): Promise<House
   return db
     .prepare(
       `SELECT id, member_no, display_name, display_name_auto, registered_at, source, postal_code, referral, transport,
-              preferred_times, event_interests, uses_other_runs, wants_news, status, merged_into_id
+              preferred_times, event_interests, uses_other_runs, wants_news, card_background, status, merged_into_id
          FROM households WHERE id = ?`,
     )
     .bind(id)
@@ -128,9 +132,9 @@ export async function loadHouseholdDetail(
     const { results } = await db
       .prepare(
         `SELECT vd.visit_id, d.id, d.name FROM visit_dogs vd JOIN dogs d ON d.id = vd.dog_id
-          WHERE vd.visit_id IN (${visitIds.map(() => '?').join(',')}) ORDER BY vd.id`,
+          WHERE vd.visit_id IN (SELECT value FROM json_each(?)) ORDER BY vd.id`,
       )
-      .bind(...visitIds)
+      .bind(JSON.stringify(visitIds))
       .all<{ visit_id: number; id: number; name: string }>();
     for (const r of results) {
       const list = visitDogs.get(r.visit_id) ?? [];
@@ -166,6 +170,7 @@ export async function loadHouseholdDetail(
     .all<{ id: number; issued_at: string; expires_at: string | null; status: TicketStatus; source: keyof typeof TICKET_SOURCE_LABELS; used_at: string | null }>();
 
   const balance = await pointBalance(db, id);
+  const householdDogs = await listHouseholdDogs(db, id, ADMIN_MEDIA_BASE, true);
   return {
     id: h.id,
     memberNo: h.member_no,
@@ -175,6 +180,7 @@ export async function loadHouseholdDetail(
     status: h.status,
     statusLabel: HOUSEHOLD_STATUS_LABELS[h.status],
     sourceLabel: HOUSEHOLD_SOURCE_LABELS[h.source],
+    cardBackgroundLabel: cardBackgroundLabel(parseCardBackground(h.card_background)),
     mergedInto: mergedInto ?? null,
     balance,
     usableTickets: await unusedTicketCount(db, id, now),
@@ -192,7 +198,8 @@ export async function loadHouseholdDetail(
       statusLabel: MEMBER_STATUS_LABELS[m.status],
       leftAt: m.left_at,
     })),
-    dogs: await listHouseholdDogs(db, id, ADMIN_MEDIA_BASE, true),
+    dogs: householdDogs,
+    stayExperiencedDogIds: [...(await experiencedDogIds(db, householdDogs.map((x) => x.id)))],
     visits: visitRows.map((v) => ({
       id: v.id,
       date: v.visit_date,
@@ -239,9 +246,9 @@ async function loadSurvey(
   const { results: answers } = await db
     .prepare(
       `SELECT question_id, member_id, household_id, answer FROM survey_answers
-        WHERE household_id = ? ${memberIds.length ? `OR member_id IN (${memberIds.map(() => '?').join(',')})` : ''}`,
+        WHERE household_id = ? ${memberIds.length ? `OR member_id IN (SELECT value FROM json_each(?))` : ''}`,
     )
-    .bind(h.id, ...memberIds)
+    .bind(h.id, ...(memberIds.length ? [JSON.stringify(memberIds)] : []))
     .all<{ question_id: number; member_id: number | null; household_id: number | null; answer: string | null }>();
   const answerOf = (qid: number, owner: { memberId?: number; householdId?: number }) => {
     const a = answers.find(

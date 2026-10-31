@@ -2,7 +2,10 @@ import type { StaffRole } from '@dr/shared';
 
 export type Bindings = {
   DB: D1Database;
+  /** 写真の保存先。R2 がないときは、データベースに保存する部品(lib/d1-media.ts)が入る */
   MEDIA: R2Bucket;
+  /** 写真の保存先の種類。"d1" のときは R2 を使っていない(バックアップは R2 がないとできないので、スキップする) */
+  MEDIA_BACKEND?: 'r2' | 'd1';
   ASSETS: Fetcher;
   ENVIRONMENT: 'local' | 'test' | 'production';
   LINE_CHANNEL_ID: string;
@@ -10,6 +13,11 @@ export type Bindings = {
   LINE_LOGIN_MOCK?: string;
   /** "1" のとき、インターネットにつながらない環境(ブラウザだけで動くデモ)。天気・祝日の取得はせず、スキップとして成功にする */
   OFFLINE?: string;
+  /**
+   * LINE の Messaging API のチャネルアクセストークン(wrangler の secret。予約の確定・お断りのお知らせに使う。21章)。
+   * ログインのチャネルとは別のチャネル。なければお知らせは送らず「送っていません(設定がまだ)」と記録する
+   */
+  LINE_MESSAGING_TOKEN?: string;
 };
 
 /** LINE の IDトークンを検証して分かった、お客さんのLINEアカウント */

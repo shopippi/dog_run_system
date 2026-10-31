@@ -1,6 +1,6 @@
 import { expect, test, type Browser, type Page } from '@playwright/test';
 import { joinFamily } from './customer-helpers';
-import { adminLogin, makePhoto, newLineUser, openLiff, registerViaUi } from './helpers';
+import { adminLogin, adminToast, makePhoto, newLineUser, openLiff, registerViaUi } from './helpers';
 import { insertMigrationRequest, openMergeInvite, putMedia, registerWithPhoto, visitYesterday } from './merge-helpers';
 
 // 担当B(おうちの統合・確認待ち)の画面の、文字と背景のコントラスト(WCAG の 4.5:1)。
@@ -196,7 +196,7 @@ for (const scheme of ['light', 'dark'] as const) {
       await dialog.waitFor();
       await check(page, 'M-08 確認');
       await dialog.getByRole('button', { name: 'まとめる' }).click();
-      await page.getByRole('status').waitFor();
+      await adminToast(page, 'にまとめました').waitFor();
       await check(page, 'M-08 まとめた後');
       await page.close();
     });

@@ -2,6 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { joinFamily } from './customer-helpers';
 import { newLineUser, openLiff, registerViaUi } from './helpers';
 import { openMergeInvite, registerWithPhoto } from './merge-helpers';
+import { liffShot } from './liff-shot';
 
 // 担当H: L-12 おうちを一つにまとめる(C-12)の見え方。e2e/liff.layout.spec.ts と同じ確かめ方。
 // LINE アプリの中で開いたときの大きさ(iPhone SE と iPhone 16)で確かめる。
@@ -44,7 +45,7 @@ async function checkScreen(page: Page, device: string, screen: string) {
   });
   expect(problems, `${device} / ${screen}`).toEqual([]);
   if (process.env.SHOT_DIR) {
-    await page.screenshot({ path: `${process.env.SHOT_DIR}/${device}/${screen}.png`, fullPage: true });
+    await liffShot(page, `${process.env.SHOT_DIR}/${device}/${screen}.png`);
   }
 }
 

@@ -2,8 +2,11 @@ import { DOG_SIZE_LABELS, DOG_SIZES, type AdminBreed, type AdminBreedsResponse, 
 import { useId, useState } from 'react';
 import { Dialog } from '../components/Dialog';
 import { ErrorNotice } from '../components/ErrorNotice';
+import { BusyLabel } from '../components/BusyLabel';
 import { PageHead } from '../components/PageHead';
-import { RadioSegment, useLoaded } from '../components/SettingsKit';
+import { useToast } from '../components/Toast';
+import { CfgListSkeleton, RadioSegment, SkeletonField, useLoaded } from '../components/SettingsKit';
+import { Skeleton } from '../components/Skeleton';
 import { adminApi, adminPatch, adminPost } from '../lib/api';
 import { useAuth } from '../lib/auth';
 
@@ -19,7 +22,8 @@ export function BreedsPage() {
   const [actionError, setActionError] = useState<unknown>(null);
   const [busy, setBusy] = useState(false);
   const [editing, setEditing] = useState<AdminBreed | null>(null);
-  const [notice, setNotice] = useState('');
+  const toast = useToast();
+  const setNotice = (m: string) => toast(m);
 
   const run = async (fn: () => Promise<AdminBreedsResponse>, message: string) => {
     setBusy(true);
@@ -60,9 +64,6 @@ export function BreedsPage() {
               <ErrorNotice error={actionError} />
             </div>
           ) : null}
-          <p className="sr-only" role="status">
-            {notice}
-          </p>
           <ul className="cfg-list" aria-label="犬種">
             {breeds.map((b) => {
               const idx = movable.findIndex((x) => x.id === b.id);
@@ -126,7 +127,20 @@ export function BreedsPage() {
           </ul>
         </section>
       )}
-      {!data && !error && <p className="loading">読み込んでいます…</p>}
+      {!data && !error && (
+        <CfgListSkeleton
+          rows={8}
+          add={
+            readOnly ? undefined : (
+              <div className="cfg-add-row">
+                <SkeletonField w="min(420px, 100%)" label={136} />
+                <SkeletonField w={360} h="var(--control-h)" label={80} />
+                <Skeleton w={96} h="var(--control-h)" r={8} />
+              </div>
+            )
+          }
+        />
+      )}
       {editing && (
         <EditBreed
           breed={editing}
@@ -177,7 +191,9 @@ function AddBreed({ onAdded }: { onAdded: (r: AdminBreedsResponse, name: string)
         </div>
         <RadioSegment label="標準のサイズ" options={SIZE_OPTIONS} value={size} onChange={setSize} />
         <button type="submit" className="btn" disabled={busy || !name.trim()}>
-          {busy ? '追加しています…' : '追加する'}
+          <BusyLabel busy={busy} pending="追加しています…">
+            追加する
+          </BusyLabel>
         </button>
       </form>
       {error ? <ErrorNotice error={error} /> : null}
@@ -212,7 +228,9 @@ function EditBreed({ breed, onClose, onDone }: { breed: AdminBreed; onClose: () 
             やめる
           </button>
           <button type="button" className="btn" disabled={busy || !changed || !name.trim()} onClick={submit}>
-            {busy ? '保存しています…' : '保存する'}
+            <BusyLabel busy={busy} pending="保存しています…">
+              保存する
+            </BusyLabel>
           </button>
         </>
       }

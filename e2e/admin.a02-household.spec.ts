@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { checkinViaLiff } from './households-helpers';
-import { adminLogin, newLineUser, registerViaUi } from './helpers';
+import { adminLogin, adminToast, newLineUser, registerViaUi } from './helpers';
 
 test('A-02 おうちを探して詳細を開き、家族・ワンちゃん・来場・ポイント・アンケートを見て、呼び名を変える', async ({ browser }) => {
   const customer = await browser.newPage();
@@ -33,10 +33,10 @@ test('A-02 おうちを探して詳細を開き、家族・ワンちゃん・来
   await head.getByLabel('おうちの呼び名').fill('ハルマキさんち');
   await head.getByRole('button', { name: '呼び名を保存' }).click();
   await expect(head.getByRole('heading', { name: 'ハルマキさんち' })).toBeVisible();
-  await expect(page.getByRole('status')).toContainText('操作ログから元に戻せます');
+  await expect(adminToast(page, '呼び名を「ハルマキさんち」にしました')).toBeVisible();
 
-  // 新しい呼び名で探せる
-  await page.getByRole('link', { name: 'おうちを探す' }).click();
+  // 新しい呼び名で探せる(道しるべの「おうちを探す」で戻る)
+  await page.getByRole('navigation', { name: 'いまいる場所' }).getByRole('link', { name: 'おうちを探す' }).click();
   await page.getByRole('searchbox', { name: '探す言葉' }).fill('はるまきさんち');
   await expect(page.getByRole('list', { name: '見つかったおうち' }).getByText('ハルマキさんち')).toBeVisible();
 });
