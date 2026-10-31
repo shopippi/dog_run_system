@@ -91,6 +91,7 @@ export const privateRevalidate = createMiddleware<AppEnv>(async (c, next) => {
  */
 export function isTransientDbError(err: unknown): boolean {
   const msg = String((err as Error)?.message ?? err);
-  if (/constraint|syntax error|no such (table|column)/i.test(msg)) return false;
+  // 文の誤り・変数の数の上限(too many SQL variables)など、送り直しても通らないものは含めない
+  if (/constraint|syntax error|no such (table|column)|too many SQL variables|SQLITE_ERROR|SQLITE_TOOBIG/i.test(msg)) return false;
   return /D1_ERROR|D1 DB|SQLITE_BUSY|database is locked|Network connection lost|object to be reset|transient|overloaded|timed? ?out/i.test(msg);
 }

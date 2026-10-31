@@ -50,7 +50,7 @@ export function BookingSettingsPage() {
 }
 
 function AcceptSection({ settings, onSaved }: { settings: Settings; onSaved: OnSaved }) {
-  const s = useSettingsDraft(settings, ['booking_enabled', 'booking_approve_all'], onSaved);
+  const s = useSettingsDraft(settings, ['booking_enabled', 'booking_approve_all', 'booking_daily_limit'], onSaved);
   return (
     <SettingsForm
       title="予約の受け付け"
@@ -65,6 +65,15 @@ function AcceptSection({ settings, onSaved }: { settings: Settings; onSaved: OnS
         <input type="checkbox" checked={s.draft.booking_approve_all === true} onChange={(e) => s.set('booking_approve_all', e.target.checked)} />
         すべて承認制にする(預かったことのある子の予約も、お店が確認してから確定する)
       </label>
+      <NumField
+        label="1つのおうちが1日にできる予約とキャンセルの回数"
+        unit="回まで"
+        hint="予約とキャンセルを合わせた回数です。超えると、お客さんには「明日もう一度お試しいただくか、お店に直接ご連絡ください」と出ます"
+        min={1}
+        max={100}
+        value={s.draft.booking_daily_limit}
+        onChange={(v) => s.set('booking_daily_limit', v)}
+      />
     </SettingsForm>
   );
 }

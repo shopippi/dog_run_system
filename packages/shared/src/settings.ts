@@ -93,6 +93,10 @@ export const settingsSchema = z.object({
   // ---- 預かり・お泊まりの予約(要件定義書 21章。2026-10-31) ----
   /** お客さんが LINE から予約できるか(止めると、予約の画面は「いまは受け付けていません」になる。管理画面の手入力はできる) */
   booking_enabled: z.boolean(),
+  /**
+   * 1つのおうちが LINE から1日にできる予約とキャンセルの回数の合計(予約とキャンセルをくり返して、LINE のお知らせの月の上限を使い切らないように。初期値 10)
+   */
+  booking_daily_limit: z.number().int().min(1).max(100),
   /** すべての予約を確認待ちにする(初期値は off。off のときは、はじめてのワンちゃんがいる予約だけ確認待ち) */
   booking_approve_all: z.boolean(),
   /** 受け入れる頭数(サービスごと・サイズごと)。預かりは1日あたり、お泊まりは1泊あたり(20章の未決事項) */
@@ -157,6 +161,7 @@ export const DEFAULT_SETTINGS: Omit<Settings, 'checkin_passphrase'> = {
   facility_name: 'グリーンドーム',
   // 予約(21章。2026-10-31 の決定。中型は仮 = 小型と大型の間。20章)
   booking_enabled: true,
+  booking_daily_limit: 10,
   booking_approve_all: false,
   booking_capacity: {
     daycare: { small: 5, medium: 3, large: 2 },

@@ -105,6 +105,7 @@ const TABLE_LABELS: Record<string, string> = {
   booking_capacity_overrides: '予約の受け入れ数の変更',
   booking_notifications: '予約のLINEのお知らせ',
   booking_guard: '予約の同時の見張り',
+  booking_dog_guard: '予約のワンちゃんの重なりの見張り',
   d1_migrations: '記録の形の版',
 };
 

@@ -394,3 +394,105 @@ describe('LINE のお知らせ(確定・お断りだけ)', () => {
     expect(spy.mock.calls.filter((c) => String(c[0]).includes('api.line.me'))).toHaveLength(0);
   });
 });
+
+describe('2026-10-31 の見直し(安全と正しさ)', () => {
+  it('受け入れ数の見張りは、14泊・3サイズの予約でも、1つの文の値が100個以内(D1 の上限)', async () => {
+    const u = await registerUser('U001:ママ', [dog('こむぎ'), dog('まめ', { breedId: 5, size: 'medium' }), dog('ラブ', { breedId: 9, size: 'large' })]);
+    const hh = (await env.DB.prepare('SELECT id FROM households WHERE member_no = ?').bind(u.memberNo).first<{ id: number }>())!.id;
+    const counts: { sql: string; n: number }[] = [];
+    // prepare(...).bind(...) に渡した値の数を数える(batch には本物の文を渡す)
+    const db = new Proxy(env.DB, {
+      get(target, prop) {
+        if (prop === 'prepare') {
+          return (sql: string) => {
+            const st = target.prepare(sql);
+            return new Proxy(st, {
+              get(s, k) {
+                if (k === 'bind') return (...a: unknown[]) => (counts.push({ sql, n: a.length }), s.bind(...a));
+                const v = (s as unknown as Record<string | symbol, unknown>)[k];
+                return typeof v === 'function' ? (v as (...x: unknown[]) => unknown).bind(s) : v;
+              },
+            });
+          };
+        }
+        const v = (target as unknown as Record<string | symbol, unknown>)[prop];
+        return typeof v === 'function' ? (v as (...x: unknown[]) => unknown).bind(target) : v;
+      },
+    }) as D1Database;
+    const id = await createBooking(db, await loadSettings(env.DB), {
+      householdId: hh, service: 'boarding', startDate: '2026-11-04', endDate: '2026-11-18', startTime: '10:00', endTime: '16:00',
+      dogIds: u.dogs.map((d) => d.id), note: null, checklist: [], source: 'customer', memberId: null, staffId: null, now: new Date(NOW),
+    });
+    expect(id).toBeGreaterThan(0);
+    const guard = counts.filter((c) => c.sql.includes('booking_guard'));
+    expect(guard).toHaveLength(1);
+    expect(Math.max(...counts.map((c) => c.n))).toBeLessThanOrEqual(100);
+    expect(guard[0]!.n).toBe(2);
+  });
+
+  it('「too many SQL variables」は一時的な不調として扱わない(送り直しても通らない)', async () => {
+    const { isTransientDbError } = await import('../src/lib/http');
+    expect(isTransientDbError(new Error('D1_ERROR: too many SQL variables at offset 12: SQLITE_ERROR'))).toBe(false);
+    expect(isTransientDbError(new Error('D1_ERROR: database is locked: SQLITE_BUSY'))).toBe(true);
+  });
+
+  it('同じワンちゃんの重なる予約は、先の確かめをすり抜けても batch の中の見張りが取り消す', async () => {
+    const u = await registerUser('U001:ママ');
+    await book('U001:ママ', daycare([u.dogs[0]!.id]));
+    const hh = (await env.DB.prepare('SELECT id FROM households WHERE member_no = ?').bind(u.memberNo).first<{ id: number }>())!.id;
+    await expect(
+      createBooking(env.DB, await loadSettings(env.DB), {
+        householdId: hh, service: 'boarding', startDate: '2026-11-03', endDate: '2026-11-05', startTime: '10:00', endTime: '16:00',
+        dogIds: [u.dogs[0]!.id], note: null, checklist: [], source: 'customer', memberId: null, staffId: null, now: new Date(NOW),
+      }, { skipPrecheck: true }),
+    ).rejects.toMatchObject({ code: 'booking_duplicate' });
+    expect(await bookingRows()).toBe(1);
+  });
+
+  it('1日にできる予約とキャンセルの回数(設定。くり返しで LINE のお知らせを使い切らないように)', async () => {
+    await env.DB.prepare("INSERT INTO settings (key, value, updated_at) VALUES ('booking_daily_limit', '2', 'x')").run();
+    const u = await registerUser('U001:ママ');
+    const a = await book('U001:ママ', daycare([u.dogs[0]!.id]));
+    expect((await call(`/api/bookings/${a.body.id}/cancel`, { user: 'U001:ママ', body: {}, now: NOW })).status).toBe(200);
+    const third = await book('U001:ママ', daycare([u.dogs[0]!.id]));
+    expect(third.status).toBe(409);
+    expect(third.body.error.code).toBe('booking_daily_limit');
+    expect(third.body.error.message).toContain('明日もう一度');
+    // 次の日はできる
+    expect((await book('U001:ママ', daycare([u.dogs[0]!.id]), { now: '2026-11-01T10:00:00+09:00' })).status).toBe(201);
+  });
+
+  it('ひと月の上限は、同時に送っても超えない(送る前に1通分の枠を取る)', async () => {
+    await env.DB.prepare(`INSERT INTO settings (key, value, updated_at) VALUES ('booking_notify', '{"confirmed":true,"declined":true,"monthly_limit":1}', 'x')`).run();
+    const ids: number[] = [];
+    for (const [i, user] of ['UA:A', 'UB:B', 'UC:C'].entries()) {
+      const u = await registerUser(user, [dog(`犬${i}`)]);
+      await markExperienced(u.dogs[0]!.id);
+      ids.push((await book(user, daycare([u.dogs[0]!.id]))).body.id);
+    }
+    await env.DB.prepare('DELETE FROM booking_notifications').run();
+    const fetcher = vi.fn(async () => new Response('{}'));
+    const rs = await Promise.all(
+      ids.map((id) => notifyBooking({ DB: env.DB, ENVIRONMENT: 'production', LINE_MESSAGING_TOKEN: 't' }, id, 'confirmed', new Date(NOW), lineTransport(fetcher as unknown as typeof fetch))),
+    );
+    expect(rs.filter((r) => r.status === 'sent')).toHaveLength(1);
+    expect(rs.filter((r) => r.reason === 'monthly_limit')).toHaveLength(2);
+    expect(fetcher).toHaveBeenCalledTimes(1);
+  });
+
+  it('予約は入ったのに応答が届かず送り直したとき、同じ予約を返す(二重にならず、お知らせも1回だけ)', async () => {
+    const u = await registerUser('U001:ママ');
+    await markExperienced(u.dogs[0]!.id);
+    const key = 'retry-key-00000001';
+    const first = await book('U001:ママ', daycare([u.dogs[0]!.id]), { key });
+    expect(first.status).toBe(201);
+    // 1回目の応答を保存できなかった(送信の印の記録がない)ことにする
+    await env.DB.prepare('DELETE FROM idempotency_keys').run();
+    const again = await book('U001:ママ', daycare([u.dogs[0]!.id]), { key });
+    expect(again.status).toBe(201);
+    expect(again.body.id).toBe(first.body.id);
+    expect(await bookingRows()).toBe(1);
+    const n = await env.DB.prepare('SELECT COUNT(*) AS n FROM booking_notifications').first<{ n: number }>();
+    expect(n!.n).toBe(1);
+  });
+});

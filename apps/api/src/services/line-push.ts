@@ -95,13 +95,14 @@ export async function notifyBooking(
           .first<{ id: number; line_user_id: string }>()
       : null;
 
+    const month = bookingMonthOf(now);
     const record = async (status: BookingNotifyStatus, reason: string | null, detail: string | null = null) => {
       await db
         .prepare(
           `INSERT INTO booking_notifications (booking_id, kind, member_id, status, reason, detail, message, month, created_at)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         )
-        .bind(b.id, kind, recipient?.id ?? null, status, reason, detail, text, bookingMonthOf(now), toJstIso(now))
+        .bind(b.id, kind, recipient?.id ?? null, status, reason, detail, text, month, toJstIso(now))
         .run();
       return { status, reason };
     };
@@ -109,12 +110,29 @@ export async function notifyBooking(
     if (!settings.booking_notify[kind]) return record('skipped', 'disabled');
     if (b.source === 'staff') return record('skipped', 'manual_entry');
     if (!recipient) return record('skipped', 'no_recipient');
-    if ((await sentThisMonth(db, now)) >= settings.booking_notify.monthly_limit) return record('skipped', 'monthly_limit');
     const token = env.LINE_MESSAGING_TOKEN?.trim();
     if (!token) return record('skipped', 'no_token');
+    // ひと月の上限: 送る前に、条件つきの INSERT で1通分の枠を取る(同時に送っても上限を超えない)
+    const reserved = await db
+      .prepare(
+        `INSERT INTO booking_notifications (booking_id, kind, member_id, status, reason, detail, message, month, created_at)
+         SELECT ?1, ?2, ?3, 'sent', NULL, NULL, ?4, ?5, ?6
+          WHERE (SELECT COUNT(*) FROM booking_notifications WHERE month = ?5 AND status = 'sent') < ?7
+         RETURNING id`,
+      )
+      .bind(b.id, kind, recipient.id, text, month, toJstIso(now), settings.booking_notify.monthly_limit)
+      .first<{ id: number }>();
+    if (!reserved) return record('skipped', 'monthly_limit');
     const r = await transport(token, recipient.line_user_id, text);
-    if (r.ok) return record('sent', r.mock ? 'mock' : null);
-    return record('failed', r.reason, r.detail);
+    if (r.ok) {
+      if (r.mock) await db.prepare("UPDATE booking_notifications SET reason = 'mock' WHERE id = ?").bind(reserved.id).run();
+      return { status: 'sent' as const, reason: r.mock ? 'mock' : null };
+    }
+    await db
+      .prepare("UPDATE booking_notifications SET status = 'failed', reason = ?, detail = ? WHERE id = ?")
+      .bind(r.reason, r.detail, reserved.id)
+      .run();
+    return { status: 'failed' as const, reason: r.reason };
   } catch (e) {
     console.error('予約のお知らせを記録できませんでした', e);
     return { status: 'failed', reason: 'internal' };

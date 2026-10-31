@@ -450,3 +450,20 @@ describe('2026-10-31 の追加の決定', () => {
     expect(d.body.stayExperiencedDogIds).toEqual([u.dogs[1]!.id]);
   });
 });
+
+describe('元に戻すときの、同じワンちゃんの重なり', () => {
+  it('キャンセルのあとに同じ子の重なる予約が入っていたら、キャンセルを元に戻せない(重ならせない)', async () => {
+    const u = await registerUser('U001:ママ');
+    await env.DB.prepare("UPDATE dogs SET stay_experience_at = 'x' WHERE id = ?").bind(u.dogs[0]!.id).run();
+    const a = await request('U001:ママ', [u.dogs[0]!.id]);
+    await adminCall(`/admin/api/bookings/${a.body.id}/cancel`, { cookie: staff, now: NOW, body: { reason: '都合' } });
+    const b = await request('U001:ママ', [u.dogs[0]!.id], { startTime: '11:00' });
+    expect(b.status).toBe(201);
+    const log = (await env.DB.prepare("SELECT id FROM audit_log WHERE action = 'booking.cancel' ORDER BY id DESC").first<{ id: number }>())!.id;
+    const r = await adminCall(`/admin/api/audit/${log}/undo`, { cookie: admin, now: NOW, body: {} });
+    expect(r.status).toBe(409);
+    expect(r.body.error.code).toBe('booking_duplicate');
+    const st = await env.DB.prepare('SELECT status FROM bookings WHERE id = ?').bind(a.body.id).first<{ status: string }>();
+    expect(st!.status).toBe('cancelled');
+  });
+});

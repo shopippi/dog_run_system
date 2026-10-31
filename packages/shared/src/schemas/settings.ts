@@ -32,6 +32,7 @@ export const SETTING_FIELDS: Record<SettingKey, { label: string; hint: string }>
   facility_name: { label: '施設の名前', hint: '1〜30文字で入れてください。' },
   weather_station: { label: '天気の観測地点', hint: '気象庁の地点番号(5桁)と名前を入れてください。' },
   booking_enabled: { label: 'LINEからの予約', hint: '受け付けるか受け付けないかを選んでください。' },
+  booking_daily_limit: { label: '1日にできる予約とキャンセルの回数', hint: '1〜100回で入れてください。' },
   booking_approve_all: { label: 'すべて承認制にする', hint: 'する・しないを選んでください。' },
   booking_capacity: { label: '受け入れる頭数', hint: '0〜100頭で入れてください。' },
   booking_prices: { label: '料金の目安', hint: '0〜1,000,000円で入れてください。半日の時間は1〜12時間です。' },

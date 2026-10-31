@@ -24,6 +24,7 @@ describe('マイグレーション', () => {
         'audit_log',
         'booking_capacity_overrides',
         'booking_dogs',
+        'booking_dog_guard',
         'booking_guard',
         'booking_notifications',
         'bookings',

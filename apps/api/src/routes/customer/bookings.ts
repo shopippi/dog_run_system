@@ -1,4 +1,5 @@
 import {
+  IDEMPOTENCY_KEY_RE,
   bookingAvailabilityQuerySchema,
   bookingRequestSchema,
   bookingWindow,
@@ -35,6 +36,7 @@ import {
   usedFor,
 } from '../../services/bookings';
 import { notifyBooking } from '../../services/line-push';
+import { userHashOf } from '../../lib/idempotency';
 import { requireMember } from '../../services/members';
 import { MEDIA_BASE } from './media';
 
@@ -45,6 +47,7 @@ export const bookingRoutes = new Hono<AppEnv>();
 export function bookingRules(s: Settings): BookingRules {
   return {
     booking_enabled: s.booking_enabled,
+    booking_daily_limit: s.booking_daily_limit,
     booking_approve_all: s.booking_approve_all,
     booking_prices: s.booking_prices,
     booking_hours: s.booking_hours,
@@ -111,30 +114,84 @@ bookingRoutes.get('/bookings/availability', async (c) => {
   return c.json(body);
 });
 
+/**
+ * 1日にできる予約とキャンセルの回数(おうちごと。設定 booking_daily_limit)。くり返して LINE のお知らせの月の上限を使い切らないように
+ */
+async function assertDailyLimit(db: D1Database, householdId: number, settings: Settings, now: Date) {
+  const today = toJstDate(now);
+  const r = await db
+    .prepare(
+      `SELECT (SELECT COUNT(*) FROM bookings WHERE household_id = ?1 AND source = 'customer' AND substr(created_at, 1, 10) = ?2)
+            + (SELECT COUNT(*) FROM bookings WHERE household_id = ?1 AND cancelled_by_type = 'member' AND substr(cancelled_at, 1, 10) = ?2) AS n`,
+    )
+    .bind(householdId, today)
+    .first<{ n: number }>();
+  if ((r?.n ?? 0) >= settings.booking_daily_limit) {
+    throw errors.conflict(
+      'booking_daily_limit',
+      '今日は予約とキャンセルの回数が多いため、これ以上はできません。明日もう一度お試しいただくか、お店に直接ご連絡ください。',
+    );
+  }
+}
+
+/** 同じ送信の印で入った予約(応答が届かずに送り直したとき)。あれば、その予約を返す */
+async function bookingForRequestKey(db: D1Database, requestKey: string | null, householdId: number): Promise<number | null> {
+  if (!requestKey) return null;
+  const r = await db.prepare('SELECT id FROM bookings WHERE request_key = ? AND household_id = ?').bind(requestKey, householdId).first<{ id: number }>();
+  return r?.id ?? null;
+}
+
+/** すぐ確定した予約の LINE のお知らせを、まだ記録していなければ送る(送り直しで二重に送らない) */
+async function notifyConfirmedOnce(env: AppEnv['Bindings'], bookingId: number, now: Date) {
+  const sent = await env.DB.prepare("SELECT 1 AS x FROM booking_notifications WHERE booking_id = ? AND kind = 'confirmed' LIMIT 1")
+    .bind(bookingId)
+    .first();
+  if (!sent) await notifyBooking(env, bookingId, 'confirmed', now);
+}
+
 // 予約する(C-15)。経験のある子だけならすぐ確定、はじめての子がいれば確認待ち
 bookingRoutes.post('/bookings', async (c) => {
   const db = c.env.DB;
   const member = await requireMember(db, c.get('lineUser').userId);
   const input = await parseJson(c, bookingRequestSchema);
   const settings = await loadSettings(db);
+  const now = c.get('now');
+  // 予約は入ったのに応答が届かず、同じ送信の印で送り直されたときは、その予約を返す(お知らせも1回だけ)
+  const key = c.req.header('idempotency-key');
+  const requestKey = key && IDEMPOTENCY_KEY_RE.test(key) ? `${await userHashOf(c.get('lineUser').userId)}:${key}` : null;
+  const existing = await bookingForRequestKey(db, requestKey, member.householdId);
+  if (existing) {
+    const detail = await detailFor(db, existing, settings, now);
+    if (detail.status === 'confirmed') await notifyConfirmedOnce(c.env, existing, now);
+    return c.json(detail, 201);
+  }
   if (!settings.booking_enabled) {
     throw errors.conflict('booking_disabled', 'いまはLINEからの予約を受け付けていません。お店に直接ご連絡ください。');
   }
   if (settings.booking_checklist_required && settings.booking_checklist.some((x) => !input.checklist.includes(x))) {
     throw errors.badRequest('「予約の前に確かめてください」のすべてに印を付けてください。');
   }
-  const now = c.get('now');
-  const id = await createBooking(db, settings, {
-    ...input,
-    householdId: member.householdId,
-    source: 'customer',
-    memberId: member.memberId,
-    staffId: null,
-    now,
-  });
+  await assertDailyLimit(db, member.householdId, settings, now);
+  let id: number;
+  try {
+    id = await createBooking(db, settings, {
+      ...input,
+      householdId: member.householdId,
+      source: 'customer',
+      memberId: member.memberId,
+      staffId: null,
+      requestKey,
+      now,
+    });
+  } catch (e) {
+    // 同じ印の予約が、ちょうど同時に入った
+    const again = await bookingForRequestKey(db, requestKey, member.householdId);
+    if (!again) throw e;
+    id = again;
+  }
   const detail = await detailFor(db, id, settings, now);
-  // すぐ確定したときだけ、LINE で知らせる(失敗しても予約はそのまま)
-  if (detail.status === 'confirmed') await notifyBooking(c.env, id, 'confirmed', now);
+  // すぐ確定したときだけ、LINE で知らせる(失敗しても予約はそのまま。二重に送らない)
+  if (detail.status === 'confirmed') await notifyConfirmedOnce(c.env, id, now);
   return c.json(detail, 201);
 });
 
@@ -178,6 +235,7 @@ bookingRoutes.post('/bookings/:id/cancel', async (c) => {
   const now = c.get('now');
   const detail = toCustomerDetail(row, [], settings, now);
   if (row.status === 'cancelled') return c.json(await detailFor(db, row.id, settings, now));
+  if (detail.canCancel) await assertDailyLimit(db, member.householdId, settings, now);
   if (!detail.canCancel) {
     throw errors.conflict(
       'cancel_deadline_passed',

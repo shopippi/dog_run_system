@@ -16,6 +16,7 @@ import type { Settings } from './settings';
 export type BookingRules = Pick<
   Settings,
   | 'booking_enabled'
+  | 'booking_daily_limit'
   | 'booking_approve_all'
   | 'booking_prices'
   | 'booking_hours'

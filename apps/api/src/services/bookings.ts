@@ -254,29 +254,61 @@ export function guardStatement(
   caps: Map<string, DayCapacity>,
   need: SizeCounts,
 ): D1PreparedStatement | null {
-  const conds: string[] = [];
-  const args: unknown[] = [];
+  // 日・サイズ・受け入れ数の組を1つの JSON にして渡す(D1 の「1つの文に100個まで」の決まりに、泊数が長くても収まるように)
+  const checks: { d: string; s: DogSize; c: number }[] = [];
   for (const [date, cap] of caps) {
-    for (const s of DOG_SIZES) {
-      if (need[s] === 0) continue;
-      conds.push(
-        `(SELECT COUNT(*) FROM booking_dogs bd JOIN bookings b ON b.id = bd.booking_id
-           WHERE b.service = ? AND b.status IN (${HOLDING_SQL}) AND bd.size = ? AND b.occupy_from <= ? AND b.occupy_to >= ?) > ?`,
-      );
-      args.push(service, s, date, date, cap.caps[s]);
-    }
+    for (const s of DOG_SIZES) if (need[s] > 0) checks.push({ d: date, s, c: cap.caps[s] });
   }
-  if (conds.length === 0) return null;
+  if (checks.length === 0) return null;
   return db
-    .prepare(`UPDATE booking_guard SET version = version + 1, ok = CASE WHEN ${conds.join(' OR ')} THEN 0 ELSE 1 END WHERE id = 1`)
-    .bind(...args);
+    .prepare(
+      `UPDATE booking_guard SET version = version + 1, ok = CASE WHEN EXISTS (
+         SELECT 1 FROM json_each(?1) j
+          WHERE (SELECT COUNT(*) FROM booking_dogs bd JOIN bookings b ON b.id = bd.booking_id
+                  WHERE b.service = ?2 AND b.status IN (${HOLDING_SQL}) AND bd.size = json_extract(j.value, '$.s')
+                    AND b.occupy_from <= json_extract(j.value, '$.d') AND b.occupy_to >= json_extract(j.value, '$.d'))
+                > json_extract(j.value, '$.c')
+       ) THEN 0 ELSE 1 END WHERE id = 1`,
+    )
+    .bind(JSON.stringify(checks), service);
 }
 
-/** 見張りに引っかかった(同時の予約で、受け入れ数を超えそうになった) */
+/**
+ * 同じワンちゃんの予約が重ならないための見張り。予約(token か id で指す)の行のあとに置く。
+ * その予約のワンちゃんに、ほかの重なる予約(確認待ち・確定・お預かり中・利用済み)があれば dog_ok = 0 にして batch 全体を取り消させる
+ */
+export function dogGuardStatement(db: D1Database, ref: { token: string } | { id: number }): D1PreparedStatement {
+  const target = 'token' in ref ? 'b1.token = ?1' : 'b1.id = ?1';
+  return db
+    .prepare(
+      `UPDATE booking_dog_guard SET version = version + 1, dog_ok = CASE WHEN EXISTS (
+         SELECT 1 FROM bookings b1
+           JOIN booking_dogs bd1 ON bd1.booking_id = b1.id
+           JOIN booking_dogs bd2 ON bd2.dog_id = bd1.dog_id AND bd2.booking_id <> b1.id
+           JOIN bookings b2 ON b2.id = bd2.booking_id
+          WHERE ${target} AND b2.status IN (${HOLDING_SQL})
+            AND b2.occupy_from <= b1.occupy_to AND b2.occupy_to >= b1.occupy_from
+       ) THEN 0 ELSE 1 END WHERE id = 1`,
+    )
+    .bind('token' in ref ? ref.token : ref.id);
+}
+
+/** 受け入れ数の見張りに引っかかった(同時の予約で、受け入れ数を超えそうになった) */
 export function isGuardError(e: unknown): boolean {
   const msg = String((e as Error)?.message ?? e);
-  return /CHECK constraint failed/i.test(msg) && /ok/.test(msg);
+  return /CHECK constraint failed:?\s*ok\b/i.test(msg);
 }
+
+/** 同じワンちゃんの見張りに引っかかった */
+export function isDogGuardError(e: unknown): boolean {
+  return /CHECK constraint failed:?\s*dog_ok\b/i.test(String((e as Error)?.message ?? e));
+}
+
+export const duplicateError = (name?: string) =>
+  errors.conflict(
+    'booking_duplicate',
+    `${name ? `${name}は、` : ''}その日にもう予約があります。予約の一覧で確かめてください。変えるときは、前の予約をキャンセルしてから入れ直してください。`,
+  );
 
 export const fullError = (details: BookingFullDetails['dates'], message?: string) =>
   new AppError(
@@ -318,17 +350,16 @@ export async function householdActiveDogs(db: D1Database, householdId: number): 
 /** 受付でお預かりしたことがある(または「預かり経験あり」の印がある)ワンちゃん。統合でまとめた子の記録も数える */
 export async function experiencedDogIds(db: D1Database, dogIds: number[]): Promise<Set<number>> {
   if (dogIds.length === 0) return new Set();
-  const inList = dogIds.map(() => '?').join(',');
   const { results } = await db
     .prepare(
       `SELECT d.id FROM dogs d
-        WHERE d.id IN (${inList})
+        WHERE d.id IN (SELECT value FROM json_each(?))
           AND (d.stay_experience_at IS NOT NULL
                OR EXISTS (SELECT 1 FROM booking_dogs bd JOIN bookings b ON b.id = bd.booking_id
                            WHERE b.status IN (${STAYED_SQL})
                              AND bd.dog_id IN (SELECT x.id FROM dogs x WHERE x.id = d.id OR (x.merged_into_id = d.id AND x.status = 'merged'))))`,
     )
-    .bind(...dogIds)
+    .bind(JSON.stringify(dogIds))
     .all<{ id: number }>();
   return new Set(results.map((r) => r.id));
 }
@@ -364,6 +395,8 @@ export type CreateBookingArgs = {
   staffNote?: string | null;
   /** いっぱいの日でも入れる理由(管理者の手入力だけ) */
   overrideReason?: string | null;
+  /** お客さんの送信の印(LINE ユーザーのハッシュ:送信の印)。同じ印の予約は1つだけ */
+  requestKey?: string | null;
   now: Date;
 };
 
@@ -404,20 +437,15 @@ export async function createBooking(
   }
 
   // 同じ子の予約が重なっていないか(お断り・キャンセル・来なかったは除く)
-  const inList = dogs.map(() => '?').join(',');
+  // (同時の予約は、batch の中の見張り dogGuardStatement が守る。ここは分かりやすい知らせのための先の確かめ)
   const dup = await db
     .prepare(
       `SELECT d.name FROM booking_dogs bd JOIN bookings b ON b.id = bd.booking_id JOIN dogs d ON d.id = bd.dog_id
-        WHERE bd.dog_id IN (${inList}) AND b.status IN (${HOLDING_SQL}) AND b.occupy_from <= ? AND b.occupy_to >= ? LIMIT 1`,
+        WHERE bd.dog_id IN (SELECT value FROM json_each(?)) AND b.status IN (${HOLDING_SQL}) AND b.occupy_from <= ? AND b.occupy_to >= ? LIMIT 1`,
     )
-    .bind(...dogs.map((d) => d.id), range.to, range.from)
+    .bind(JSON.stringify(dogs.map((d) => d.id)), range.to, range.from)
     .first<{ name: string }>();
-  if (dup) {
-    throw errors.conflict(
-      'booking_duplicate',
-      `${dup.name}は、その日にもう予約があります。予約の一覧で確かめてください。変えるときは、前の予約をキャンセルしてから入れ直してください。`,
-    );
-  }
+  if (dup && !opts.skipPrecheck) throw duplicateError(dup.name);
 
   const override = args.source === 'staff' && args.overrideReason ? args.overrideReason : null;
   if (!opts.skipPrecheck && !override) {
@@ -447,8 +475,8 @@ export async function createBooking(
       .prepare(
         `INSERT INTO bookings (household_id, service, status, start_date, end_date, start_time, end_time, occupy_from, occupy_to,
                                note, checklist, estimate_total, estimate_detail, source, approval_reason, requested_by_member_id,
-                               created_by_staff_id, token, staff_note, capacity_override_reason, decided_at, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                               created_by_staff_id, token, staff_note, capacity_override_reason, decided_at, created_at, updated_at, request_key)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .bind(
         args.householdId,
@@ -474,6 +502,7 @@ export async function createBooking(
         status === 'confirmed' ? nowIso : null,
         nowIso,
         nowIso,
+        args.requestKey ?? null,
       ),
     ...dogs.map((d) =>
       db
@@ -484,6 +513,7 @@ export async function createBooking(
         .bind(d.id, d.size, experienced.has(d.id) ? 0 : 1, token),
     ),
   ];
+  statements.push(dogGuardStatement(db, { token }));
   if (!override) {
     const guard = guardStatement(db, args.service, caps, need);
     if (guard) statements.push(guard);
@@ -511,6 +541,7 @@ export async function createBooking(
   try {
     await db.batch(statements);
   } catch (e) {
+    if (isDogGuardError(e)) throw duplicateError();
     if (isGuardError(e)) {
       // 同時に入った予約で、いっぱいになった
       const used = await usedFor(db, args.service, range.from, range.to);
@@ -649,10 +680,14 @@ export async function revertBookingStatus(
     const need = await bookingNeed(db, b.id);
     const guard = guardStatement(db, b.service, caps, need);
     if (guard) statements.push(guard);
+    statements.push(dogGuardStatement(db, { id: b.id }));
   }
   try {
     await db.batch(statements);
   } catch (e) {
+    if (isDogGuardError(e)) {
+      throw errors.conflict('booking_duplicate', 'このワンちゃんには、そのあとに重なる日の予約が入っているため戻せません。予約の画面で確かめてください。');
+    }
     if (isGuardError(e)) {
       throw errors.conflict('booking_full', 'その日は、ほかの予約でいっぱいになっているため戻せません。受け入れる頭数を増やしてから戻してください。');
     }
@@ -678,9 +713,9 @@ export async function bookingDogs(db: D1Database, ids: number[], mediaBase: stri
     .prepare(
       `SELECT bd.booking_id, d.id, d.name, COALESCE(d.breed_other, br.name) AS breed_name, bd.size, d.thumb_key, bd.first_time
          FROM booking_dogs bd JOIN dogs d ON d.id = bd.dog_id JOIN breeds br ON br.id = d.breed_id
-        WHERE bd.booking_id IN (${ids.map(() => '?').join(',')}) ORDER BY bd.id`,
+        WHERE bd.booking_id IN (SELECT value FROM json_each(?)) ORDER BY bd.id`,
     )
-    .bind(...ids)
+    .bind(JSON.stringify(ids))
     .all<{ booking_id: number; id: number; name: string; breed_name: string; size: DogSize; thumb_key: string | null; first_time: number }>();
   for (const r of results) {
     const list = out.get(r.booking_id) ?? [];
