@@ -212,6 +212,14 @@ function Demo({ engine }: { engine: DemoEngine }) {
     }
   };
 
+  /** 予約のお知らせ(デモでは LINE に送らず、トーク画面に「届くメッセージ」として出す) */
+  const bookingNotices = (userId: string) =>
+    engine.select<{ id: number; message: string; created_at: string; status: string }>(
+      `SELECT n.id, n.message, n.created_at, n.status FROM booking_notifications n JOIN family_members m ON m.id = n.member_id
+        WHERE m.line_user_id = ? AND n.status = 'sent' ORDER BY n.id`,
+      [userId],
+    );
+
   const isMember = (userId: string) =>
     engine.select("SELECT 1 FROM family_members WHERE line_user_id = ? AND status = 'active'", [userId]).length > 0;
 
@@ -276,6 +284,10 @@ function Demo({ engine }: { engine: DemoEngine }) {
     } else if (n === 8) {
       await loginAs('staff');
       openAdmin('/search');
+    } else if (n === 9) {
+      openPhone('/bookings', 'U-demo-mama');
+      if (ui.role !== 'admin') await loginAs('admin');
+      openAdmin('/bookings/pending');
     }
     update({ hint: `${n}. ${scene.title} — ${hint}` });
   };
@@ -413,7 +425,7 @@ function Demo({ engine }: { engine: DemoEngine }) {
           </div>
           <div className="phone">
             {lineView === 'talk' ? (
-              <LineTalk facility="グリーンドーム" onOpen={openFromRichMenu} />
+              <LineTalk facility="グリーンドーム" onOpen={openFromRichMenu} notices={bookingNotices(account.userId)} />
             ) : (
               <>
             {lineView === 'liff' && <LiffBar title="グリーンドーム 会員証" onClose={() => setLineView('talk')} />}

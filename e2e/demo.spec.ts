@@ -213,3 +213,56 @@ test('LINE のトーク画面: リッチメニューから会員証・来場の�
   await menu.getByRole('button', { name: 'リッチメニューの「チェックイン」' }).click();
   await expect(phone(page).getByRole('button', { name: 'チェックインする' })).toBeVisible();
 });
+
+test('手順9: 予約(はじめての子は確認待ち → 管理者が承認 → 確定。LINE のトークに確定のお知らせ。満員・休みの日は選べない)', async ({ page }) => {
+  await openDemo(page);
+  await scene(page, 9);
+  const p = phone(page);
+  await expect(p.getByRole('heading', { name: '預かり・お泊まりの予約' })).toBeVisible();
+  await p.getByRole('button', { name: '予約する' }).click();
+  await p.getByRole('checkbox', { name: /だいず/ }).check();
+  await expect(p.getByText('はじめての子がいるので、お店が確認してから確定します。')).toBeVisible();
+  await barClick(page, '日にちを選ぶ');
+  await expect(p.locator('.bk-cal')).toHaveAttribute('aria-busy', 'false');
+  // 6日後は中型が満員、9日後は休み(初期データ)
+  const day = (n: number) => {
+    const t = new Date(Date.now() + 9 * 3600_000);
+    return new Date(Date.UTC(t.getUTCFullYear(), t.getUTCMonth(), t.getUTCDate() + n)).toISOString().slice(0, 10);
+  };
+  const cell = (n: number) => p.locator(`.bk-cal-cell[data-date="${day(n)}"]`);
+  for (const n of [6, 9, 3]) {
+    if ((await cell(n).count()) === 0) await p.getByRole('button', { name: '次の月' }).click();
+    await expect(p.locator('.bk-cal')).toHaveAttribute('aria-busy', 'false');
+    if (n === 6) await expect(cell(6)).toHaveAttribute('data-status', 'full');
+    if (n === 9) await expect(cell(9)).toHaveAttribute('data-status', 'closed');
+    if (n === 3) {
+      if ((await cell(3).count()) === 0) await p.getByRole('button', { name: '前の月' }).click();
+      await cell(3).click();
+    }
+  }
+  await barClick(page, '次へ');
+  for (const box of await p.locator('.bk-check input[type=checkbox]').all()) await box.check();
+  await barClick(page, '内容を確かめる');
+  await expect(p.getByRole('region', { name: '料金の目安' })).toContainText('4,000円');
+  await barClick(page, '予約する');
+  await expect(p.locator('.bk-detail-title .badge')).toHaveText('確認待ち');
+
+  // 管理者が確認待ちから承認する
+  const a = adminFrame(page);
+  await a.getByRole('link', { name: '予約カレンダー' }).click();
+  await a.getByRole('link', { name: /確認待ちの予約/ }).click();
+  await a.getByRole('button', { name: /こむぎ・だいずのおうち/ }).first().click();
+  const dialog = a.getByRole('dialog', { name: '預かりの予約' });
+  await dialog.getByRole('button', { name: '承認する' }).click();
+  await dialog.getByRole('button', { name: '承認する' }).click();
+  await expect(dialog.locator('.badge').first()).toHaveText('確定');
+
+  // お客さんの画面が確定になり、LINE のトークに確定のお知らせが出る
+  await page.getByRole('button', { name: 'リッチメニューから開く' }).click();
+  await p.getByRole('link', { name: '預かり・お泊まりの予約' }).click();
+  await expect(p.getByRole('region', { name: 'これからの予約' })).toContainText('だいず');
+  await expect(p.getByRole('region', { name: 'これからの予約' }).getByRole('link', { name: /だいず/ })).toContainText('確定');
+  await page.getByRole('button', { name: 'LINE のトーク画面' }).click();
+  await expect(page.getByTestId('booking-notice').last()).toContainText('預かりのご予約が確定しました');
+  await expect(page.getByTestId('booking-notice').last()).toContainText('デモでは実際には送りません');
+});

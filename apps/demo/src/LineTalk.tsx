@@ -16,7 +16,16 @@ const pct = (v: number, total: number) => `${(v / total) * 100}%`;
  * LINE 公式アカウントのトーク画面の再現(デモ用)。下にリッチメニュー。
  * 押すと onOpen(route) で、その画面を LINE の中で開いたときと同じように出す。
  */
-export function LineTalk({ onOpen, facility }: { onOpen: (route: string) => void; facility: string }) {
+export function LineTalk({
+  onOpen,
+  facility,
+  notices = [],
+}: {
+  onOpen: (route: string) => void;
+  facility: string;
+  /** 予約のお知らせ(確定・お断り)。デモでは LINE に送らず、ここに「届くメッセージ」として出す */
+  notices?: { id: number; message: string; created_at: string }[];
+}) {
   return (
     <div className="lt" role="region" aria-label="LINE のトーク画面">
       <div className="lt-head">
@@ -52,6 +61,16 @@ export function LineTalk({ onOpen, facility }: { onOpen: (route: string) => void
             </p>
           </div>
         </div>
+        {notices.map((n) => (
+          <div key={n.id} className="lt-msg" data-testid="booking-notice">
+            <span className="lt-avatar" aria-hidden="true" />
+            <div>
+              <p className="lt-name">{facility}・{n.created_at.slice(5, 16).replace('T', ' ').replace('-', '/')}</p>
+              <p className="lt-bubble lt-pre">{n.message.replace(/https:\/\/liff\.line\.me\/\S+/, '(予約の内容のリンク)')}</p>
+              <p className="lt-demo-note">デモでは実際には送りません。本物では、このメッセージがLINEに届きます。</p>
+            </div>
+          </div>
+        ))}
       </div>
       <div className="lt-menu" role="group" aria-label="リッチメニュー">
         <img src={richmenu} alt="" />

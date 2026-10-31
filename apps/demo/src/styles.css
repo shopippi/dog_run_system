@@ -410,3 +410,5 @@ iframe:focus-visible {
 .lt-liffbar button { width: 40px; height: 40px; border: 0; background: transparent; font-size: 22px; color: #111315; cursor: pointer; }
 .phone .lt-liffbar + iframe { height: 660px; }
 .launch.three { grid-template-columns: 1fr 1fr 1fr; max-width: 520px; }
+.lt-pre { white-space: pre-wrap; }
+.lt-demo-note { margin-top: 4px; font-size: 12px; color: #5b6470; }

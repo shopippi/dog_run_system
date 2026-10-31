@@ -2,8 +2,13 @@
 // 乱数は固定の種から作るので、何度やり直しても同じデータになる(日付だけは「今日」に合わせて動く)。
 
 import {
+  DEFAULT_SETTINGS,
   addDays,
   autoHouseholdName,
+  bookingMessageText,
+  bookingWhenText,
+  estimateBooking,
+  occupiedRange,
   formatDogNo,
   formatMemberNo,
   normalizeForSearch,
@@ -713,6 +718,154 @@ export async function seedDemo(sql: Database, opts: SeedOptions): Promise<SeedSu
        VALUES ('demo-merge-invite', ?, 'family', ?, ?, ?)`,
       [hTaka.id, takaMember.id, toJstIso(new Date(now.getTime() - 3 * 3600e3)), toJstIso(new Date(now.getTime() + 60 * 24 * 3600e3))],
     );
+
+    // ---- 預かり・お泊まりの予約(21章)。今日の前後およそ1か月分。受け入れ数(小型5・中型3・大型2)を超えない
+    {
+      type Size = 'small' | 'medium' | 'large';
+      const caps = DEFAULT_SETTINGS.booking_capacity;
+      const used = new Map<string, number>();
+      const key = (svc: string, d: string, size: string) => `${svc}:${d}:${size}`;
+      const fits = (svc: 'daycare' | 'boarding', start: string, end: string, dogs: Dog[]) => {
+        const r = occupiedRange(svc, start, end);
+        for (let d = r.from; d <= r.to; d = addDays(d, 1)) {
+          for (const sz of ['small', 'medium', 'large'] as const) {
+            const n = dogs.filter((x) => x.size === sz).length;
+            if (n && (used.get(key(svc, d, sz)) ?? 0) + n > caps[svc][sz]) return false;
+          }
+        }
+        return true;
+      };
+      const stayed = new Set<number>();
+      let bseq = 0;
+      const addBooking = (b: {
+        h: Household;
+        svc: 'daycare' | 'boarding';
+        start: string;
+        end: string;
+        dogs: Dog[];
+        status: 'pending' | 'confirmed' | 'declined' | 'cancelled' | 'checked_in' | 'completed' | 'no_show';
+        source?: 'customer' | 'staff';
+        note?: string | null;
+        createdAt: string;
+        cancelReason?: string;
+        notify?: boolean;
+      }) => {
+        const holding = ['pending', 'confirmed', 'checked_in', 'completed'].includes(b.status);
+        if (holding && !fits(b.svc, b.start, b.end, b.dogs)) return false;
+        const id = ++bseq;
+        const st = b.svc === 'daycare' ? '10:00' : '11:00';
+        const et = b.svc === 'daycare' ? (rand() < 0.5 ? '16:00' : '17:30') : '16:00';
+        const r = occupiedRange(b.svc, b.start, b.end);
+        const est = estimateBooking(DEFAULT_SETTINGS, {
+          service: b.svc, startDate: b.start, endDate: b.end, startTime: st, endTime: et,
+          dogs: b.dogs.map((d) => ({ id: d.id, name: d.name, size: d.size as Size })),
+        });
+        const source = b.source ?? 'customer';
+        const first = b.dogs.filter((d) => !stayed.has(d.id));
+        const member = b.h.members[0]!;
+        const decided = b.status !== 'pending' && source === 'customer' && first.length > 0;
+        run(
+          `INSERT INTO bookings (id, household_id, service, status, start_date, end_date, start_time, end_time, occupy_from, occupy_to,
+                                 note, checklist, estimate_total, estimate_detail, source, approval_reason, requested_by_member_id,
+                                 created_by_staff_id, token, staff_note, decided_at, decided_by_staff_id, cancelled_at, cancelled_by_type,
+                                 cancelled_by_id, cancel_reason, checked_in_at, checked_in_by_staff_id, completed_at, completed_by_staff_id,
+                                 no_show_at, no_show_by_staff_id, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            id, b.h.id, b.svc, b.status, b.start, b.end, st, et, r.from, r.to,
+            b.note ?? null,
+            JSON.stringify(source === 'customer' ? DEFAULT_SETTINGS.booking_checklist : []),
+            est.total, JSON.stringify(est), source,
+            source === 'customer' && first.length > 0 ? 'first_time' : null,
+            source === 'customer' ? member.id : null,
+            source === 'staff' ? 1 : null,
+            `demo-booking-${id}`,
+            source === 'staff' ? '電話で受けた' : null,
+            b.status === 'pending' ? null : decided ? addDaysIso(b.createdAt, 0.2) : b.createdAt,
+            decided ? 2 : null,
+            b.status === 'cancelled' ? addDaysIso(b.createdAt, 1) : null,
+            b.status === 'cancelled' ? 'member' : null,
+            b.status === 'cancelled' ? member.id : null,
+            b.cancelReason ?? (b.status === 'cancelled' ? 'お客さんがキャンセル' : null),
+            ['checked_in', 'completed'].includes(b.status) ? at(b.start, 10 * 60 + 5) : null,
+            ['checked_in', 'completed'].includes(b.status) ? 1 : null,
+            b.status === 'completed' ? at(b.end, 16 * 60 + 10) : null,
+            b.status === 'completed' ? 1 : null,
+            b.status === 'no_show' ? at(b.start, 12 * 60) : null,
+            b.status === 'no_show' ? 1 : null,
+            b.createdAt, b.createdAt,
+          ],
+        );
+        for (const d of b.dogs) {
+          run(`INSERT INTO booking_dogs (booking_id, dog_id, size, first_time) VALUES (?, ?, ?, ?)`, [id, d.id, d.size, stayed.has(d.id) ? 0 : 1]);
+        }
+        if (holding) {
+          for (let d = r.from; d <= r.to; d = addDays(d, 1)) {
+            for (const x of b.dogs) used.set(key(b.svc, d, x.size), (used.get(key(b.svc, d, x.size)) ?? 0) + 1);
+          }
+        }
+        if (['checked_in', 'completed'].includes(b.status)) for (const d of b.dogs) stayed.add(d.id);
+        if (b.notify && source === 'customer' && ['confirmed', 'checked_in', 'completed'].includes(b.status)) {
+          const text = bookingMessageText({
+            kind: 'confirmed', facilityName: 'グリーンドーム', service: b.svc,
+            when: bookingWhenText({ service: b.svc, startDate: b.start, endDate: b.end, startTime: st, endTime: et }),
+            dogNames: b.dogs.map((d) => d.name), estimateTotal: est.total, message: null, link: null,
+          });
+          run(
+            `INSERT INTO booking_notifications (booking_id, kind, member_id, status, reason, message, month, created_at)
+             VALUES (?, 'confirmed', ?, 'sent', 'mock', ?, ?, ?)`,
+            [id, member.id, text, b.createdAt.slice(0, 7), b.createdAt],
+          );
+        }
+        return true;
+      };
+      function addDaysIso(iso: string, days: number) {
+        return toJstIso(new Date(new Date(iso).getTime() + days * 86400000));
+      }
+
+      // こむぎ・だいずのおうち: こむぎは預かったことがある(すぐ確定)。だいずは、はじめて(予約すると確認待ち)
+      const [komugi] = hKomugi.dogs;
+      addBooking({ h: hKomugi, svc: 'daycare', start: addDays(today, -20), end: addDays(today, -20), dogs: [komugi!], status: 'completed', createdAt: at(addDays(today, -26), 20 * 60), notify: true, note: 'ごはんはお昼に1回。おやつを持たせます。' });
+      addBooking({ h: hKomugi, svc: 'daycare', start: addDays(today, 8), end: addDays(today, 8), dogs: [komugi!], status: 'confirmed', createdAt: at(addDays(today, -2), 21 * 60), notify: true });
+
+      // ほかのおうち(5〜30)の予約。過ぎた日は利用済み(ときどき来なかった・キャンセル)、これからの日は確定(はじめての子は確認待ち)
+      const others = households.filter((x) => x.id >= 5 && x.dogs.length > 0);
+      // 紙の台帳のころに預かったことのある子(「預かり経験あり」の印)
+      for (const x of others.filter((_, i) => i % 3 !== 2)) {
+        run('UPDATE dogs SET stay_experience_at = ?, stay_experience_by_staff_id = 2 WHERE id = ?', [at(addDays(today, -40), 10 * 60), x.dogs[0]!.id]);
+        stayed.add(x.dogs[0]!.id);
+      }
+      // 満員の日(中型。だいずを選ぶと選べない)と、休みの日(研修)
+      const fullDay = addDays(today, 6);
+      for (const x of others.filter((o) => o.dogs.some((d) => d.size === 'medium')).slice(0, 3)) {
+        const dog = x.dogs.find((d) => d.size === 'medium')!;
+        stayed.add(dog.id);
+        addBooking({ h: x, svc: 'daycare', start: fullDay, end: fullDay, dogs: [dog], status: 'confirmed', createdAt: at(addDays(today, -5), 19 * 60) });
+      }
+      run(
+        `INSERT INTO booking_capacity_overrides (date, service, closed, note, created_by_staff_id, created_at) VALUES (?, 'daycare', 1, '研修のため', 2, ?)`,
+        [addDays(today, 9), at(addDays(today, -10), 9 * 60)],
+      );
+      for (let i = 0; i < 46; i++) {
+        const x = others[Math.floor(rand() * others.length)]!;
+        const offset = Math.floor(rand() * 36) - 15;
+        const svc: 'daycare' | 'boarding' = rand() < 0.28 ? 'boarding' : 'daycare';
+        const start = addDays(today, offset);
+        if (svc === 'daycare' ? start === fullDay : false) continue;
+        const end = svc === 'boarding' ? addDays(start, 1 + Math.floor(rand() * 3)) : start;
+        const dogs = x.dogs.length > 1 && rand() < 0.3 ? x.dogs.slice(0, 2) : [x.dogs[0]!];
+        const createdAt = at(addDays(start, -(3 + Math.floor(rand() * 12))), 20 * 60 + Math.floor(rand() * 90));
+        const allStayed = dogs.every((d) => stayed.has(d.id));
+        let status: Parameters<typeof addBooking>[0]['status'];
+        if (end < today) status = rand() < 0.08 ? 'no_show' : rand() < 0.1 ? 'cancelled' : 'completed';
+        else if (start <= today && svc === 'boarding') status = 'checked_in';
+        else if (start === today) status = 'checked_in';
+        else status = allStayed ? (rand() < 0.08 ? 'cancelled' : 'confirmed') : 'pending';
+        const source = rand() < 0.2 ? 'staff' : 'customer';
+        if (source === 'staff' && status === 'pending') status = 'confirmed';
+        addBooking({ h: x, svc, start, end, dogs, status, source, createdAt, note: rand() < 0.35 ? pick(['ごはんは朝と夕方に1回ずつ。', 'お薬を1日1回、ごはんに混ぜてください。', '雷が苦手です。', 'ほかの子と遊ぶのが好きです。']) : null });
+      }
+    }
 
     // ルール: 旧カードの移行期間(前後1か月)と、困ったときの連絡先
     run(`INSERT OR REPLACE INTO settings (key, value, updated_at) VALUES ('migration_period', ?, ?)`, [
