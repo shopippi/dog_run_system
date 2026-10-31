@@ -6,7 +6,7 @@ API・お客さん向け画面(LIFF)・管理画面は、1つの Cloudflare Work
 
 1. **Cloudflare**
    - `pnpm --filter @dr/api exec wrangler d1 create dog-run-production` でデータベースを作り、表示された `database_id` を `apps/api/wrangler.toml` の `[env.production]` に書く。
-   - `pnpm --filter @dr/api exec wrangler r2 bucket create dog-run-production-media` で写真の保存先を作る(公開設定にはしない)。
+   - 写真はデータベース(media_objects)に保存するので、R2 の用意は要らない。R2 を有効にして写真を R2 に置くときだけ、`pnpm --filter @dr/api exec wrangler r2 bucket create dog-run-production-media` で保存先を作り(公開設定にはしない)、`apps/api/wrangler.toml` の `[[env.production.r2_buckets]]` の3行の # を外す。
 2. **LINE Developers**
    - LINEログインのチャネルを作り、チャネルIDを `wrangler.toml` の `LINE_CHANNEL_ID` に書く(チャネルIDは公開してよい値)。
    - そのチャネルに LIFF アプリを追加する。サイズは Full、エンドポイントURLは `https://<Workerのドメイン>/liff/`、スコープは `openid` と `profile`。シェアターゲットピッカーを有効にする。

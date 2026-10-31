@@ -11,7 +11,7 @@ LINE公式アカウントの標準ショップカードを置き換える、LINE
 
 ## 技術構成
 
-- TypeScript。API は Cloudflare Workers + Hono、DB は Cloudflare D1、写真は Cloudflare R2。
+- TypeScript。API は Cloudflare Workers + Hono、DB は Cloudflare D1、写真も D1(media_objects)に保存する(R2 を有効にすれば写真を R2 に置ける)。
 - 画面は React + Vite。お客さん向け(apps/liff)と管理画面(apps/admin)は別アプリ。LIFF SDK を使う。
 - 入力チェックは zod。型・入力チェック・ポイント計算・統合のロジックは packages/shared に置き、API と画面で共有する。
 - スキーマの変更は wrangler のマイグレーションで管理する。

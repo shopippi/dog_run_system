@@ -11,6 +11,7 @@ import {
   registerByApi,
   scrollToTop,
   seedManualData,
+  todayJst,
 } from './manual-helpers';
 import { insertMigrationRequest, putMedia, sendInvite, sql, visitYesterday } from './merge-helpers';
 
@@ -41,6 +42,12 @@ const NICO = 'U-demo-nico:nico.mama';
 const NEWCOMER = 'U-manual-new-1:そらママ';
 // 同じサーバーで撮り直すときに、LINE のアカウントがぶつからないように
 const RUN = Date.now().toString(36);
+
+/** 今日(日本時間)から n 日後 */
+function dayAfter(n: number): string {
+  const [y, m, d] = todayJst().split('-').map(Number) as [number, number, number];
+  return new Date(Date.UTC(y, m - 1, d + n)).toISOString().slice(0, 10);
+}
 
 test.beforeAll(async ({ browser }) => {
   test.setTimeout(300_000);
@@ -205,6 +212,54 @@ test('お客さん: ワンちゃんの変更・おやすみ・プロフィール
   await expect(page.getByRole('heading', { name: 'プロフィール' })).toBeVisible();
   await scrollToTop(page.getByText('来たい時間帯').first(), 120);
   await shot(page, 'customer-profile');
+  await context.close();
+});
+
+test('お客さん: 預かり・お泊まりの予約', async ({ browser }) => {
+  const context = await phoneContext(browser);
+  const page = await context.newPage();
+  // こむぎは預かったことがある(すぐ確定)。だいずは、はじめて(確認待ちになる)。初期データの予約は 8日後のこむぎの預かり
+  await openLiff(page, MAMA, '/bookings');
+  await expect(page.getByRole('region', { name: 'これからの予約' })).toBeVisible();
+  await page.getByRole('button', { name: '予約する' }).click();
+  await page.getByRole('heading', { name: '予約する' }).waitFor();
+  await page.getByRole('checkbox', { name: /だいず/ }).check({ force: true });
+  await shot(page, 'customer-booking-new');
+
+  await page.getByRole('button', { name: '日にちを選ぶ' }).click();
+  await page.getByRole('heading', { name: '日にちと時刻' }).waitFor();
+  await expect(page.locator('.bk-cal')).toHaveAttribute('aria-busy', 'false');
+  // 2〜5日後のうち、だいず(中型)が空いている日を選ぶ(6日後は中型が満員、9日後は研修で休み)
+  let picked = '';
+  for (const n of [2, 3, 4, 5]) {
+    const cell = page.locator(`.bk-cal-cell[data-date="${dayAfter(n)}"]`);
+    if ((await cell.count()) > 0 && (await cell.isEnabled())) {
+      picked = dayAfter(n);
+      await cell.click();
+      break;
+    }
+  }
+  expect(picked, '2〜5日後に空いている日がない').not.toBe('');
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await shot(page, 'customer-booking-calendar');
+
+  await page.getByRole('button', { name: '次へ' }).click();
+  await page.getByRole('heading', { name: 'お店へのメモ' }).waitFor();
+  await page.getByLabel('お店へのメモ').fill('はじめての預かりです。ごはんはお昼に1回お願いします。');
+  for (const box of await page.locator('.bk-check input[type=checkbox]').all()) await box.check({ force: true });
+  await page.getByRole('button', { name: '内容を確かめる' }).click();
+  await page.getByRole('region', { name: '料金の目安' }).waitFor();
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await shot(page, 'customer-booking-confirm');
+
+  await page.getByRole('button', { name: '予約する', exact: true }).click();
+  await expect(page.locator('.bk-detail-title .badge')).toHaveText('確認待ち');
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await shot(page, 'customer-booking-detail');
+
+  await openLiff(page, MAMA, '/bookings');
+  await expect(page.getByRole('region', { name: 'これからの予約' }).getByText('確認待ち').first()).toBeVisible();
+  await shot(page, 'customer-bookings');
   await context.close();
 });
 
@@ -456,6 +511,75 @@ test('管理者: 設定', async ({ browser }) => {
   await page.getByRole('button', { name: '前の月' }).click();
   await page.waitForTimeout(800);
   await shot(page, 'admin-events');
+  await context.close();
+});
+
+test('管理者: 予約カレンダー・確認待ち・予約を入れる・予約の設定・今日の預け・お迎え', async ({ browser }) => {
+  const context = await desktopContext(browser);
+  const page = await context.newPage();
+  // これから10日のうち、預かりの予約がいちばん多い日を開く
+  const busiest = sql(
+    `SELECT start_date AS d, COUNT(*) AS n FROM bookings WHERE service = 'daycare' AND status IN ('pending', 'confirmed', 'checked_in')
+       AND start_date BETWEEN '${dayAfter(1)}' AND '${dayAfter(10)}' GROUP BY start_date ORDER BY n DESC, start_date LIMIT 1`,
+  )[0]?.d as string | undefined;
+  const date = busiest ?? dayAfter(8);
+  await adminLogin(page, 'admin', `/bookings?service=daycare&date=${date}`);
+  await page.getByRole('heading', { name: '予約カレンダー' }).waitFor();
+  const panel = page.getByRole('region', { name: /の預かり$/ });
+  await panel.locator('.bk-adm-list').getByRole('button').first().waitFor();
+  await page.waitForTimeout(500);
+  await shot(page, 'admin-bookings-calendar');
+  await scrollToTop(panel, 16);
+  await page.waitForTimeout(300);
+  await shot(page, 'admin-bookings-day');
+
+  // 確認待ち(お客さんの画面で、こむぎママがだいずの預かりを予約したもの)
+  await page.goto('/admin/bookings/pending');
+  await page.getByRole('heading', { name: '確認待ちの予約' }).waitFor();
+  const pending = page.getByRole('list', { name: '確認待ちの予約' });
+  await pending.getByRole('button', { name: /だいず/ }).first().waitFor();
+  await shot(page, 'admin-bookings-pending');
+  await pending.getByRole('button', { name: /だいず/ }).first().click();
+  const dialog = page.getByRole('dialog', { name: '預かりの予約' });
+  await expect(dialog).toBeVisible();
+  await dialog.getByRole('button', { name: '承認する' }).click();
+  await dialog.getByLabel(/お客さんへの一言/).fill('お待ちしています。当日はワクチンの証明書をお持ちください。');
+  await dialog.getByRole('checkbox', { name: 'だいずを預かり経験ありにする' }).check({ force: true });
+  // 一言と「預かり経験あり」の印が見えるよう、ダイアログの下までスクロールする
+  await dialog.getByText('受付で「利用開始」にすると').evaluate((el) => el.scrollIntoView({ block: 'end' }));
+  await shot(page, 'admin-bookings-approve');
+  await dialog.getByRole('button', { name: 'やめる' }).click();
+  await dialog.getByRole('button', { name: '閉じる' }).click();
+
+  // 電話で受けた予約を入れる(もものおうち・DR-000004)
+  await page.goto('/admin/bookings/new');
+  await page.getByRole('heading', { name: '予約を入れる' }).waitFor();
+  const picker = page.getByRole('group', { name: '予約を入れるおうち' });
+  await picker.getByRole('searchbox', { name: '探す言葉' }).fill('DR-000004');
+  await picker.getByRole('list', { name: '予約を入れるおうちの候補' }).getByRole('button', { name: /DR-000004/ }).click();
+  await page.getByRole('checkbox').first().check({ force: true });
+  await page.getByRole('tab', { name: 'お泊まり' }).click();
+  await page.getByLabel('チェックインの日').fill(dayAfter(12));
+  await page.getByLabel('チェックアウトの日').fill(dayAfter(14));
+  await page.getByLabel('受付のメモ').fill('電話で受けた');
+  await page.locator('.bk-adm-estimate').waitFor();
+  // 料金の目安と「予約を入れる」まで見えるよう、おうちの欄を画面の上に出す
+  await scrollToTop(page.getByRole('heading', { name: 'もものおうち' }), 40);
+  await page.waitForTimeout(300);
+  await shot(page, 'admin-bookings-new');
+
+  await page.goto('/admin/booking-settings');
+  await page.getByRole('heading', { name: '予約の設定' }).waitFor();
+  await page.getByRole('region', { name: '受け入れる頭数' }).waitFor();
+  await page.waitForTimeout(300);
+  await shot(page, 'admin-booking-settings');
+
+  // 今日の来場の画面の上の「今日の預け・お迎え」
+  await page.goto('/admin/');
+  const todayBookings = page.getByRole('region', { name: '今日の預け・お迎え' });
+  await todayBookings.getByRole('button').first().waitFor();
+  await page.waitForTimeout(300);
+  await shot(page, 'admin-today-bookings');
   await context.close();
 });
 
