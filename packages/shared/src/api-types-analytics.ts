@@ -210,6 +210,11 @@ export type SystemStatusResponse = {
   }[];
   /** 赤のときに出す、製作者への連絡方法(settings.developer_contact) */
   contact: string | null;
+  /**
+   * 今月の LINE のお知らせ(予約の確定・お断り。21章)。sent は送った数(無料のプランは月200通まで)、
+   * skipped・failed は送らなかった・送れなかった数。configured は Messaging API のトークンが設定されているか
+   */
+  lineMessages: { month: string; sent: number; skipped: number; failed: number; limit: number; configured: boolean };
   /** 製作者だけ(D-02)。管理者には null */
   detail: {
     recentFailures: SystemJobRun[];

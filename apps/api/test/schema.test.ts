@@ -22,6 +22,11 @@ describe('マイグレーション', () => {
     expect(results.map((r) => r.name)).toEqual(
       [
         'audit_log',
+        'booking_capacity_overrides',
+        'booking_dogs',
+        'booking_guard',
+        'booking_notifications',
+        'bookings',
         'breeds',
         'calendar',
         'daily_stats',

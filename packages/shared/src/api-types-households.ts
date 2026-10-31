@@ -57,6 +57,16 @@ export const AUDIT_ACTION_LABELS: Record<string, string> = {
   'day_note.update': 'その日のメモを直した',
   'day_note.delete': 'その日のメモを消した',
   'system.run.postal_areas': '郵便番号から地域を調べる処理の実行',
+  'booking.request': '予約の申し込み(お客さん)',
+  'booking.create': '予約の手入力',
+  'booking.approve': '予約の承認',
+  'booking.decline': '予約のお断り',
+  'booking.check_in': '予約の利用開始',
+  'booking.complete': '予約を利用済みにした',
+  'booking.no_show': '予約を「来なかった」にした',
+  'booking.cancel': '予約のキャンセル',
+  'booking.override': 'その日の受け入れ数の変更',
+  'dog.stay_experience': '預かり経験ありの印',
 };
 
 export function auditActionLabel(action: string): string {
@@ -265,6 +275,11 @@ export type AdminDogDetail = {
   breeds: import('./api-types').Breed[];
   /** 変更の履歴(新しい順) */
   changes: DogChangeEntry[];
+  /**
+   * 預かり・お泊まりの経験(21章)。experienced: 受付でお預かりしたことがあるか印がある(すぐ確定になる)。
+   * marked: 管理者が「預かり経験あり」の印を付けている。stays: 受付でお預かりした回数
+   */
+  stay?: { experienced: boolean; marked: boolean; stays: number };
 };
 
 // ============================================================
