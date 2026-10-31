@@ -64,22 +64,21 @@ export async function recentHouseholds(db: D1Database, role: StaffRole): Promise
 async function attach(db: D1Database, rows: Row[], role: StaffRole): Promise<HouseholdHit[]> {
   if (rows.length === 0) return [];
   const ids = rows.map((r) => r.id);
-  const marks = ids.map(() => '?').join(',');
   const { results: dogs } = await db
     .prepare(
       `SELECT d.household_id, d.id, d.name, COALESCE(d.breed_other, b.name) AS breed_name, d.thumb_key
          FROM dogs d JOIN breeds b ON b.id = d.breed_id
-        WHERE d.household_id IN (${marks}) AND d.status = 'active' ORDER BY d.id`,
+        WHERE d.household_id IN (SELECT value FROM json_each(?)) AND d.status = 'active' ORDER BY d.id`,
     )
-    .bind(...ids)
+    .bind(JSON.stringify(ids))
     .all<{ household_id: number; id: number; name: string; breed_name: string; thumb_key: string | null }>();
   void role;
   const { results: family } = await db
     .prepare(
       `SELECT household_id, line_display_name FROM family_members
-        WHERE household_id IN (${marks}) AND status = 'active' ORDER BY id`,
+        WHERE household_id IN (SELECT value FROM json_each(?)) AND status = 'active' ORDER BY id`,
     )
-    .bind(...ids)
+    .bind(JSON.stringify(ids))
     .all<{ household_id: number; line_display_name: string | null }>();
   return rows.map((r) => ({
     id: r.id,

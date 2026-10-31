@@ -79,16 +79,15 @@ export async function resolveTargets(db: D1Database, targets: { type: string; id
   const out = new Map<string, TargetView>();
   const idsOf = (type: string) =>
     [...new Set(targets.filter((t) => t.type === type && t.id && /^\d+$/.test(t.id)).map((t) => Number(t.id)))];
-  const marks = (n: number) => Array.from({ length: n }, () => '?').join(',');
 
   const visitIds = idsOf('visit');
   if (visitIds.length) {
     const { results } = await db
       .prepare(
         `SELECT v.id, v.visit_date, v.household_id, v.dog_count, h.display_name, h.member_no
-           FROM visits v LEFT JOIN households h ON h.id = v.household_id WHERE v.id IN (${marks(visitIds.length)})`,
+           FROM visits v LEFT JOIN households h ON h.id = v.household_id WHERE v.id IN (SELECT value FROM json_each(?))`,
       )
-      .bind(...visitIds)
+      .bind(JSON.stringify(visitIds))
       .all<{ id: number; visit_date: string; household_id: number | null; dog_count: number; display_name: string | null; member_no: string | null }>();
     for (const r of results) {
       out.set(keyOf('visit', String(r.id)), {
@@ -102,8 +101,8 @@ export async function resolveTargets(db: D1Database, targets: { type: string; id
   const householdIds = idsOf('household');
   if (householdIds.length) {
     const { results } = await db
-      .prepare(`SELECT id, display_name, member_no FROM households WHERE id IN (${marks(householdIds.length)})`)
-      .bind(...householdIds)
+      .prepare(`SELECT id, display_name, member_no FROM households WHERE id IN (SELECT value FROM json_each(?))`)
+      .bind(JSON.stringify(householdIds))
       .all<{ id: number; display_name: string; member_no: string }>();
     for (const r of results) {
       out.set(keyOf('household', String(r.id)), { label: r.display_name, code: r.member_no, householdId: r.id });
@@ -115,9 +114,9 @@ export async function resolveTargets(db: D1Database, targets: { type: string; id
     const { results } = await db
       .prepare(
         `SELECT d.id, d.name, d.dog_no, d.household_id, h.display_name
-           FROM dogs d JOIN households h ON h.id = d.household_id WHERE d.id IN (${marks(dogIds.length)})`,
+           FROM dogs d JOIN households h ON h.id = d.household_id WHERE d.id IN (SELECT value FROM json_each(?))`,
       )
-      .bind(...dogIds)
+      .bind(JSON.stringify(dogIds))
       .all<{ id: number; name: string; dog_no: string; household_id: number; display_name: string }>();
     for (const r of results) {
       out.set(keyOf('dog', String(r.id)), { label: `${r.name}(${r.display_name})`, code: r.dog_no, householdId: r.household_id });
@@ -129,9 +128,9 @@ export async function resolveTargets(db: D1Database, targets: { type: string; id
     const { results } = await db
       .prepare(
         `SELECT m.id, m.line_display_name, m.household_id, h.display_name, h.member_no
-           FROM family_members m JOIN households h ON h.id = m.household_id WHERE m.id IN (${marks(memberIds.length)})`,
+           FROM family_members m JOIN households h ON h.id = m.household_id WHERE m.id IN (SELECT value FROM json_each(?))`,
       )
-      .bind(...memberIds)
+      .bind(JSON.stringify(memberIds))
       .all<{ id: number; line_display_name: string | null; household_id: number; display_name: string; member_no: string }>();
     for (const r of results) {
       out.set(keyOf('family_member', String(r.id)), {
@@ -147,9 +146,9 @@ export async function resolveTargets(db: D1Database, targets: { type: string; id
     const { results } = await db
       .prepare(
         `SELECT b.id, b.service, b.start_date, b.household_id, h.display_name, h.member_no
-           FROM bookings b JOIN households h ON h.id = b.household_id WHERE b.id IN (${marks(bookingIds.length)})`,
+           FROM bookings b JOIN households h ON h.id = b.household_id WHERE b.id IN (SELECT value FROM json_each(?))`,
       )
-      .bind(...bookingIds)
+      .bind(JSON.stringify(bookingIds))
       .all<{ id: number; service: string; start_date: string; household_id: number; display_name: string; member_no: string }>();
     for (const r of results) {
       out.set(keyOf('booking', String(r.id)), {
@@ -163,8 +162,8 @@ export async function resolveTargets(db: D1Database, targets: { type: string; id
   const staffIds = idsOf('staff');
   if (staffIds.length) {
     const { results } = await db
-      .prepare(`SELECT id, name FROM staff_users WHERE id IN (${marks(staffIds.length)})`)
-      .bind(...staffIds)
+      .prepare(`SELECT id, name FROM staff_users WHERE id IN (SELECT value FROM json_each(?))`)
+      .bind(JSON.stringify(staffIds))
       .all<{ id: number; name: string }>();
     for (const r of results) out.set(keyOf('staff', String(r.id)), { label: `スタッフ: ${r.name}`, code: null, householdId: null });
   }
@@ -240,8 +239,8 @@ export async function listAudit(db: D1Database, q: AuditQuery, role: StaffRole, 
   const originals = new Map<string, { action: string; target_type: string; target_id: string | null }>();
   if (undoneIds.length) {
     const { results: rows } = await db
-      .prepare(`SELECT id, action, target_type, target_id FROM audit_log WHERE id IN (${undoneIds.map(() => '?').join(',')})`)
-      .bind(...undoneIds)
+      .prepare(`SELECT id, action, target_type, target_id FROM audit_log WHERE id IN (SELECT value FROM json_each(?))`)
+      .bind(JSON.stringify(undoneIds))
       .all<{ id: number; action: string; target_type: string; target_id: string | null }>();
     for (const r of rows) originals.set(String(r.id), r);
   }

@@ -73,25 +73,24 @@ type CardRow = {
 
 /** そのおうち(統合でまとめたおうちを含む)で引き継いだカード。以前の記録(入力の記録がない台帳の行)も、だれのカードか分からないものとして含める */
 export async function householdCards(db: D1Database, householdIds: number[]): Promise<MigrationCardView[]> {
-  const marks = householdIds.map(() => '?').join(',');
   const [cards, legacy] = await db.batch([
     db
       .prepare(
         `SELECT c.family_member_id, f.line_display_name AS member_name, c.source, c.points, c.card_points, c.tickets, c.created_at
            FROM migration_cards c LEFT JOIN family_members f ON f.id = c.family_member_id
-          WHERE c.household_id IN (${marks}) AND c.undone_at IS NULL`,
+          WHERE c.household_id IN (SELECT value FROM json_each(?)) AND c.undone_at IS NULL`,
       )
-      .bind(...householdIds),
+      .bind(JSON.stringify(householdIds)),
     db
       .prepare(
         `SELECT NULL AS family_member_id, NULL AS member_name, migration_source AS source, delta AS points, NULL AS card_points, 0 AS tickets, created_at
            FROM point_ledger
-          WHERE household_id IN (${marks}) AND ${ACTIVE_MIGRATION}
+          WHERE household_id IN (SELECT value FROM json_each(?)) AND ${ACTIVE_MIGRATION}
             AND NOT EXISTS (SELECT 1 FROM migration_cards c WHERE c.ledger_id = point_ledger.id
                              OR (c.ledger_id IS NULL AND c.household_id = point_ledger.household_id
                                  AND c.source = point_ledger.migration_source AND c.created_at = point_ledger.created_at))`,
       )
-      .bind(...householdIds),
+      .bind(JSON.stringify(householdIds)),
   ]);
   return [...(cards!.results as CardRow[]), ...(legacy!.results as CardRow[])]
     .sort((x, y) => (x.created_at < y.created_at ? 1 : x.created_at > y.created_at ? -1 : 0))
@@ -145,9 +144,9 @@ export async function migrationStatus(db: D1Database, householdId: number, now: 
         await db
           .prepare(
             `SELECT family_member_id, source, created_at, points FROM migration_cards
-              WHERE undone_at IS NULL AND family_member_id IN (${ids.map(() => '?').join(',')})`,
+              WHERE undone_at IS NULL AND family_member_id IN (SELECT value FROM json_each(?))`,
           )
-          .bind(...ids)
+          .bind(JSON.stringify(ids))
           .all<{ family_member_id: number; source: MigrationSource; created_at: string; points: number }>()
       ).results
     : [];

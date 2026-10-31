@@ -132,9 +132,9 @@ export async function loadHouseholdDetail(
     const { results } = await db
       .prepare(
         `SELECT vd.visit_id, d.id, d.name FROM visit_dogs vd JOIN dogs d ON d.id = vd.dog_id
-          WHERE vd.visit_id IN (${visitIds.map(() => '?').join(',')}) ORDER BY vd.id`,
+          WHERE vd.visit_id IN (SELECT value FROM json_each(?)) ORDER BY vd.id`,
       )
-      .bind(...visitIds)
+      .bind(JSON.stringify(visitIds))
       .all<{ visit_id: number; id: number; name: string }>();
     for (const r of results) {
       const list = visitDogs.get(r.visit_id) ?? [];
@@ -246,9 +246,9 @@ async function loadSurvey(
   const { results: answers } = await db
     .prepare(
       `SELECT question_id, member_id, household_id, answer FROM survey_answers
-        WHERE household_id = ? ${memberIds.length ? `OR member_id IN (${memberIds.map(() => '?').join(',')})` : ''}`,
+        WHERE household_id = ? ${memberIds.length ? `OR member_id IN (SELECT value FROM json_each(?))` : ''}`,
     )
-    .bind(h.id, ...memberIds)
+    .bind(h.id, ...(memberIds.length ? [JSON.stringify(memberIds)] : []))
     .all<{ question_id: number; member_id: number | null; household_id: number | null; answer: string | null }>();
   const answerOf = (qid: number, owner: { memberId?: number; householdId?: number }) => {
     const a = answers.find(
