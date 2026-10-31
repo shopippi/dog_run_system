@@ -153,7 +153,7 @@ export const ANALYSIS_HOUSEHOLD_COLUMNS: CsvColumn[] = [
   col('家族の人数(人)', 'LINEでつながっている家族の数'),
   col('ワンちゃんの数(頭)', '登録中のワンちゃんの数'),
   col('ワンちゃんのサイズ', '登録中のワンちゃんのサイズ(・でつなぐ)'),
-  col('犬種', '登録中のワンちゃんの犬種(・でつなぐ)'),
+  col('犬種', '登録中のワンちゃんの犬種(・でつなぐ。自由入力の犬種は「その他」)'),
   col('期間中の来場回数(回)', '期間の中で来場した回数(取り消し・臨時休業日を除く)'),
   col('これまでの来場回数(回)', '今日までに来場した回数(取り消しを除く)'),
   col('最初の来場日', '日本時間の日付'),
@@ -194,7 +194,7 @@ export async function analysisHouseholds(
   const [{ results: dogs }, { results: areas }] = await Promise.all([
     db
       .prepare(
-        `SELECT d.household_id, d.size, COALESCE(d.breed_other, b.name) AS breed
+        `SELECT d.household_id, d.size, CASE WHEN d.breed_other IS NOT NULL THEN 'その他' ELSE b.name END AS breed
            FROM dogs d JOIN breeds b ON b.id = d.breed_id
           WHERE d.status = 'active' AND d.household_id IN (SELECT value FROM json_each(?))
           ORDER BY d.id`,
