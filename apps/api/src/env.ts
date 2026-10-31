@@ -13,6 +13,11 @@ export type Bindings = {
   LINE_LOGIN_MOCK?: string;
   /** "1" のとき、インターネットにつながらない環境(ブラウザだけで動くデモ)。天気・祝日の取得はせず、スキップとして成功にする */
   OFFLINE?: string;
+  /**
+   * LINE の Messaging API のチャネルアクセストークン(wrangler の secret。予約の確定・お断りのお知らせに使う。21章)。
+   * ログインのチャネルとは別のチャネル。なければお知らせは送らず「送っていません(設定がまだ)」と記録する
+   */
+  LINE_MESSAGING_TOKEN?: string;
 };
 
 /** LINE の IDトークンを検証して分かった、お客さんのLINEアカウント */

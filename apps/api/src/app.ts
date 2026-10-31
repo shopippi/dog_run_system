@@ -39,6 +39,8 @@ import { cardBackgroundRoutes } from './routes/customer/card-background';
 import { facilityHandler } from './routes/facility';
 import { dashboardDaysRoutes } from './routes/admin/dashboard-days';
 import { dayNotesRoutes } from './routes/admin/day-notes';
+import { bookingRoutes } from './routes/customer/bookings';
+import { adminBookingRoutes } from './routes/admin/bookings';
 
 export function createApp() {
   const app = new Hono<AppEnv>();
@@ -100,6 +102,7 @@ export function createApp() {
   customer.route('/', familyRoutes);
   customer.route('/', ticketRoutes);
   customer.route('/', cardBackgroundRoutes);
+  customer.route('/', bookingRoutes);
   app.route('/api', customer);
 
   // 管理画面向け API(ログインのセッションで認証)。ログインだけは認証の前に置く
@@ -125,6 +128,7 @@ export function createApp() {
   admin.route('/', migrationRoutes);
   admin.route('/', dashboardDaysRoutes);
   admin.route('/', dayNotesRoutes);
+  admin.route('/', adminBookingRoutes);
   app.route('/admin/api', admin);
 
   app.all('/api/*', (c) =>
