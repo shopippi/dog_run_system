@@ -387,7 +387,80 @@ export function JoinSkeleton() {
 }
 
 /** 開いた URL に合わせた形(会員証の情報を読み込むあいだ、App から使う) */
+/** L-15 予約の一覧(主ボタンと、アバター + 3 行の行) */
+export function BookingsSkeleton() {
+  return (
+    <SkeletonScreen>
+      <HeadSk lead={2} width="64%" />
+      <ButtonSk />
+      <div className="section">
+        <LabelSk width="30%" />
+        <div className="rows sk-rows" style={{ ['--row-inset' as string]: '16px' }}>
+          {Array.from({ length: 3 }, (_, i) => (
+            <div key={i} className="bk-row">
+              <SkeletonCircle size={36} />
+              <span className="bk-row-body">
+                <SkeletonText size={15} width={i % 2 ? '34%' : '28%'} />
+                <SkeletonText size={13} width="70%" />
+                <SkeletonText size={13} width="52%" />
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </SkeletonScreen>
+  );
+}
+
+/** L-15 予約の内容 */
+export function BookingDetailSkeleton() {
+  return (
+    <SkeletonScreen>
+      <HeadSk lead={2} width="48%" />
+      <div className="rows sk-rows">
+        {Array.from({ length: 2 }, (_, i) => (
+          <div key={i} className="bk-sk-line">
+            <SkeletonText size={13} width="24%" />
+            <SkeletonText size={15} width="60%" />
+          </div>
+        ))}
+      </div>
+      <AvatarRowsSk count={1} avatar={40} />
+      <Skeleton height={120} radius={16} />
+    </SkeletonScreen>
+  );
+}
+
+/** L-14 予約する(進み具合・見出し・セグメント・犬の選択) */
+export function BookingFormSkeleton() {
+  return (
+    <SkeletonScreen>
+      <div className="progress" aria-hidden="true">
+        <span />
+        <span />
+        <span />
+        <span />
+      </div>
+      <HeadSk lead={1} width="36%" />
+      <div className="field">
+        <LabelSk width="30%" />
+        <Skeleton height={44} radius={12} />
+      </div>
+      <div className="field">
+        <LabelSk width="34%" />
+        {Array.from({ length: 2 }, (_, i) => (
+          <Skeleton key={i} height={56} radius={12} />
+        ))}
+      </div>
+      <BarSk />
+    </SkeletonScreen>
+  );
+}
+
 export function skeletonFor(path: string) {
+  if (path === '/bookings') return <BookingsSkeleton />;
+  if (path === '/bookings/new') return <BookingFormSkeleton />;
+  if (/^\/bookings\/\d+$/.test(path)) return <BookingDetailSkeleton />;
   if (path === '/checkin') return <CheckinSkeleton />;
   if (path.startsWith('/checkin/done/')) return <DoneSkeleton />;
   if (path.startsWith('/tickets/')) return <DoneSkeleton avatars={false} />;

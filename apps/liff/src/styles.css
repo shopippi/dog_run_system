@@ -867,3 +867,69 @@ html.has-action-bar .toast-region { bottom: calc(var(--action-bar-h, 80px) + var
 .freshness.overlay { position: absolute; top: 4px; left: var(--sp-5); right: var(--sp-5); margin: 0; pointer-events: none; }
 /* 画面の表示に失敗したとき(エラーの境界)。ふつうの案内と同じ形 */
 .boundary { padding-top: var(--sp-5); }
+
+/* ---- L-14・L-15 預かり・お泊まりの予約(21章)。色は足さない(状態の印も灰色。確定だけ文字を濃く) ---- */
+.bk-status.bk-confirmed, .bk-status.bk-checked_in { color: var(--text); }
+.bk-list .bk-row, .bk-row {
+  display: flex; align-items: center; gap: var(--sp-3);
+  min-height: 72px; padding: var(--sp-3) var(--sp-3) var(--sp-3) var(--sp-4);
+  color: var(--text); text-decoration: none;
+}
+.bk-row:focus-visible { outline: 2px solid var(--focus-color); outline-offset: -2px; border-radius: var(--radius-xl); }
+.bk-dogs > .av + .av { margin-left: -14px; }
+.bk-row-body { display: flex; flex-direction: column; flex: 1; min-width: 0; gap: 2px; }
+.bk-row-top { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; }
+.bk-row-top b { font-size: var(--fs-15); font-weight: var(--fw-strong); }
+@media (hover: hover) { .bk-row:hover { background-color: var(--surface-sunk); } }
+
+.bk-detail-title { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; }
+.bk-summary { margin: 0; }
+.bk-summary > div { display: flex; flex-direction: column; gap: 2px; padding: var(--sp-3) var(--sp-4); }
+.bk-summary dt { font-size: var(--fs-13); color: var(--text-secondary); }
+.bk-summary dd { margin: 0; font-size: var(--fs-15); overflow-wrap: anywhere; }
+.bk-pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+.bk-sk-line { display: flex; flex-direction: column; gap: 4px; padding: var(--sp-3) var(--sp-4); }
+.bk-message { display: flex; flex-direction: column; gap: var(--sp-1); padding: var(--sp-3) var(--sp-4); border: 1px solid var(--border); border-radius: var(--radius-xl); background: var(--surface-sunk); font-size: var(--fs-15); }
+.bk-dog { min-height: 64px; }
+
+.bk-estimate { display: flex; flex-direction: column; gap: var(--sp-2); padding: var(--sp-4); border: 1px solid var(--border); border-radius: var(--radius-xl); background: var(--surface); box-shadow: var(--shadow-card); }
+.bk-estimate-head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--sp-3); }
+.bk-estimate-total { font-size: var(--fs-24); font-weight: var(--fw-strong); font-variant-numeric: tabular-nums; }
+.bk-estimate-lines { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--sp-1); font-size: var(--fs-14); color: var(--text-secondary); }
+.bk-estimate-lines li { display: flex; justify-content: space-between; gap: var(--sp-3); }
+.mono-num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.bk-estimate .note { color: var(--text-secondary); }
+
+.bk-when { font-size: var(--fs-15); font-weight: var(--fw-strong); }
+.bk-note { min-height: 104px; padding: 10px var(--sp-3); line-height: var(--lh); resize: vertical; }
+.bk-check { border: 0; margin: 0; padding: 0; min-width: 0; }
+.bk-check legend { padding: 0; margin-bottom: var(--sp-1); }
+.bk-check .check { align-items: flex-start; padding: 10px 0; line-height: 1.5; }
+.bk-check .check input { margin-top: 2px; }
+.bk-vaccine p + p { margin-top: var(--sp-1); }
+
+.bk-cal { display: flex; flex-direction: column; gap: var(--sp-2); }
+.bk-cal-head { display: flex; align-items: center; justify-content: space-between; }
+.bk-cal-nav { width: 44px; min-height: 44px; padding: 0; }
+.bk-cal-month { font-size: var(--fs-17); font-weight: var(--fw-strong); font-variant-numeric: tabular-nums; }
+.bk-cal-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+.bk-cal-wd { text-align: center; font-size: var(--fs-12); color: var(--text-secondary); padding: 2px 0; }
+.bk-cal-cell {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0;
+  min-height: 52px; padding: 4px 0; border: 1px solid var(--border); border-radius: var(--radius-md, 8px);
+  background: var(--surface); color: var(--text); font: inherit; cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background-color var(--ease), border-color var(--ease);
+}
+.bk-cal-cell.empty { border: 0; background: transparent; cursor: default; }
+.bk-cal-cell b { font-size: var(--fs-15); font-weight: var(--fw-strong); font-variant-numeric: tabular-nums; line-height: 1.3; }
+.bk-cal-cell span { font-size: var(--fs-12); color: var(--text-secondary); line-height: 1.3; min-height: 1.3em; }
+.bk-cal-cell:disabled { cursor: default; background: var(--surface-sunk); border-color: transparent; }
+.bk-cal-cell:disabled b { color: var(--text-tertiary); font-weight: var(--fw-regular); }
+.bk-cal-cell:disabled span { color: var(--text-tertiary); }
+.bk-cal-cell.mid { background: var(--surface-sunk); border-color: var(--border-strong); }
+.bk-cal-cell.on { background: var(--ink); border-color: var(--ink); }
+.bk-cal-cell.on b, .bk-cal-cell.on span { color: var(--on-ink); }
+.bk-cal-cell:focus-visible { outline: 2px solid var(--focus-color); outline-offset: 2px; }
+@media (hover: hover) { .bk-cal-cell:not(:disabled):not(.on):hover { background: var(--surface-sunk); } }
+.bk-cal-legend { margin-top: var(--sp-1); }

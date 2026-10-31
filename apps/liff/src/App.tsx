@@ -47,6 +47,11 @@ const MergeNoticeScreen = lazyPage(() =>
   import('./pages/family/MergeNoticeScreen').then((x) => ({ default: x.MergeNoticeScreen })),
 );
 const TicketUsedPage = lazyPage(() => import('./pages/tickets/TicketUsedPage').then((x) => ({ default: x.TicketUsedPage })));
+const BookingsPage = lazyPage(() => import('./pages/bookings/BookingsPage').then((x) => ({ default: x.BookingsPage })));
+const BookingNewPage = lazyPage(() => import('./pages/bookings/BookingNewPage').then((x) => ({ default: x.BookingNewPage })));
+const BookingDetailPage = lazyPage(() =>
+  import('./pages/bookings/BookingDetailPage').then((x) => ({ default: x.BookingDetailPage })),
+);
 const CardBackgroundPage = lazyPage(() =>
   import('./pages/card/CardBackgroundPage').then((x) => ({ default: x.CardBackgroundPage })),
 );
@@ -153,6 +158,8 @@ function backFor(path: string): HeaderBack | null {
   if (path === '/profile') return { to: '/', label: '会員証' };
   if (path === '/help') return { to: '/', label: '会員証' };
   if (path === '/card/background') return { to: '/', label: '会員証' };
+  if (path === '/bookings') return { to: '/', label: '会員証' };
+  if (path === '/bookings/new' || /^\/bookings\/\d+$/.test(path)) return { to: '/bookings', label: '予約' };
   return null;
 }
 
@@ -201,6 +208,9 @@ function Registered() {
       <Route path="/help" element={<HelpPage />} />
       <Route path="/tickets/:id" element={<TicketUsedPage />} />
       <Route path="/card/background" element={<CardBackgroundPage />} />
+      <Route path="/bookings" element={<BookingsPage />} />
+      <Route path="/bookings/new" element={<BookingNewPage />} />
+      <Route path="/bookings/:id" element={<BookingDetailPage />} />
       <Route path="*" element={<CardPage />} />
     </Routes>
   );

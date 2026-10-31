@@ -136,6 +136,7 @@ function Card({
           <MenuLink to="/dogs" aside={<DogFaces dogs={card.dogs} />}>
             ワンちゃん
           </MenuLink>
+          <MenuLink to="/bookings">預かり・お泊まりの予約</MenuLink>
           <MenuLink to="/family">家族を招待</MenuLink>
           <MenuLink to="/card/background">背景を変える</MenuLink>
         </div>
