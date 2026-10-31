@@ -65,7 +65,7 @@ export const settingsSchema = z.object({
   /** 利用規約とプライバシーポリシーの本文 */
   terms_text: z.string().max(20000),
   privacy_text: z.string().max(20000),
-  /** 天気を取る観測地点(気象庁のアメダスの地点番号5桁と名前)。未決事項(20章)。初期値は東京 */
+  /** 天気を取る観測地点(気象庁のアメダスの地点番号5桁と名前)。所在地(兵庫県小野市樫山町)に近い三木(2026-10-31) */
   weather_station: z.object({
     code: z.string().regex(/^\d{5}$/),
     name: z.string().min(1).max(40),
@@ -97,7 +97,7 @@ export const DEFAULT_SETTINGS: Omit<Settings, 'checkin_passphrase'> = {
   developer_contact: '',
   terms_text: '(利用規約の本文は準備中です。管理画面の設定から差し替えてください)',
   privacy_text: '(プライバシーポリシーの本文は準備中です。管理画面の設定から差し替えてください)',
-  weather_station: { code: '44132', name: '東京' },
+  weather_station: { code: '63461', name: '三木' },
   liff_id: '',
   facility_name: 'グリーンドーム',
 };

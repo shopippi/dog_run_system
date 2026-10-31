@@ -25,7 +25,7 @@ test('デモ: ダッシュボードに、数字・グラフ・天気と来場・
   await expect(kpis.getByRole('button', { name: /^来場組数/ })).toBeVisible();
   await expect(kpis.getByRole('button', { name: /^来場組数 0組/ })).toHaveCount(0);
   await expect(a.getByRole('list', { name: /天気ごとの1日あたりの来場/ })).toBeVisible();
-  await expect(a.getByRole('table', { name: '市区町村ごとのおうちと来場' }).getByText('世田谷区')).toBeVisible();
+  await expect(a.getByRole('table', { name: '市区町村ごとのおうちと来場' }).getByText('小野市')).toBeVisible();
   const cal = a.getByRole('group', { name: /のカレンダー$/ });
   await expect(cal.getByRole('button', { name: /メモ1件/ }).first()).toBeVisible();
   // AI に渡す分析パック(デモの初期データ)。SHOT_DIR があればサンプルとして保存する

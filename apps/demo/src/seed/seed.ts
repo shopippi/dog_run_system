@@ -146,31 +146,25 @@ const AGES = ['20代', '30代', '30代', '40代', '40代', '50代', '60代', '70
 const REFERRALS = ['Instagram', 'Googleマップ', '知人の紹介', '通りがかり', 'ほかのドッグランで聞いた', 'その他'];
 const TRANSPORTS = ['車', '車', '車', '徒歩', '自転車', '電車やバス'];
 const POSTALS = [
-  '1540001', '1540017', '1520004', '1560043', '1530064', '1580094', '1450062', '1810013', '1820021', '2140014',
-  '1550031', '1520035', '1580083', '1570062', '1540001', '1540017', '1550031',
+  '6751373', '6751375', '6751373', '6731431', '6730512', '6751375', '6770054', '6752312', '6750101', '6730521',
+  '6751373', '6731431', '6751375', '6730512', '6751373', '6770054', '6751375',
 ];
 
 /** 郵便番号から調べた地域(デモはインターネットにつながらないので、実在の市区町村・町域を入れておく。docs/design.md 12.3) */
 const POSTAL_AREAS: Record<string, [string, string, string]> = {
-  '1540001': ['東京都', '世田谷区', '池尻'],
-  '1540017': ['東京都', '世田谷区', '世田谷'],
-  '1520004': ['東京都', '目黒区', '鷹番'],
-  '1560043': ['東京都', '世田谷区', '松原'],
-  '1530064': ['東京都', '目黒区', '下目黒'],
-  '1580094': ['東京都', '世田谷区', '玉川'],
-  '1450062': ['東京都', '大田区', '北千束'],
-  '1810013': ['東京都', '三鷹市', '下連雀'],
-  '1820021': ['東京都', '調布市', '調布ケ丘'],
-  '2140014': ['神奈川県', '川崎市多摩区', '登戸'],
-  '1550031': ['東京都', '世田谷区', '北沢'],
-  '1520035': ['東京都', '目黒区', '自由が丘'],
-  '1580083': ['東京都', '世田谷区', '奥沢'],
-  '1570062': ['東京都', '世田谷区', '南烏山'],
+  '6751373': ['兵庫県', '小野市', '東本町'],
+  '6751375': ['兵庫県', '小野市', '西本町'],
+  '6731431': ['兵庫県', '加東市', '社'],
+  '6730512': ['兵庫県', '三木市', '志染町井上'],
+  '6730521': ['兵庫県', '三木市', '志染町青山'],
+  '6770054': ['兵庫県', '西脇市', '野村町'],
+  '6752312': ['兵庫県', '加西市', '北条町北条'],
+  '6750101': ['兵庫県', '加古川市', '平岡町新在家'],
 };
 
-/** 東京の月ごとのおおよその気温(最高・最低) */
+/** 兵庫県の内陸(三木・小野のあたり)の月ごとのおおよその気温(最高・最低) */
 const TEMPS: [number, number][] = [
-  [10, 1], [11, 2], [14, 5], [19, 10], [23, 15], [26, 19], [30, 23], [31, 24], [27, 21], [22, 15], [17, 9], [12, 4],
+  [9, -1], [10, -1], [14, 2], [20, 7], [25, 12], [28, 17], [31, 22], [33, 23], [29, 19], [23, 12], [17, 6], [11, 1],
 ];
 
 // ---------------------------------------------------------------- 型
@@ -357,17 +351,17 @@ export async function seedDemo(sql: Database, opts: SeedOptions): Promise<SeedSu
 
   // 固定のおうち(手順で使う)
   const account = (id: string) => ACCOUNTS.find((a) => a.userId === id)!;
-  const hKomugi = newHousehold(FIXED.komugi, at(addDays(START, 1), 10 * 60 + 20), 0, { referral: 'Instagram', transport: '車', postal: '1540001' });
+  const hKomugi = newHousehold(FIXED.komugi, at(addDays(START, 1), 10 * 60 + 20), 0, { referral: 'Instagram', transport: '車', postal: '6751373' });
   makeDog(hKomugi, 'こむぎ', 1, 'female');
   makeDog(hKomugi, 'だいず', 5, 'male');
   makeMember(hKomugi, { userId: 'U-demo-mama', name: account('U-demo-mama').name, age: '30代', gender: '女性', joinedAt: hKomugi.regAt });
   makeMember(hKomugi, { userId: 'U-demo-baaba', name: account('U-demo-baaba').name, age: '60代', gender: '女性', joinedAt: at(addDays(START, 40), 11 * 60) });
 
-  const hTaka = newHousehold(FIXED.taka, at(addDays(START, 2), 9 * 60 + 40), 0, { referral: '通りがかり', transport: '徒歩', postal: '1520004' });
+  const hTaka = newHousehold(FIXED.taka, at(addDays(START, 2), 9 * 60 + 40), 0, { referral: '通りがかり', transport: '徒歩', postal: '6731431' });
   makeDog(hTaka, 'アル', 5, 'male');
   makeMember(hTaka, { userId: 'U-demo-taka', name: account('U-demo-taka').name, age: '40代', gender: '男性', joinedAt: hTaka.regAt });
 
-  const hNico = newHousehold(FIXED.nico, at(addDays(START, 60), 13 * 60 + 5), 0, { referral: '知人の紹介', transport: '車', postal: '1520004' });
+  const hNico = newHousehold(FIXED.nico, at(addDays(START, 60), 13 * 60 + 5), 0, { referral: '知人の紹介', transport: '車', postal: '6731431' });
   makeDog(hNico, 'アル', 5, 'male');
   makeDog(hNico, 'ニコ', 1, 'female');
   makeMember(hNico, { userId: 'U-demo-nico', name: account('U-demo-nico').name, age: '40代', gender: '女性', joinedAt: hNico.regAt });
@@ -662,7 +656,7 @@ export async function seedDemo(sql: Database, opts: SeedOptions): Promise<SeedSu
     for (const [d, w] of weather) {
       run(
         `INSERT INTO daily_weather (date, weather, temp_max, temp_min, precipitation, station, source, fetched_at)
-         VALUES (?, ?, ?, ?, ?, '東京', '気象庁(デモ用の値)', ?)`,
+         VALUES (?, ?, ?, ?, ?, '三木', '気象庁(デモ用の値)', ?)`,
         [d, w.w, w.max, w.min, w.rain, at(addDays(d, 1), 5 * 60 + 10)],
       );
     }
@@ -748,7 +742,7 @@ export async function seedDemo(sql: Database, opts: SeedOptions): Promise<SeedSu
       job('migration_images', at(d, 3 * 60 + 11), '消す写真はありませんでした。');
       job('postal_areas', at(d, 3 * 60 + 12), 'スキップしました(インターネットにつながらない環境のため)。');
       if (i === 0 && nowMinutes < 5 * 60 + 10) break;
-      job('weather', at(d, 5 * 60 + 10), `${addDays(d, -1)} の天気(東京)を取得しました(デモ用の値)。`);
+      job('weather', at(d, 5 * 60 + 10), `${addDays(d, -1)} の天気(三木)を取得しました(デモ用の値)。`);
     }
 
     sql.run('COMMIT');

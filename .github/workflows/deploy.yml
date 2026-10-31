@@ -93,6 +93,26 @@ jobs:
             echo "管理画面のアカウントがすでにあるので、作りません。"
           fi
 
+      # デモで受付の画面を見せるための、仮の受付スタッフ(2026-10-31 依頼主の依頼)。本番運用では Variable の CREATE_DEMO_STAFF を false にする
+      - name: デモ用の受付スタッフを作る(まだいないときだけ)
+        if: ${{ vars.CREATE_DEMO_STAFF != 'false' }}
+        working-directory: apps/api
+        env:
+          STAFF_PASSWORD: ${{ secrets.STAFF_INITIAL_PASSWORD }}
+          DEMO_STAFF_EMAIL: ${{ vars.DEMO_STAFF_EMAIL || 'staff@greendome.example' }}
+        run: |
+          if [ -z "$STAFF_PASSWORD" ]; then
+            echo "::warning::Secrets に STAFF_INITIAL_PASSWORD がないので、デモ用の受付スタッフは作りません。"
+            exit 0
+          fi
+          COUNT=$(pnpm exec wrangler d1 execute DB --remote --env production --json --command "SELECT COUNT(*) AS n FROM staff_users WHERE email = '${DEMO_STAFF_EMAIL}'" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const j=JSON.parse(s);console.log(j[0].results[0].n)})')
+          if [ "$COUNT" = "0" ]; then
+            pnpm staff:create --email "$DEMO_STAFF_EMAIL" --name "受付スタッフ(デモ)" --role staff --remote --env production
+            echo "::notice title=デモ用の受付スタッフ::${DEMO_STAFF_EMAIL} を作りました(パスワードは STAFF_INITIAL_PASSWORD)"
+          else
+            echo "デモ用の受付スタッフはすでにいるので、作りません。"
+          fi
+
       - name: 配信先のまとめ
         run: |
           {
