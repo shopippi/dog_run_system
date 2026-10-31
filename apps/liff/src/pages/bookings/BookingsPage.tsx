@@ -16,6 +16,7 @@ import { Icon } from '../../components/Icon';
 import { PressButton } from '../../components/PressButton';
 import { api } from '../../lib/api';
 import { BookingsSkeleton } from '../skeletons';
+import { KeepWords } from '../../components/KeepWords';
 
 /** 状態の印。色は付けない(確定だけ文字を濃く)。お断りも危険の色にはしない(本当の問題ではないため) */
 export function StatusBadge({ status }: { status: BookingStatus }) {
@@ -81,9 +82,9 @@ function BookingRows({ items }: { items: BookingSummary[] }) {
                 <b>{BOOKING_SERVICE_LABELS[b.service]}</b>
                 <StatusBadge status={b.status} />
               </span>
-              <span className="sub-text">{bookingWhenText(b)}</span>
+              <span className="sub-text"><KeepWords text={bookingWhenText(b)} /></span>
               <span className="sub-text">
-                {b.dogs.map((d) => d.name).join('・')}・目安 {yen(b.estimateTotal)}
+                {b.dogs.map((d) => d.name).join('・')}・<span className="cu-nowrap">目安 {yen(b.estimateTotal)}</span>
               </span>
             </span>
             <Icon name="chevron-right" />

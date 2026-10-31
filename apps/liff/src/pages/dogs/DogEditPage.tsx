@@ -13,6 +13,7 @@ import { BusyLabel } from '../../components/BusyLabel';
 import { useToast } from '../../components/Toast';
 import { DogFormSkeleton } from '../skeletons';
 import { PressButton } from '../../components/PressButton';
+import { KeepWords } from '../../components/KeepWords';
 
 /** ワンちゃんの変更と、登録のおやすみ(C-08)。犬種とサイズは受付で変える(6.1) */
 export function DogEditPage() {
@@ -100,7 +101,7 @@ export function DogEditPage() {
       />
       <div className="page-head">
         <h2>{dog.name}</h2>
-        <p className="dog-record">{recordText(records.find((r) => r.dogId === dog.id))}</p>
+        <p className="dog-record"><KeepWords text={recordText(records.find((r) => r.dogId === dog.id))} /></p>
         <p className="lead">
           犬種: {dog.breedName}・サイズ: {DOG_SIZE_LABELS[dog.size]}(間違っているときは受付にお知らせください)
         </p>

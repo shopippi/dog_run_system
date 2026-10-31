@@ -51,8 +51,13 @@ export function DogsPage() {
               <span className="dog-row-body">
                 <b>{d.name}</b>
                 <span className="sub-text">
-                  {d.breedName}・{DOG_SIZE_LABELS[d.size]}
-                  {!d.photoUrl && '・写真なし'}
+                  {/* 「大型」などが途中で切れないよう、ことばごとに折り返す(区切りの「・」は前に付ける) */}
+                  <span className="cu-nowrap">{d.breedName}・</span>
+                  <span className="cu-nowrap">
+                    {DOG_SIZE_LABELS[d.size]}
+                    {!d.photoUrl && '・'}
+                  </span>
+                  {!d.photoUrl && <span className="cu-nowrap">写真なし</span>}
                 </span>
               </span>
               <Icon name="chevron-right" />

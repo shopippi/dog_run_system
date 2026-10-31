@@ -96,7 +96,7 @@ export function JoinPage({ onJoined }: { onJoined: () => void }) {
 
   const header = (
     <div className="invite-from">
-      <div className="stack">
+      <div className="stack wrap">
         {info.dogs.map((d) => (
           <DogAvatar key={d.id} name={d.name} breedName={d.breedName} url={d.thumbUrl} size={56} />
         ))}

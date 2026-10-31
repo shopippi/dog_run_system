@@ -25,6 +25,7 @@ import { newId } from '../../lib/storage';
 import { BookingFormSkeleton } from '../skeletons';
 import { BookingCalendar } from './BookingCalendar';
 import { EstimateBlock } from './EstimateBlock';
+import { KeepWords } from '../../components/KeepWords';
 
 const STEPS = 4;
 
@@ -176,8 +177,12 @@ function Flow({ opts }: { opts: BookingOptionsResponse }) {
                     <span className="pick-body">
                       <b>{d.name}</b>
                       <span className="sub-text">
-                        {d.breedName}・{DOG_SIZE_LABELS[d.size]}
-                        {d.experienced ? '' : '・はじめての預かり'}
+                        <span className="cu-nowrap">{d.breedName}・</span>
+                        <span className="cu-nowrap">
+                          {DOG_SIZE_LABELS[d.size]}
+                          {d.experienced ? '' : '・'}
+                        </span>
+                        {d.experienced ? '' : <span className="cu-nowrap">はじめての預かり</span>}
                       </span>
                     </span>
                   </label>
@@ -253,7 +258,7 @@ function Flow({ opts }: { opts: BookingOptionsResponse }) {
               </div>
             </div>
           )}
-          {datesReady && <p className="bk-when">{bookingWhenText(input)}</p>}
+          {datesReady && <p className="bk-when"><KeepWords text={bookingWhenText(input)} /></p>}
           {timeProblem && <p className="err">{timeProblem}</p>}
           <p className="note">
             受付の時間は {rules.booking_hours.open.replace(/^0/, '')}〜{rules.booking_hours.close.replace(/^0/, '')} です。
@@ -330,7 +335,7 @@ function Flow({ opts }: { opts: BookingOptionsResponse }) {
             </div>
             <div>
               <dt>日にち</dt>
-              <dd>{bookingWhenText(input)}</dd>
+              <dd><KeepWords text={bookingWhenText(input)} /></dd>
             </div>
             <div>
               <dt>ワンちゃん</dt>

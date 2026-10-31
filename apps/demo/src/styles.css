@@ -264,6 +264,7 @@ iframe:focus-visible {
 .seg button {
   min-height: 44px;
   padding: 0 var(--sp-3);
+  white-space: nowrap;
   border: 0;
   border-radius: 6px;
   background: transparent;
@@ -409,6 +410,12 @@ iframe:focus-visible {
 .lt-liff-title { font-weight: 600; }
 .lt-liffbar button { width: 40px; height: 40px; border: 0; background: transparent; font-size: 22px; color: #111315; cursor: pointer; }
 .phone .lt-liffbar + iframe { height: 660px; }
-.launch.three { grid-template-columns: 1fr 1fr 1fr; max-width: 520px; }
+/* 3 つ並べると「LINE のト/ーク画面」のように切れる(左の列は 404px)ので、1 列に並べる */
+.launch.three { grid-template-columns: 1fr; max-width: 404px; }
 .lt-pre { white-space: pre-wrap; }
 .lt-demo-note { margin-top: 4px; font-size: 12px; color: #5b6470; }
+
+/* 幅の狭いスマホでは、セグメントの左右の余白を詰めて「受付スタッフ」を1行に収める */
+@media (max-width: 400px) {
+  .seg button { padding: 0 var(--sp-2); }
+}

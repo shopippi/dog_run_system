@@ -61,8 +61,8 @@ export function FamilyMembers() {
                 {m.isMe && <span className="fam-me">(あなた)</span>}
               </b>
               <span className="sub-text">
-                <span className="cu-nowrap">{formatDay(m.joinedAt)}に参加</span>
-                <span className="cu-nowrap">・{JOIN_METHOD_LABELS[m.joinMethod]}</span>
+                <span className="cu-nowrap">{formatDay(m.joinedAt)}に参加・</span>
+                <span className="cu-nowrap">{JOIN_METHOD_LABELS[m.joinMethod]}</span>
               </span>
             </li>
           ))}

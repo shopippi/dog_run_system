@@ -11,9 +11,13 @@ export function EstimateBlock({ estimate }: { estimate: BookingEstimate }) {
       <ul className="bk-estimate-lines">
         {estimate.lines.map((l, i) => (
           <li key={`${l.dogId ?? l.dogName}-${i}`}>
+            {/* 「(預かり(1日)・中型)」が途中で切れないよう、名前と内容をそれぞれまとめて折り返す */}
             <span>
-              {l.dogName}({l.label}
-              {l.label.startsWith('お泊まり') ? ` × ${l.qty}泊` : ''})
+              {l.dogName}
+              <span className="cu-nowrap">
+                ({l.label}
+                {l.label.startsWith('お泊まり') ? ` × ${l.qty}泊` : ''})
+              </span>
             </span>
             <span className="mono-num">{yen(l.amount)}</span>
           </li>

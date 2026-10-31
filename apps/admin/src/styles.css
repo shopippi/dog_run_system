@@ -28,6 +28,8 @@ a { color: var(--accent-text); }
 .side-foot { grid-area: foot; display: flex; align-items: center; justify-content: flex-end; gap: var(--sp-1); min-width: 0; padding: 0 var(--sp-3); }
 .who { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-13); color: var(--text-secondary); }
 .who b { color: var(--text); }
+/* スマホの幅の上のバーでは、名前が「管」の1文字だけに切れてしまうので出さない(ログアウトは残す) */
+@media (max-width: 480px) { .side-foot .who { display: none; } }
 .nav {
   grid-area: nav; display: flex; gap: var(--sp-1); padding: 6px var(--sp-3);
   overflow-x: auto; border-top: 1px solid var(--border); scrollbar-width: none;
@@ -148,6 +150,11 @@ input::placeholder { color: var(--text-tertiary); }
 }
 .segment button[aria-selected="true"] { color: var(--text); font-weight: var(--fw-strong); }
 .segment button[aria-selected="true"]::before { background: var(--surface); box-shadow: var(--shadow-seg); }
+/* スマホの幅では、3つ以上の選択肢が 120px ずつでは収まらないので、幅を等分して画面に収める */
+@media (max-width: 560px) {
+  .segment { grid-auto-columns: minmax(0, 1fr); max-width: 100%; }
+  .segment button { padding: 0 var(--sp-2); }
+}
 .segment button:focus-visible { outline: none; }
 .segment button:focus-visible::before { box-shadow: 0 0 0 2px var(--focus-color); }
 
@@ -236,6 +243,20 @@ input::placeholder { color: var(--text-tertiary); }
   .badges { grid-column: 3 / 4; grid-row: 2; justify-content: flex-start; }
   .visit-acts { grid-column: 4; grid-row: 1; }
 }
+/*
+ * スマホの幅(560px 以下)では、名前の列が数文字ずつに細くならないよう、
+ * 1段目に「時刻・顔・取り消す」、2段目に名前と呼び名を幅いっぱいに、3段目にバッジを置く
+ */
+@media (max-width: 560px) {
+  .visit { grid-template-columns: 44px minmax(0, 1fr) auto; column-gap: var(--sp-3); padding-left: var(--sp-4); }
+  .visit > .stack { grid-column: 2; grid-row: 1; }
+  .visit-acts { grid-column: 3; grid-row: 1; }
+  .visit-body { grid-column: 2 / 4; grid-row: 2; }
+  .badges { grid-column: 2 / 4; grid-row: 3; }
+  .badges:empty { display: none; }
+}
+/* 英語の長い名前(空白のない語)でも、枠からはみ出さずに折り返す */
+.visit-body b, .visit-body .sub-text { overflow-wrap: anywhere; }
 
 /* ---- ダイアログ ---- */
 .dialog {
@@ -285,9 +306,12 @@ input::placeholder { color: var(--text-tertiary); }
 .photo-cell .sub-text { font-size: var(--fs-12); }
 
 .selected { display: flex; flex-direction: column; gap: var(--sp-5); padding: var(--sp-5); }
-.sel-head { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--sp-3); }
+.sel-head { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: var(--sp-3); }
+/* 呼び名が長いとき・幅が狭いときは、「選び直す」を下の段へ送る(呼び名の列を細くしない) */
+.sel-title { flex: 1 1 14em; }
 .sel-title { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .sel-title h2 { font-size: var(--fs-17); }
+.nowrap-block { display: inline-block; }
 .sel-dogs { display: flex; flex-wrap: wrap; gap: var(--sp-4) var(--sp-6); }
 .sel-dog { display: flex; align-items: center; gap: var(--sp-3); }
 .sel-dog-text { display: flex; flex-direction: column; }
@@ -637,6 +661,10 @@ input::placeholder { color: var(--text-tertiary); }
 .cfg-seg button[aria-checked="true"] { color: var(--text); font-weight: var(--fw-strong); }
 .cfg-seg button[aria-checked="true"]::before { background: var(--surface); box-shadow: var(--shadow-seg); }
 .cfg-seg button:disabled { cursor: not-allowed; }
+/* スマホの幅では「もらった日から」などが2行に割れるので、選択肢を縦に並べる */
+@media (max-width: 560px) {
+  .cfg-seg { grid-auto-flow: row; width: 100%; }
+}
 .field .cfg-textarea { width: 100%; min-height: 120px; padding: 10px var(--sp-3); line-height: var(--lh); resize: vertical; }
 .cfg-wide { width: 100%; max-width: 420px; }
 .cfg-date { width: 200px; max-width: 100%; }

@@ -155,7 +155,7 @@ export function BookingDialog({ id, onClose, onChanged }: { id: number; onClose:
                   <b>{d.name}</b>
                   <span className="sub-text">
                     {d.breedName}・{DOG_SIZE_LABELS[d.size]}
-                    {d.firstTime ? '・はじめての預かり' : ''}
+                    {d.firstTime ? <>・<span className="nowrap-block">はじめての預かり</span></> : ''}
                   </span>
                   <Link to={`/dogs/${d.id}`} className="bk-dog-link" onClick={onClose}>
                     ワンちゃんの情報

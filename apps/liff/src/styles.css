@@ -2,7 +2,15 @@
  * お客さん向け画面(LINE の中で開く)。スマホの幅で使う。
  * 色・大きさは packages/shared/styles/tokens.css の変数だけを使う(docs/design.md)。
  */
-body { font-size: var(--fs-15); background: var(--surface); }
+/* 空白のない長い英語の名前(「Christophersonwolf」など)も、枠からはみ出さずに折り返す */
+body { font-size: var(--fs-15); background: var(--surface); overflow-wrap: break-word; }
+/*
+ * 入力欄にフォーカスしたとき(キーボードが出たとき)に、上に固定したヘッダーと下に固定した帯に、
+ * 入力欄とそのラベルが隠れないよう、スクロールの止まる位置に余白をとる
+ */
+html { scroll-padding-top: calc(48px + env(safe-area-inset-top, 0px) + var(--sp-8)); }
+/* ページの流れの中で下に貼り付く帯(ワンちゃんの変更の「保存する」)も、同じだけ余白をとる */
+html:has(.action-bar.sticky) { scroll-padding-bottom: calc(84px + env(safe-area-inset-bottom, 0px) + var(--sp-3)); }
 a { color: var(--accent-text); }
 
 .app { min-height: 100dvh; display: flex; flex-direction: column; background: var(--surface); }
@@ -247,10 +255,15 @@ a { color: var(--accent-text); }
 .stack { display: flex; flex: none; }
 .stack > .av { box-shadow: 0 0 0 2px var(--surface); }
 .stack > .av + .av { margin-left: -10px; }
+/* 頭数が多いとき(チェックイン完了の 72px の顔が 5 頭以上など)は、幅に収まらない分を次の段へ送る。
+   どの段も左の端がそろうよう、すべての顔に -10px を付け、入れ物の左に 10px を足す */
+.stack.wrap { flex-wrap: wrap; max-width: 100%; padding-left: 10px; row-gap: var(--sp-2); }
+.stack.wrap > .av { margin-left: -10px; }
 
 /* ---- L-04 登録完了・L-12 参加 ---- */
 .welcome-card { border: 1px solid var(--border); border-radius: var(--radius-xl); overflow: hidden; background: var(--surface); box-shadow: var(--shadow-card); }
-.welcome-who { display: flex; align-items: center; gap: var(--sp-3); padding: var(--sp-4); }
+.welcome-who { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-3); padding: var(--sp-4); }
+.welcome-who > .name { flex: 1 1 11em; }
 .welcome-card .name { font-size: var(--fs-17); font-weight: var(--fw-strong); font-feature-settings: "palt"; min-width: 0; }
 .welcome-id { display: flex; flex-direction: column; gap: 2px; padding: var(--sp-4); border-top: 1px solid var(--border); }
 .welcome-id .label { font-size: var(--fs-12); color: var(--text-secondary); }
@@ -262,9 +275,14 @@ a { color: var(--accent-text); }
   --mc-text: var(--on-card);
   --mc-sub: var(--on-card-85);
   --mc-shadow: none;
-  position: relative; isolation: isolate; overflow: hidden;
+  /*
+   * 縦横比は 1.58:1。文字を大きくしている端末や幅 320 で中身が収まらないときは、縦に伸びる
+   * (overflow を visible のままにし、min-height を auto にすると、縦横比より中身の高さが優先される)。
+   * 写真と影の角は、それぞれに border-radius: inherit を付けて丸める
+   */
+  position: relative; isolation: isolate;
   display: flex; flex-direction: column; justify-content: space-between; gap: var(--sp-2);
-  aspect-ratio: 1.58 / 1; min-height: 196px;
+  aspect-ratio: 1.58 / 1;
   padding: var(--sp-4) var(--sp-4) var(--sp-4) var(--sp-5); border-radius: var(--radius-xl);
   background: var(--mc-bg); color: var(--mc-text);
   box-shadow: var(--shadow-card);
@@ -284,15 +302,15 @@ a { color: var(--accent-text); }
 .member-card.mc-light { --mc-text: var(--on-card-light); --mc-sub: var(--on-card-light-secondary); box-shadow: inset 0 0 0 1px var(--border), var(--shadow-card); }
 /* 写真: 読み込むまでは墨。写真の上に、下に向かって濃くなる影と、上の文字のための薄い影を重ねる */
 .member-card.mc-photo-bg { --mc-shadow: var(--card-text-shadow); }
-.mc-photo { position: absolute; inset: 0; z-index: -2; width: 100%; height: 100%; max-width: none; object-fit: cover; }
+.mc-photo { position: absolute; inset: 0; z-index: -2; width: 100%; height: 100%; max-width: none; object-fit: cover; border-radius: inherit; }
 .member-card.mc-photo-bg::before {
-  content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none; border-radius: inherit;
   background: var(--card-scrim-top), var(--card-scrim);
 }
 .member-card p { text-shadow: var(--mc-shadow); }
 /* 上段: 犬のアバター(主役)と、右に小さく施設名。下に呼び名と誕生月の一言 */
 .mc-head { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--sp-2); min-width: 0; }
-.mc-head:has(.mc-change) { padding-right: 26px; }
+.mc-head:has(.mc-change) { padding-right: 30px; }
 .mc-top { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .mc-birthday { font-size: var(--fs-12); color: var(--mc-sub); line-height: 1.4; }
 .mc-name {
@@ -301,7 +319,7 @@ a { color: var(--accent-text); }
   overflow-wrap: anywhere;
   display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden;
 }
-.mc-facility { flex: none; max-width: 40%; padding-top: 3px; font-size: var(--fs-12); color: var(--mc-sub); line-height: 1.4; text-align: right; }
+.mc-facility { text-wrap-style: balance; flex: none; max-width: 40%; padding-top: 3px; font-size: var(--fs-12); color: var(--mc-sub); line-height: 1.4; text-align: right; }
 /* 右上の「背景を変える」。指で押せる 44px の中に、小さなアイコンだけを見せる */
 .mc-change {
   position: absolute; top: 2px; right: 2px; display: grid; place-items: center; width: 44px; height: 44px;
@@ -315,8 +333,21 @@ a { color: var(--accent-text); }
 .mc-dogs > .av { box-shadow: 0 0 0 2px var(--mc-bg); }
 .mc-photo-bg .mc-dogs > .av { box-shadow: 0 0 0 2px var(--on-card-85); }
 .mc-dogs > .av + .av { margin-left: -12px; }
-.mc-bottom { display: flex; align-items: flex-end; justify-content: space-between; gap: var(--sp-3); }
-.mc-id { font-size: var(--fs-13); color: var(--mc-sub); line-height: 1.3; }
+/* 5 頭以上のときの「+2」(顔と同じ 44px の丸。色は会員証の文字の色を薄く敷くだけ) */
+.mc-more {
+  display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px;
+  background: color-mix(in srgb, var(--mc-text) 16%, var(--mc-bg)); color: var(--mc-text);
+  font-size: var(--fs-13); font-weight: var(--fw-strong); font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+.mc-photo-bg .mc-more { background: rgba(0, 0, 0, .45); color: var(--on-card); }
+/* 幅の狭い画面(320 など)では、顔の重なりを深くして 4 つを収める */
+@media (max-width: 359px) {
+  .mc-dogs > .av + .av { margin-left: -18px; }
+}
+.mc-bottom { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: var(--sp-1) var(--sp-3); }
+/* 文字を大きくしている端末で会員IDと並ばないときは、ポイントを次の行の右に送る */
+.mc-points { margin-left: auto; }
+.mc-id { font-size: var(--fs-13); color: var(--mc-sub); line-height: 1.3; white-space: nowrap; }
 .mc-points { display: flex; align-items: baseline; gap: var(--sp-1); line-height: 1.1; white-space: nowrap; }
 .mc-points b { font-size: var(--fs-24); font-weight: var(--fw-strong); font-variant-numeric: tabular-nums; }
 .mc-points > span { font-size: var(--fs-12); color: var(--mc-sub); }
@@ -376,7 +407,7 @@ a { color: var(--accent-text); }
   border-left: 3px solid var(--warning); border-radius: var(--radius); background: var(--warning-50);
   font-size: var(--fs-20); font-weight: var(--fw-strong); color: var(--text);
 }
-.done-names { margin-top: var(--sp-1); font-size: var(--fs-20); font-weight: var(--fw-strong); font-feature-settings: "palt"; line-height: 1.35; }
+.done-names { overflow-wrap: anywhere; margin-top: var(--sp-1); font-size: var(--fs-20); font-weight: var(--fw-strong); font-feature-settings: "palt"; line-height: 1.35; }
 .done-meta { font-size: var(--fs-14); color: var(--text-secondary); }
 /* 小さな記念(来場の節目)。飾りすぎず、朱肉の色の肉球を 1 つ添える */
 .done-milestone { display: flex; align-items: center; gap: 6px; font-size: var(--fs-15); font-weight: var(--fw-strong); color: var(--text); }
@@ -385,12 +416,15 @@ a { color: var(--accent-text); }
 .done.past { gap: var(--sp-2); }
 .done.past h2 { font-size: var(--fs-24); }
 
-.stats { display: grid; grid-template-columns: 1fr 1fr; border: 1px solid var(--border); border-radius: var(--radius-xl); background: var(--surface); box-shadow: var(--shadow-card); }
+/* ふだんは2つ並び。文字を大きくしている端末や幅 320 で数字が収まらないときは、縦に並べる(5桁のポイントが「1230/7」に割れないように) */
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 8.5em), 1fr)); border: 1px solid var(--border); border-radius: var(--radius-xl); background: var(--surface); box-shadow: var(--shadow-card); }
 .stat { display: flex; flex-direction: column; gap: 2px; padding: 14px var(--sp-4); min-width: 0; }
-.stat + .stat { border-left: 1px solid var(--border); }
+/* 区切りの線: 横に並ぶときは左の線、縦に並ぶときは上の線に見える(外側の線と重なる方は見えない) */
+.stat + .stat { box-shadow: -1px 0 0 var(--border), 0 -1px 0 var(--border); }
+.stat-value { overflow-wrap: normal; }
 .stat-label { font-size: var(--fs-12); color: var(--text-secondary); }
 .stat-value { font-size: var(--fs-24); font-weight: var(--fw-strong); line-height: 1.25; font-variant-numeric: tabular-nums; }
-.stat-value small { margin-left: 2px; font-size: var(--fs-14); font-weight: var(--fw-regular); color: var(--text-secondary); }
+.stat-value small { white-space: nowrap; margin-left: 2px; font-size: var(--fs-14); font-weight: var(--fw-regular); color: var(--text-secondary); }
 
 /* ---- L-09 犬の変更 ---- */
 
@@ -399,7 +433,9 @@ a { color: var(--accent-text); }
 .qr-frame { align-self: center; padding: var(--sp-4); border: 1px solid var(--border); border-radius: var(--radius-xl); background: var(--paper); box-shadow: var(--shadow-card); }
 .qr { display: block; image-rendering: pixelated; }
 .qr-text { display: flex; flex-direction: column; gap: var(--sp-1); font-size: var(--fs-14); }
-.invite-from { display: flex; align-items: center; gap: var(--sp-3); padding-bottom: var(--sp-5); border-bottom: 1px solid var(--border); }
+.invite-from { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-3); padding-bottom: var(--sp-5); border-bottom: 1px solid var(--border); }
+/* 頭数が多くて横に並ばないときは、呼び名を顔の下へ送る(呼び名の列を細くしない) */
+.invite-from > div:last-child { flex: 1 1 11em; min-width: 0; }
 .invite-name { font-size: var(--fs-17); font-weight: var(--fw-strong); font-feature-settings: "palt"; }
 
 /* ホバーはマウスで使う端末だけ(指で押したあとに色が残らないように) */
@@ -422,6 +458,8 @@ a { color: var(--accent-text); }
 .badge.cu-danger { background: var(--danger-50); color: var(--danger); }
 /* 言葉の途中で折り返さない(行の中の「だいたい7ポイント」など) */
 .cu-nowrap { display: inline-block; }
+/* 途中で折り返さない語(日時・数と単位)。前後の空白では折り返す */
+.nowrap { white-space: nowrap; }
 
 /* ---- L-13 旧カードの引き継ぎ ---- */
 .mig-row {
@@ -837,7 +875,7 @@ html.has-action-bar .toast-region { bottom: calc(var(--action-bar-h, 80px) + var
 .roll { display: inline-grid; vertical-align: bottom; overflow: hidden; font-variant-numeric: tabular-nums; }
 .roll-item { grid-area: 1 / 1; display: inline-block; text-align: right; }
 /* チェックイン完了の「+1ポイント」の横に押すハンコ */
-.done-points { display: inline-flex; align-items: center; gap: 6px; }
+.done-points { white-space: nowrap; display: inline-flex; align-items: center; gap: 6px; }
 .done-pon { position: relative; display: inline-block; width: 22px; height: 22px; flex: none; }
 .done-pon .pon-mark { display: block; width: 22px; height: 22px; fill: var(--stamp-today); transform: rotate(-8deg); }
 .done-pon .paw-ink { inset: -2px; }
@@ -893,10 +931,14 @@ html.has-action-bar .toast-region { bottom: calc(var(--action-bar-h, 80px) + var
 .bk-dog { min-height: 64px; }
 
 .bk-estimate { display: flex; flex-direction: column; gap: var(--sp-2); padding: var(--sp-4); border: 1px solid var(--border); border-radius: var(--radius-xl); background: var(--surface); box-shadow: var(--shadow-card); }
-.bk-estimate-head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--sp-3); }
-.bk-estimate-total { font-size: var(--fs-24); font-weight: var(--fw-strong); font-variant-numeric: tabular-nums; }
+.bk-estimate-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 0 var(--sp-3); }
+/* 文字を大きくしたとき、「料金の目/安」と割れずに、合計を次の行の右へ送る */
+.bk-estimate-head .section-label { white-space: nowrap; }
+.bk-estimate-total { margin-left: auto; white-space: nowrap; font-size: var(--fs-24); font-weight: var(--fw-strong); font-variant-numeric: tabular-nums; }
 .bk-estimate-lines { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--sp-1); font-size: var(--fs-14); color: var(--text-secondary); }
 .bk-estimate-lines li { display: flex; justify-content: space-between; gap: var(--sp-3); }
+/* 名前が長くても、金額が画面の外に押し出されないように */
+.bk-estimate-lines li > span:first-child { min-width: 0; overflow-wrap: anywhere; }
 .mono-num { font-variant-numeric: tabular-nums; white-space: nowrap; }
 .bk-estimate .note { color: var(--text-secondary); }
 
@@ -924,6 +966,8 @@ html.has-action-bar .toast-region { bottom: calc(var(--action-bar-h, 80px) + var
 .bk-cal-cell.empty { border: 0; background: transparent; cursor: default; }
 .bk-cal-cell b { font-size: var(--fs-15); font-weight: var(--fw-strong); font-variant-numeric: tabular-nums; line-height: 1.3; }
 .bk-cal-cell span { font-size: var(--fs-12); color: var(--text-secondary); line-height: 1.3; min-height: 1.3em; }
+/* マスの幅は 1/7 しかないので、文字を大きくしている端末でも「空/き」「わず/か」と割れないよう、空きの印だけは画面の幅に合わせて大きさの上限を決める(ふだんの 12px は変わらない) */
+.bk-cal-cell span { white-space: nowrap; font-size: min(var(--fs-12), 3.8vw); }
 .bk-cal-cell:disabled { cursor: default; background: var(--surface-sunk); border-color: transparent; }
 .bk-cal-cell:disabled b { color: var(--text-tertiary); font-weight: var(--fw-regular); }
 .bk-cal-cell:disabled span { color: var(--text-tertiary); }

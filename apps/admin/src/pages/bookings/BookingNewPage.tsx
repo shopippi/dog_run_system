@@ -174,7 +174,7 @@ function EntryForm({
                   <b>{d.name}</b>
                   <span className="sub-text">
                     {DOG_SIZE_LABELS[d.size]}
-                    {d.experienced ? '' : '・はじめての預かり'}
+                    {d.experienced ? '' : <>・<span className="nowrap-block">はじめての預かり</span></>}
                   </span>
                 </span>
               </label>
