@@ -12,6 +12,7 @@ import {
 import { Hono } from 'hono';
 import type { AppEnv } from '../../env';
 import { parseInput } from '../../lib/validate';
+import { errors } from '../../lib/errors';
 import { listVisitsOn, totalsOf } from '../../services/admin-visits';
 import { loadDayFacts } from '../../services/day-facts';
 import { listDayNotes } from './day-notes';
@@ -106,6 +107,10 @@ dashboardDaysRoutes.get('/dashboard/day/:date', async (c) => {
 // その日の来場の一覧(今日の来場と同じ形)。受付スタッフには、今日の来場と同じ範囲だけを出す
 dashboardDaysRoutes.get('/dashboard/day/:date/visits', async (c) => {
   const date = parseInput(noteDateSchema, c.req.param('date'));
+  // 受付スタッフが見られる来場の一覧は今日の分だけ(3.2。ほかの日は集計だけ)
+  if (c.get('staff').role === 'staff' && date !== toJstDate(c.get('now'))) {
+    throw errors.forbidden('受付スタッフが見られる来場の一覧は、今日の分だけです。ほかの日の来場は、管理者に見てもらってください。');
+  }
   const visits = await listVisitsOn(c.env.DB, date, c.get('staff').role);
   const body: DayVisitsResponse = { date, visits, totals: totalsOf(visits) };
   return c.json(body);

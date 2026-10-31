@@ -318,10 +318,22 @@ describe('日ごとのカレンダーと日の詳細', () => {
     const none = await adminCall('/admin/api/dashboard/day/2026-10-25', { cookie, now: NOW });
     expect(none.body.weather).toBeNull();
     expect(none.body.totals.groups).toBe(0);
-    const list = await adminCall('/admin/api/dashboard/day/2026-10-24/visits', { cookie, now: NOW });
+    const list = await adminCall('/admin/api/dashboard/day/2026-10-24/visits', { cookie: await cookieOf('admin'), now: NOW });
     expect(list.body.visits).toHaveLength(4);
     expect(list.body.totals).toEqual({ groups: 3, memberDogs: 3, walkinDogs: 3, ticketsUsed: 0 });
     expect((await adminCall('/admin/api/dashboard/day/2026-02-30', { cookie, now: NOW })).status).toBe(400);
+  });
+
+  it('受付スタッフが見られる来場の一覧は今日の分だけ(ほかの日は 403。日の集計は見られる)。管理者・製作者はほかの日も見られる', async () => {
+    const staff = await cookieOf('staff');
+    const past = await adminCall('/admin/api/dashboard/day/2026-10-24/visits', { cookie: staff, now: NOW });
+    expect(past.status).toBe(403);
+    expect(past.body.error.message).toContain('今日の分だけ');
+    expect((await adminCall('/admin/api/dashboard/day/2026-10-24', { cookie: staff, now: NOW })).status).toBe(200);
+    const today = NOW.slice(0, 10);
+    expect((await adminCall(`/admin/api/dashboard/day/${today}/visits`, { cookie: staff, now: NOW })).status).toBe(200);
+    expect((await adminCall('/admin/api/dashboard/day/2026-10-24/visits', { cookie: await cookieOf('admin'), now: NOW })).status).toBe(200);
+    expect((await adminCall('/admin/api/dashboard/day/2026-10-24/visits', { cookie: await cookieOf('developer'), now: NOW })).status).toBe(200);
   });
 });
 
@@ -421,7 +433,9 @@ describe('AI に渡す分析パックの CSV', () => {
     // 今日より先の日は出さない
     expect(comments).toContain('# 期間: 2026-10-25〜2026-10-28(日付はすべて日本時間)');
     expect(comments).toContain('# - 来場組数(組) = その日にチェックインしたおうちの数と、会員以外の入力の件数の合計(取り消しを除く)');
-    expect(comments.some((l) => l.includes('個人を特定できる情報(名前・LINEの名前・会員ID・郵便番号)は入っていません'))).toBe(true);
+    expect(comments.some((l) => l.includes('名前・LINEの名前・会員ID・郵便番号は入っていません'))).toBe(true);
+    // メモの列はスタッフが書いた文のまま。渡す前に確かめるよう、正直に書く
+    expect(comments.some((l) => l.includes('「その日のメモ」「休業の理由」の列は、スタッフが書いた文のままです'))).toBe(true);
     expect(comments.some((l) => l.includes('『曜日と天気ごとの来場の傾向を教えて』'))).toBe(true);
     // 説明行は1つのセルに収まる(半角のカンマを含まない)
     expect(comments.every((l) => !l.includes(','))).toBe(true);
