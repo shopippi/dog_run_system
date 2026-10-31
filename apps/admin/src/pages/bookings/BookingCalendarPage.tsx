@@ -9,6 +9,8 @@ import {
   type BookingCalendarResponse,
   type BookingDayResponse,
   type BookingService,
+  type BookingRules,
+  bookingHoursText,
 } from '@dr/shared';
 import { useEffect, useId, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
@@ -23,6 +25,7 @@ import { adminApi } from '../../lib/api';
 import { useAuth } from '../../lib/auth';
 import { BookingDialog } from './BookingDialog';
 import { BookingRowButton, SizeUsage } from './parts';
+import { BookingSchedule } from './BookingSchedule';
 
 const WEEK = ['日', '月', '火', '水', '木', '金', '土'];
 const pad = (n: number) => String(n).padStart(2, '0');
@@ -61,6 +64,7 @@ export function BookingCalendarPage() {
   );
   const changed = () => setTick((t) => t + 1);
   const { staff, readOnly } = useAuth();
+  const opts = useLoad(() => adminApi<{ today: string; rules: BookingRules }>('/bookings/options'), []);
 
   const setService = (s: BookingService) => {
     const p = new URLSearchParams(params);
@@ -132,6 +136,17 @@ export function BookingCalendarPage() {
         </div>
       </div>
 
+      {opts.data && (
+        <p className="bk-hours" data-testid="booking-hours">
+          {bookingHoursText(opts.data.rules)}
+          {staff?.role === 'admin' && !readOnly && (
+            <>
+              {' '}
+              <Link to="/booking-settings">変える</Link>
+            </>
+          )}
+        </p>
+      )}
       {cal.error ? <ErrorNotice error={cal.error} onRetry={() => void cal.reload()} /> : null}
 
       <section className="panel bk-cal-panel" aria-label={`${label}の${BOOKING_SERVICE_LABELS[service]}のカレンダー`}>
@@ -229,6 +244,10 @@ function DayPanel({ date, service, onOpen, onChanged }: { date: string; service:
         {d?.counts.closed && <span className="sub-text">{d.counts.closedReason}</span>}
       </div>
       {day.error ? <ErrorNotice error={day.error} onRetry={() => void day.reload()} /> : null}
+      <div className="bk-daypanel-sched">
+        <BookingSchedule date={date} title="この日の預け・お迎え(預かり・お泊まり)" onChanged={onChanged} />
+      </div>
+      <h3 className="bk-daypanel-sub">この日の{BOOKING_SERVICE_LABELS[service]}の予約</h3>
       {!d ? (
         <Loading>
           <div className="bk-daypanel-body">

@@ -222,3 +222,24 @@ describe('予約の設定の確かめ(ルールの設定と同じ)', () => {
     if (!r.ok) expect(r.message).toContain('受け入れる頭数');
   });
 });
+
+describe('その日の預け・お迎え(お店の1日の予定)', () => {
+  it('預かりは預けとお迎え、お泊まりはチェックインとチェックアウトの日だけ。時刻の順', async () => {
+    const { scheduleOf, bookingHoursText } = await import('../src');
+    const b = (id: number, service: 'daycare' | 'boarding', startDate: string, endDate: string, startTime: string, endTime: string, status = 'confirmed' as const) =>
+      ({ id, service, status, startDate, endDate, startTime, endTime });
+    const items = scheduleOf(
+      [
+        b(1, 'daycare', '2026-11-04', '2026-11-04', '10:00', '16:00'),
+        b(2, 'boarding', '2026-11-03', '2026-11-05', '11:00', '15:00'),
+        b(3, 'boarding', '2026-11-04', '2026-11-06', '09:30', '16:00'),
+        b(4, 'daycare', '2026-11-04', '2026-11-04', '09:00', '12:00', 'cancelled' as never),
+      ],
+      '2026-11-04',
+    );
+    expect(items.map((i) => `${i.time} ${i.kind} ${i.bookingId}`)).toEqual(['09:30 checkin 3', '10:00 dropoff 1', '16:00 pickup 1']);
+    expect(scheduleOf([b(2, 'boarding', '2026-11-03', '2026-11-05', '11:00', '15:00')], '2026-11-05')[0]).toMatchObject({ kind: 'checkout', time: '15:00' });
+    expect(bookingHoursText(DEFAULT_SETTINGS)).toBe('預け・お迎え 9:00〜18:00 / 定休日 なし');
+    expect(bookingHoursText({ ...DEFAULT_SETTINGS, booking_closed_weekdays: [3, 0] })).toBe('預け・お迎え 9:00〜18:00 / 定休日 日・水曜');
+  });
+});

@@ -6,7 +6,6 @@ import {
   checkBookingDates,
   estimateBooking,
   timeOptions,
-  toJstDate,
   type AdminBookingSaved,
   type BookingDogOption,
   type BookingFullDetails,
@@ -40,7 +39,7 @@ export function BookingNewPage() {
     <div className="page">
       <PageHead
         title="予約を入れる"
-        howto="電話やLINEのトークで受けた予約を入れます。おうちを探して選び、ワンちゃんと日にちを選んで「予約を入れる」を押してください。受付で入れた予約は、すぐ確定になります。"
+        howto="電話やLINEのトークで受けた予約を入れます。おうちを探して選び、ワンちゃんと日にちを選んで「予約を入れる」を押してください。今日の予約も入れられます。受付で入れた予約は、すぐ確定になります。"
         crumbs={[{ label: '予約カレンダー', to: '/bookings' }, { label: '予約を入れる' }]}
       />
       {opts.error ? <ErrorNotice error={opts.error} onRetry={() => void opts.reload()} /> : null}
@@ -98,7 +97,8 @@ function EntryForm({
   }, [dogs.data]);
 
   const input = { service, startDate, endDate: service === 'daycare' ? startDate : endDate, startTime, endTime };
-  const problem = checkBookingDates(rules, input, toJstDate(new Date()), { ignoreWindow: true });
+  // 受付の手入力は、今日とお客さんの予約できる期間より前の日も入れられる(過ぎた日だけはだめ)
+  const problem = checkBookingDates(rules, input, today, { ignoreWindow: true });
   const picked = (dogs.data?.dogs ?? []).filter((d) => dogIds.includes(d.id));
   const estimate = picked.length > 0 && !problem ? estimateBooking(rules, { ...input, dogs: picked.map((d) => ({ id: d.id, name: d.name, size: d.size })) }) : null;
 
@@ -186,7 +186,7 @@ function EntryForm({
       <div className="cfg-row">
         <div className="field date-field">
           <label htmlFor={`${id}-sd`}>{service === 'daycare' ? '日にち' : 'チェックインの日'}</label>
-          <input id={`${id}-sd`} type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+          <input id={`${id}-sd`} type="date" min={today} value={startDate} onChange={(e) => setStartDate(e.target.value)} />
         </div>
         {service === 'boarding' && (
           <div className="field date-field">

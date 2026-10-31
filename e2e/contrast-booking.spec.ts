@@ -1,7 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { lowContrast } from './households-helpers';
 import { adminLogin, newLineUser, openLiff } from './helpers';
-import { bookDaycareApi, dayAhead, markExperienced, registerApi, setOverride, showDateInCalendar } from './booking-helpers';
+import { adminApiLogin, bookDaycareApi, dayAhead, jstToday, markExperienced, registerApi, setOverride, showDateInCalendar } from './booking-helpers';
 
 // 預かり・お泊まりの予約の画面(L-14・L-15・M-20〜M-23)の、文字と背景のコントラスト(4.5:1。ライトとダーク)
 const PHONE = { viewport: { width: 393, height: 759 }, isMobile: true, hasTouch: true };
@@ -52,10 +52,16 @@ for (const scheme of ['light', 'dark'] as const) {
       const user = newLineUser('パパ');
       const u = await registerApi(request, user, [{ name: 'ペコリーノ' }]);
       await bookDaycareApi(request, user, [u.dogs[0]!.id], date);
+      await adminApiLogin(request, 'staff');
+      const hh = (await (await request.get(`/admin/api/households?q=${u.memberNo}`)).json()).households[0].id;
+      await request.post('/admin/api/bookings', {
+        headers: { 'x-dr-admin': '1' },
+        data: { householdId: hh, dogIds: [u.dogs[0]!.id], service: 'daycare', startDate: jstToday(), endDate: jstToday(), startTime: '10:00', endTime: '15:00' },
+      });
       const page = await browser.newPage({ ...TABLET, colorScheme: scheme });
       await adminLogin(page, 'admin', `/bookings?service=daycare&date=${date}`);
       const panel = page.getByRole('region', { name: /の預かり$/ });
-      await panel.getByRole('button', { name: /ペコリーノ/ }).waitFor();
+      await panel.locator('.bk-adm-list').getByRole('button', { name: /ペコリーノ/ }).waitFor();
       await check(page, 'M-20 予約カレンダー');
       await page.getByRole('tab', { name: '週' }).click();
       await page.locator('.bk-chip').first().waitFor();
@@ -70,6 +76,9 @@ for (const scheme of ['light', 'dark'] as const) {
       await page.getByRole('list', { name: '予約を入れるおうちの候補' }).getByRole('button', { name: new RegExp(u.memberNo) }).click();
       await page.locator('.bk-adm-estimate').waitFor();
       await check(page, 'M-22 予約を入れる');
+      await page.goto('/admin/');
+      await page.getByRole('region', { name: '今日の預け・お迎え' }).getByRole('button').first().waitFor();
+      await check(page, 'M-02 今日の預け・お迎え');
       await page.goto('/admin/booking-settings');
       await page.getByRole('region', { name: '受け入れる頭数' }).waitFor();
       await check(page, 'M-23 予約の設定');

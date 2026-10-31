@@ -41,7 +41,9 @@ export function BookingDialog({ id, onClose, onChanged }: { id: number; onClose:
   const [mode, setMode] = useState<Action | null>(null);
   const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);
-  const { readOnly } = useAuth();
+  const [markDogs, setMarkDogs] = useState<number[]>([]);
+  const { readOnly, staff } = useAuth();
+  const isAdmin = staff?.role === 'admin' && !readOnly;
   const toast = useToast();
   const textId = useId();
 
@@ -57,10 +59,19 @@ export function BookingDialog({ id, onClose, onChanged }: { id: number; onClose:
     try {
       const body = a === 'cancel' ? { reason: text } : a === 'approve' || a === 'decline' ? { message: text || null } : {};
       const r = await adminPost<AdminBookingSaved>(`/bookings/${id}/${ACTION[a].path}`, body);
+      // 承認するときに選んだ子を「預かり経験あり」にする(次からすぐ確定。管理者だけ。操作ログから元に戻せる)
+      const marked: string[] = [];
+      if (a === 'approve' && isAdmin) {
+        for (const dogId of markDogs) {
+          await adminPost(`/dogs/${dogId}/stay-experience`, { experienced: true });
+          marked.push(r.booking.dogs.find((d) => d.id === dogId)?.name ?? '');
+        }
+      }
+      setMarkDogs([]);
       setB(r.booking);
       setMode(null);
       setText('');
-      toast({ message: ACTION[a].done, undo: { auditId: r.auditId, onUndone: () => { load(); onChanged(); } } });
+      toast({ message: marked.length ? `${ACTION[a].done}${marked.join('・')}を預かり経験ありにしました。` : ACTION[a].done, undo: { auditId: r.auditId, onUndone: () => { load(); onChanged(); } } });
       onChanged();
     } catch (e) {
       setError(e);
@@ -134,6 +145,7 @@ export function BookingDialog({ id, onClose, onChanged }: { id: number; onClose:
               {b.householdName}
             </Link>{' '}
             <span className="mono sub-text">{b.memberNo}</span>
+            {b.ownerNames.length > 0 && <span className="sub-text"> · 飼い主 {b.ownerNames.join('、')}さん</span>}
           </p>
           <ul className="bk-dlg-dogs">
             {b.dogs.map((d) => (
@@ -145,6 +157,9 @@ export function BookingDialog({ id, onClose, onChanged }: { id: number; onClose:
                     {d.breedName}・{DOG_SIZE_LABELS[d.size]}
                     {d.firstTime ? '・はじめての預かり' : ''}
                   </span>
+                  <Link to={`/dogs/${d.id}`} className="bk-dog-link" onClick={onClose}>
+                    ワンちゃんの情報
+                  </Link>
                 </span>
               </li>
             ))}
@@ -222,6 +237,24 @@ export function BookingDialog({ id, onClose, onChanged }: { id: number; onClose:
               {mode === 'decline' && <span className="hint">お断りのLINEに、この一言が入ります。</span>}
               {mode === 'approve' && <span className="hint">確定のLINEに、この一言が入ります。</span>}
             </div>
+          )}
+          {mode === 'approve' && isAdmin && b.dogs.some((d) => d.firstTime) && (
+            <fieldset className="bk-mark">
+              <legend className="label">次の予約からすぐ確定にする</legend>
+              {b.dogs
+                .filter((d) => d.firstTime)
+                .map((d) => (
+                  <label key={d.id} className="check">
+                    <input
+                      type="checkbox"
+                      checked={markDogs.includes(d.id)}
+                      onChange={(e) => setMarkDogs((xs) => (e.target.checked ? [...xs, d.id] : xs.filter((x) => x !== d.id)))}
+                    />
+                    {d.name}を預かり経験ありにする
+                  </label>
+                ))}
+              <span className="hint">受付で「利用開始」にすると、印を付けなくても次からすぐ確定になります。</span>
+            </fieldset>
           )}
           {error ? <ErrorNotice error={error} /> : null}
 

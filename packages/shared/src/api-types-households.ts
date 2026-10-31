@@ -214,6 +214,8 @@ export type HouseholdDetail = {
   family: HouseholdFamilyMember[];
   /** 犬(おやすみ中の犬も含む) */
   dogs: import('./api-types').DogSummary[];
+  /** 預かり・お泊まりの経験がある犬(受付で預かった・「預かり経験あり」の印。21章) */
+  stayExperiencedDogIds?: number[];
   /** 来場履歴(新しい順。最大100件) */
   visits: HouseholdVisit[];
   /** ポイントの記録(新しい順。最大200件) */

@@ -7,6 +7,8 @@ import {
   bookingManualSchema,
   capacityOverrideSchema,
   formatBookingDate,
+  scheduleOf,
+  type BookingScheduleResponse,
   stayExperienceSchema,
   toJstDate,
   toJstIso,
@@ -96,6 +98,20 @@ adminBookingRoutes.get('/bookings/day', async (c) => {
       ADMIN_MEDIA_BASE,
     ),
   };
+  return c.json(body);
+});
+
+// その日の預け・お迎え(お店の1日の予定。両方のサービス。今日の来場の画面と、予約カレンダーの日のパネル)。全員
+adminBookingRoutes.get('/bookings/schedule', async (c) => {
+  const date = c.req.query('date') || toJstDate(c.get('now'));
+  if (!ymd.test(date)) throw errors.badRequest('日にちを選び直してください。');
+  const rows = await adminList(
+    c.env.DB,
+    "(b.start_date = ? OR b.end_date = ?) AND b.status NOT IN ('declined', 'cancelled', 'no_show')",
+    [date, date],
+    ADMIN_MEDIA_BASE,
+  );
+  const body: BookingScheduleResponse = { date, items: scheduleOf(rows, date), bookings: rows };
   return c.json(body);
 });
 

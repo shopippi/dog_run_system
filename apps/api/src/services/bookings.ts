@@ -85,10 +85,13 @@ export type BookingRow = {
   household_name: string;
   requested_by: string | null;
   decided_by: string | null;
+  owner_names: string | null;
 };
 
 const BOOKING_SELECT = `
-  SELECT b.*, h.member_no, h.display_name AS household_name, m.line_display_name AS requested_by, ds.name AS decided_by
+  SELECT b.*, h.member_no, h.display_name AS household_name, m.line_display_name AS requested_by, ds.name AS decided_by,
+         (SELECT GROUP_CONCAT(f.line_display_name, '、') FROM family_members f
+           WHERE f.household_id = b.household_id AND f.status = 'active' AND f.line_display_name IS NOT NULL) AS owner_names
     FROM bookings b
     JOIN households h ON h.id = b.household_id
     LEFT JOIN family_members m ON m.id = b.requested_by_member_id
@@ -743,6 +746,7 @@ export function toAdminRow(r: BookingRow, dogs: BookingDogView[]): AdminBookingR
     source: r.source,
     approvalReason: r.approval_reason,
     requestedBy: r.requested_by,
+    ownerNames: r.owner_names ? r.owner_names.split('、') : [],
   };
 }
 

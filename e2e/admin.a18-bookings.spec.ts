@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { adminLogin, adminToast, newLineUser } from './helpers';
-import { bookDaycareApi, dayAhead, markExperienced, registerApi } from './booking-helpers';
+import { bookDaycareApi, dayAhead, jstToday, markExperienced, registerApi } from './booking-helpers';
 
 // A-18 予約カレンダー・A-19 確認待ち・A-20 手入力・A-21 状態の変更(要件定義書 21章)
 
@@ -37,7 +37,7 @@ test('A-20 手入力: 電話の予約を入れる。いっぱいの日は知ら�
   await page.getByRole('heading', { name: '予約カレンダー' }).waitFor();
   const panel = page.getByRole('region', { name: /の預かり$/ });
   await expect(panel.locator('.bk-usage')).toContainText('大 3/2');
-  await expect(panel.getByRole('button', { name: /ゴンザブロウ/ })).toBeVisible();
+  await expect(panel.locator('.bk-adm-list').getByRole('button', { name: /ゴンザブロウ/ })).toBeVisible();
 });
 
 test('A-20 受付スタッフは、いっぱいの日に入れられない(管理者に相談)', async ({ page, request }) => {
@@ -84,7 +84,7 @@ test('A-18・A-21 カレンダーから予約を開き、利用開始 → 利用
   await adminLogin(page, 'staff', `/bookings?service=daycare&date=${date}`);
   await page.getByRole('heading', { name: '予約カレンダー' }).waitFor();
   const panel = page.getByRole('region', { name: /の預かり$/ });
-  await panel.getByRole('button', { name: /ポチタロウ/ }).click();
+  await panel.locator('.bk-adm-list').getByRole('button', { name: /ポチタロウ/ }).click();
   const dialog = page.getByRole('dialog', { name: '預かりの予約' });
   await expect(dialog.locator('.bk-adm-estimate')).toContainText('目安。お支払いは受付で');
   await dialog.getByRole('button', { name: '利用開始にする' }).click();
@@ -92,8 +92,8 @@ test('A-18・A-21 カレンダーから予約を開き、利用開始 → 利用
   await dialog.getByRole('button', { name: '利用済みにする' }).click();
   await expect(dialog.locator('.badge').first()).toHaveText('利用済み');
   await dialog.getByRole('button', { name: '閉じる' }).click();
-  await expect(panel.getByRole('button', { name: /ポチタロウ/ })).toContainText('利用済み');
-  await expect(panel.getByRole('button', { name: /タマサブロウ/ })).toContainText('確認待ち');
+  await expect(panel.locator('.bk-adm-list').getByRole('button', { name: /ポチタロウ/ })).toContainText('利用済み');
+  await expect(panel.locator('.bk-adm-list').getByRole('button', { name: /タマサブロウ/ })).toContainText('確認待ち');
   await expect(page.locator('.nav-badge')).not.toHaveText('0');
 });
 
@@ -122,4 +122,50 @@ test('A-19 確認待ちをお断りする(お客さんへの一言)。製作者�
   await dialog.getByRole('button', { name: 'お断りする' }).click();
   await expect(dialog.locator('.badge').first()).toHaveText('お断り');
   await expect(dialog).toContainText('お断り: 送っていません');
+});
+
+test('A-20・A-18 受付スタッフは今日の予約を入れられる。今日の来場と予約カレンダーに「預け・お迎え」が時刻の順に出る。預けの時間と定休日が見える', async ({ page, browser, request }) => {
+  const today = jstToday();
+  const u = await registerApi(request, newLineUser('サクラモチママ'), [{ name: 'サクラモチ', size: 'medium' }]);
+  await adminLogin(page, 'staff', '/bookings/new');
+  const picker = page.getByRole('group', { name: '予約を入れるおうち' });
+  await picker.getByRole('searchbox', { name: '探す言葉' }).fill(u.memberNo);
+  await picker.getByRole('list', { name: '予約を入れるおうちの候補' }).getByRole('button', { name: new RegExp(u.memberNo) }).click();
+  await page.getByLabel('日にち').fill(today);
+  await page.getByLabel('預ける時刻').selectOption('09:00');
+  await page.getByLabel('お迎えの時刻').selectOption('12:30');
+  await page.getByLabel('お客さんからのメモ(ごはん・お薬・体調など)').fill('お昼ごはんあり');
+  await expect(page.locator('.err-text')).toHaveCount(0);
+  await page.getByRole('button', { name: '予約を入れる' }).click();
+  await expect(adminToast(page, /予約を入れました。/)).toBeVisible();
+  await expect(page.getByTestId('booking-hours')).toContainText('預け・お迎え 9:00〜18:00 / 定休日 なし');
+
+  await page.goto('/admin/');
+  const sched = page.getByRole('region', { name: '今日の預け・お迎え' });
+  const rows = sched.getByRole('button', { name: /サクラモチ/ });
+  await expect(rows).toHaveCount(2);
+  await expect(rows.nth(0)).toHaveAccessibleName(/^9:00 預け サクラモチ/);
+  await expect(rows.nth(1)).toHaveAccessibleName(/^12:30 お迎え サクラモチ/);
+  await expect(rows.nth(0)).toContainText('サクラモチ(プードル・中型)');
+  await expect(rows.nth(0)).toContainText('お昼ごはんあり');
+
+  // 製作者も見られる(見るだけ)
+  const dev = await browser.newPage({ viewport: { width: 1024, height: 768 } });
+  await adminLogin(dev, 'developer', '/');
+  await expect(dev.getByRole('region', { name: '今日の預け・お迎え' }).getByRole('button', { name: /サクラモチ/ })).toHaveCount(2);
+  await dev.close();
+});
+
+test('A-19 承認するときに「預かり経験あり」にでき、次の予約はすぐ確定する', async ({ page, request }) => {
+  const user = newLineUser('ワラビモチママ');
+  const u = await registerApi(request, user, [{ name: 'ワラビモチ' }]);
+  expect((await bookDaycareApi(request, user, [u.dogs[0]!.id], dayAhead(14))).status).toBe('pending');
+  await adminLogin(page, 'admin', '/bookings/pending');
+  await page.getByRole('button', { name: /ワラビモチ/ }).first().click();
+  const dialog = page.getByRole('dialog', { name: '預かりの予約' });
+  await dialog.getByRole('button', { name: '承認する' }).click();
+  await dialog.getByLabel('ワラビモチを預かり経験ありにする').check();
+  await dialog.getByRole('button', { name: '承認する' }).click();
+  await expect(adminToast(page, /ワラビモチを預かり経験ありにしました。/)).toBeVisible();
+  expect((await bookDaycareApi(request, user, [u.dogs[0]!.id], dayAhead(15))).status).toBe('confirmed');
 });

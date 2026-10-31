@@ -395,3 +395,58 @@ describe('LINE のお知らせのトークンの確かめ(システムの状態�
     spy.mockRestore();
   });
 });
+
+describe('2026-10-31 の追加の決定', () => {
+  const manual = async (cookie: string, memberNo: string, dogId: number, date: string) =>
+    adminCall('/admin/api/bookings', {
+      cookie,
+      now: NOW,
+      body: { householdId: await householdId(memberNo), dogIds: [dogId], service: 'daycare', startDate: date, endDate: date, startTime: '10:00', endTime: '15:00' },
+    });
+
+  it('受付の手入力は今日と、お客さんの予約できる期間より前の日も入れられる。過ぎた日はだめ。お客さんは今日を予約できない', async () => {
+    await env.DB.prepare(`INSERT INTO settings (key, value, updated_at) VALUES ('booking_window', '{"min_days_ahead":3,"max_days_ahead":60,"max_nights":14}', 'x')`).run();
+    const u = await registerUser('U001:ママ', [dog('こむぎ'), dog('だいず'), dog('まめ')]);
+    expect((await manual(staff, u.memberNo, u.dogs[0]!.id, '2026-10-31')).status).toBe(201);
+    expect((await manual(admin, u.memberNo, u.dogs[1]!.id, '2026-11-01')).status).toBe(201);
+    const past = await manual(staff, u.memberNo, u.dogs[2]!.id, '2026-10-30');
+    expect(past.status).toBe(400);
+    expect(past.body.error.message).toContain('過ぎた日');
+    const mine = await request('U001:ママ', [u.dogs[2]!.id], { startDate: '2026-10-31', endDate: '2026-10-31' });
+    expect(mine.status).toBe(400);
+    const early = await request('U001:ママ', [u.dogs[2]!.id], { startDate: '2026-11-02', endDate: '2026-11-02' });
+    expect(early.status).toBe(400);
+    expect(early.body.error.message).toContain('3日後から');
+  });
+
+  it('その日の預け・お迎え(両方のサービス・時刻の順)。登録した名前・犬種・サイズ・飼い主の名前が付く。受付スタッフ・製作者も見られる', async () => {
+    const u = await registerUser('U001:ママ', [dog('こむぎ', { breedId: 5, size: 'medium' })]);
+    const { addFamily } = await import('./helpers');
+    await addFamily(u.memberNo, 'U009', 'パパ');
+    await request('U001:ママ', [u.dogs[0]!.id], { startTime: '11:00', endTime: '15:30' });
+    const o = await registerUser('U002:よそ', [dog('ラテ')]);
+    await adminCall('/admin/api/bookings', {
+      cookie: staff,
+      now: NOW,
+      body: { householdId: await householdId(o.memberNo), dogIds: [o.dogs[0]!.id], service: 'boarding', startDate: DAY, endDate: '2026-11-06', startTime: '09:30', endTime: '17:00' },
+    });
+    for (const cookie of [staff, developer]) {
+      const r = await adminCall(`/admin/api/bookings/schedule?date=${DAY}`, { cookie, now: NOW });
+      expect(r.status).toBe(200);
+      expect(r.body.items.map((i: { time: string; kind: string }) => `${i.time} ${i.kind}`)).toEqual(['09:30 checkin', '11:00 dropoff', '15:30 pickup']);
+    }
+    const r = await adminCall(`/admin/api/bookings/schedule?date=${DAY}`, { cookie: staff, now: NOW });
+    const mama = r.body.bookings.find((b: { memberNo: string }) => b.memberNo === u.memberNo);
+    expect(mama.ownerNames).toEqual(['ママ', 'パパ']);
+    expect(mama.dogs[0]).toMatchObject({ name: 'こむぎ', breedName: '柴犬', size: 'medium' });
+    const checkout = await adminCall('/admin/api/bookings/schedule?date=2026-11-06', { cookie: staff, now: NOW });
+    expect(checkout.body.items).toEqual([expect.objectContaining({ kind: 'checkout', time: '17:00' })]);
+  });
+
+  it('おうちの詳細で、預かり経験のある子が分かる', async () => {
+    const u = await registerUser('U001:ママ', [dog('こむぎ'), dog('だいず')]);
+    await adminCall(`/admin/api/dogs/${u.dogs[1]!.id}/stay-experience`, { cookie: admin, now: NOW, body: { experienced: true } });
+    const d = await adminCall(`/admin/api/households/${await householdId(u.memberNo)}`, { cookie: admin, now: NOW });
+    expect(d.body.stayExperiencedDogIds).toEqual([u.dogs[1]!.id]);
+  });
+});

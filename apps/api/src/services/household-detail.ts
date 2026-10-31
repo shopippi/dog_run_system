@@ -26,6 +26,7 @@ import {
 import { errors } from '../lib/errors';
 import { ADMIN_MEDIA_BASE, canSeePersonal } from './admin-visits';
 import { listHouseholdDogs } from './dogs';
+import { experiencedDogIds } from './bookings';
 import { pointBalance, unusedTicketCount } from './points';
 import { ticketUsedOnVisitSql } from './tickets';
 import { HOUSEHOLD_FIXED_COLUMNS, householdColumnText } from './profile-fields';
@@ -169,6 +170,7 @@ export async function loadHouseholdDetail(
     .all<{ id: number; issued_at: string; expires_at: string | null; status: TicketStatus; source: keyof typeof TICKET_SOURCE_LABELS; used_at: string | null }>();
 
   const balance = await pointBalance(db, id);
+  const householdDogs = await listHouseholdDogs(db, id, ADMIN_MEDIA_BASE, true);
   return {
     id: h.id,
     memberNo: h.member_no,
@@ -196,7 +198,8 @@ export async function loadHouseholdDetail(
       statusLabel: MEMBER_STATUS_LABELS[m.status],
       leftAt: m.left_at,
     })),
-    dogs: await listHouseholdDogs(db, id, ADMIN_MEDIA_BASE, true),
+    dogs: householdDogs,
+    stayExperiencedDogIds: [...(await experiencedDogIds(db, householdDogs.map((x) => x.id)))],
     visits: visitRows.map((v) => ({
       id: v.id,
       date: v.visit_date,

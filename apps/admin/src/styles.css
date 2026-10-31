@@ -1136,3 +1136,31 @@ ul > .list-head + li { border-top: 0; }
 }
 .bk-week-head { min-height: var(--control-h); }
 .bk-head-acts { display: flex; flex-wrap: wrap; gap: var(--sp-2); justify-content: flex-end; }
+.bk-hours { font-size: var(--fs-13); color: var(--text-secondary); }
+.bk-hours a { display: inline-flex; align-items: center; min-height: var(--control-h); }
+.bk-sched { overflow: clip; }
+.bk-sched-title { padding: var(--sp-4) var(--sp-5) var(--sp-2); font-size: var(--fs-15); }
+.bk-sched-sk { padding: 0 var(--sp-5) var(--sp-4); }
+.bk-sched-list { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--border); }
+.bk-sched-list > li + li { border-top: 1px solid var(--border); }
+.bk-sched-row {
+  width: 100%; display: grid; grid-template-columns: 52px 96px auto minmax(0, 1fr) auto; align-items: center; gap: var(--sp-3);
+  min-height: 64px; padding: var(--sp-2) var(--sp-4) var(--sp-2) var(--sp-5);
+  border: 0; background: transparent; color: var(--text); text-align: left; font: inherit; cursor: pointer;
+}
+.bk-sched-row:focus-visible { outline: 2px solid var(--focus-color); outline-offset: -2px; }
+@media (hover: hover) { .bk-sched-row:hover { background: var(--surface-sunk); } }
+.bk-sched-time { font-size: var(--fs-15); font-weight: var(--fw-strong); font-variant-numeric: tabular-nums; }
+.bk-sched-kind { font-size: var(--fs-13); font-weight: var(--fw-strong); color: var(--text); }
+.bk-sched-kind.out { color: var(--text-secondary); }
+@media (max-width: 720px) {
+  .bk-sched-row { grid-template-columns: 48px minmax(0, 1fr) auto; row-gap: 4px; }
+  .bk-sched-row .stack { display: none; }
+  .bk-sched-row .bk-adm-body { grid-column: 1 / -1; }
+}
+.bk-daypanel-sched { padding: var(--sp-4) var(--sp-5) 0; }
+.bk-daypanel-sched .bk-sched { box-shadow: none; }
+.bk-daypanel-sub { padding: var(--sp-4) var(--sp-5) var(--sp-2); font-size: var(--fs-14); }
+.bk-mark { border: 0; margin: 0; padding: 0; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.bk-mark legend { padding: 0; margin-bottom: var(--sp-1); font-size: var(--fs-13); font-weight: var(--fw-strong); }
+.bk-dlg-dogs .bk-dog-link { align-self: flex-start; display: inline-flex; align-items: center; min-height: var(--control-h); font-size: var(--fs-13); flex-direction: row; }

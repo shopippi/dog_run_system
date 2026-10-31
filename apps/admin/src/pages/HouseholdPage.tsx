@@ -230,7 +230,7 @@ function Detail({
       <Section title="ワンちゃん" count={activeDogs.length} unit="頭">
         <ul className="hh-list" aria-label="ワンちゃん">
           {d.dogs.map((x) => (
-            <DogRow key={x.id} dog={x} />
+            <DogRow key={x.id} dog={x} stayed={d.stayExperiencedDogIds?.includes(x.id) ?? false} />
           ))}
         </ul>
       </Section>
@@ -375,7 +375,7 @@ function Answers({ list }: { list: { label: string; answer: string | null }[] })
   );
 }
 
-function DogRow({ dog }: { dog: DogSummary }) {
+function DogRow({ dog, stayed = false }: { dog: DogSummary; stayed?: boolean }) {
   const facts = [
     dog.breedName,
     DOG_SIZE_LABELS[dog.size],
@@ -397,6 +397,8 @@ function DogRow({ dog }: { dog: DogSummary }) {
         <span className="hh-meta mono">{dog.dogNo}</span>
         <span className="hh-end">
           {dog.status !== 'active' && <span className="badge">{DOG_STATUS_LABELS[dog.status]}</span>}
+          {/* 預かり・お泊まりの経験(21章)。印を付ける・外すのは、押した先のワンちゃんの画面で */}
+          <span className="badge">{stayed ? '預かり経験あり' : '預かりはまだ'}</span>
           <Icon name="chevron-right" />
         </span>
       </Link>

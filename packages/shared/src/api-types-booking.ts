@@ -137,6 +137,15 @@ export type AdminBookingRow = BookingSummary & {
   source: 'customer' | 'staff';
   approvalReason: ApprovalReason;
   requestedBy: string | null;
+  /** おうちの家族(LINEで登録した名前)。飼い主の名前として出す */
+  ownerNames: string[];
+};
+
+/** GET /admin/api/bookings/schedule?date= その日の預け・お迎え(両方のサービス) */
+export type BookingScheduleResponse = {
+  date: string;
+  items: import('./booking').ScheduleItem[];
+  bookings: AdminBookingRow[];
 };
 
 /** GET /admin/api/bookings/:id */

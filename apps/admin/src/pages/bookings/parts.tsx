@@ -34,7 +34,7 @@ export function SizeUsage({ used, caps, closed }: { used: SizeCounts; caps: Size
 /** 予約の一覧の1行(日のパネル・確認待ち)。押すと内容を開く */
 export function BookingRowButton({ b, onOpen, showDate = true }: { b: AdminBookingRow; onOpen: (id: number) => void; showDate?: boolean }) {
   return (
-    <button type="button" className="bk-adm-row" onClick={() => onOpen(b.id)} aria-label={`${b.householdName}の${BOOKING_SERVICE_LABELS[b.service]}の予約を開く`}>
+    <button type="button" className="bk-adm-row" onClick={() => onOpen(b.id)} aria-label={`${b.dogs.map((d) => d.name).join('・')}(${b.householdName})の${BOOKING_SERVICE_LABELS[b.service]}の予約を開く`}>
       <span className="stack">
         {b.dogs.slice(0, 3).map((d) => (
           <DogFace key={d.id} name={d.name} breedName={d.breedName} url={d.thumbUrl} size={44} />
@@ -42,11 +42,12 @@ export function BookingRowButton({ b, onOpen, showDate = true }: { b: AdminBooki
       </span>
       <span className="bk-adm-body">
         <b>
-          {b.dogs.map((d) => `${d.name}(${DOG_SIZE_LABELS[d.size]}${d.firstTime ? '・はじめて' : ''})`).join('・')}
+          {b.dogs.map((d) => `${d.name}(${d.breedName}・${DOG_SIZE_LABELS[d.size]}${d.firstTime ? '・はじめて' : ''})`).join('・')}
         </b>
         <span className="sub-text">
           {b.householdName} · <span className="mono">{b.memberNo}</span>
-          {b.source === 'staff' ? ' · 受付で入力' : b.requestedBy ? ` · ${b.requestedBy}さん` : ''}
+          {b.ownerNames.length > 0 ? ` · 飼い主 ${b.ownerNames.join('、')}さん` : ''}
+          {b.source === 'staff' ? ' · 受付で入力' : ''}
         </span>
         <span className="sub-text">
           {showDate ? `${BOOKING_SERVICE_LABELS[b.service]} ${bookingWhenText(b)}` : `${b.startTime.replace(/^0/, '')}〜${b.endTime.replace(/^0/, '')}`}

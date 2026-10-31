@@ -2,6 +2,7 @@ import { CANCEL_REASONS, toJstDate, type AdminVisit, type DayVisitsResponse, typ
 import { useEffect, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { DayNotes } from '../components/DayNotes';
+import { BookingSchedule } from './bookings/BookingSchedule';
 import '../dashboard.css';
 import { Dialog } from '../components/Dialog';
 import { DogFace } from '../components/DogFace';
@@ -79,6 +80,8 @@ export function TodayPage() {
         <h2>この日のメモ</h2>
         <DayNotes date={noteDate} compact />
       </section>
+      {/* 預かり・お泊まりの預け・お迎え(21.5)。予定がない日は出さない */}
+      <BookingSchedule date={noteDate} title={otherDay ? 'この日の預け・お迎え' : '今日の預け・お迎え'} hideWhenEmpty />
       {error ? <ErrorNotice error={error} onRetry={reload} /> : null}
       {!data ? (
         error ? null : <TodaySkeleton walkin={!readOnly && !otherDay} />

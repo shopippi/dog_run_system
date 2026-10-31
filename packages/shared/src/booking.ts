@@ -282,7 +282,10 @@ export function checkBookingDates(
     const nights = nightsOf('boarding', input.startDate, input.endDate);
     if (nights > settings.booking_window.max_nights) return `お泊まりは${settings.booking_window.max_nights}泊までです。それより長いときは、お店にご相談ください。`;
   }
-  if (!opts.ignoreWindow) {
+  if (opts.ignoreWindow) {
+    // 受付の手入力: 今日と、お客さんの予約できる期間より前の日も入れられる(過ぎた日だけはだめ)
+    if (input.startDate < today) return '過ぎた日には予約を入れられません。日にちを選び直してください。';
+  } else {
     const w = bookingWindow(settings, today);
     if (input.startDate < w.first) {
       return settings.booking_window.min_days_ahead === 0
@@ -372,3 +375,47 @@ export const BOOKING_NOTIFY_REASON_LABELS: Record<string, string> = {
 /** 日本時間の「いま」から見た、利用の初日まで(画面の並べ替え用) */
 export const isUpcoming = (b: { status: BookingStatus; endDate: string }, today: string): boolean =>
   b.endDate >= today && (b.status === 'pending' || b.status === 'confirmed' || b.status === 'checked_in');
+
+/** その日の預け・お迎えの1件(お店の1日の予定。21.5) */
+export type ScheduleItem = {
+  bookingId: number;
+  time: string;
+  /** dropoff 預け / pickup お迎え / checkin チェックイン / checkout チェックアウト */
+  kind: 'dropoff' | 'pickup' | 'checkin' | 'checkout';
+};
+export const SCHEDULE_KIND_LABELS: Record<ScheduleItem['kind'], string> = {
+  dropoff: '預け',
+  pickup: 'お迎え',
+  checkin: 'お泊まりの預け(チェックイン)',
+  checkout: 'お泊まりのお迎え(チェックアウト)',
+};
+
+/**
+ * その日の預け・お迎えを時刻の順に並べる。お断り・キャンセル・来なかったは出さない。
+ * 預かりは預けとお迎えの2件、お泊まりはチェックインの日とチェックアウトの日にだけ出す(泊まっている途中の日は出さない)
+ */
+export function scheduleOf(
+  bookings: readonly { id: number; service: BookingService; status: BookingStatus; startDate: string; endDate: string; startTime: string; endTime: string }[],
+  date: string,
+): ScheduleItem[] {
+  const out: ScheduleItem[] = [];
+  for (const b of bookings) {
+    if (b.status === 'declined' || b.status === 'cancelled' || b.status === 'no_show') continue;
+    if (b.service === 'daycare') {
+      if (b.startDate !== date) continue;
+      out.push({ bookingId: b.id, time: b.startTime, kind: 'dropoff' }, { bookingId: b.id, time: b.endTime, kind: 'pickup' });
+    } else {
+      if (b.startDate === date) out.push({ bookingId: b.id, time: b.startTime, kind: 'checkin' });
+      if (b.endDate === date) out.push({ bookingId: b.id, time: b.endTime, kind: 'checkout' });
+    }
+  }
+  const order = { checkout: 0, pickup: 1, checkin: 2, dropoff: 3 } as const;
+  return out.sort((a, b) => a.time.localeCompare(b.time) || order[a.kind] - order[b.kind] || a.bookingId - b.bookingId);
+}
+
+/** 予約の画面の上に出す、預け・お迎えの時間と定休日の一行(「預け・お迎え 9:00〜18:00 / 定休日 なし」) */
+export function bookingHoursText(settings: Pick<Settings, 'booking_hours' | 'booking_closed_weekdays'>): string {
+  const t = (x: string) => x.replace(/^0/, '');
+  const days = [...settings.booking_closed_weekdays].sort().map((d) => '日月火水木金土'[d]).join('・');
+  return `預け・お迎え ${t(settings.booking_hours.open)}〜${t(settings.booking_hours.close)} / 定休日 ${days ? `${days}曜` : 'なし'}`;
+}
