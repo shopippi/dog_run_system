@@ -119,8 +119,26 @@ curl "http://localhost:8787/cdn-cgi/local/scheduled?cron=10+20+*+*+*"   # 5:10 �
 
 ## バックアップと復元
 
-- D1 のタイムトラベル(無料プランでは過去7日間)に加え、毎晩 3:10 に全テーブルを JSON にして R2 の `backups/<日付>.json` に保存する(B-04)。今日を含めて30日分を残し、それより前は自動で消す。
-- 管理画面の「システムの状態」から、管理者が手動でも保存できる(`POST /admin/api/system/backup`)。
-- 中身は `{ format: "dog-run-backup", version: 1, createdAt, tables: { 表の名前: { columns: [...], rows: [[...], ...] } } }`。
-- 取り出し: `pnpm --filter @dr/api exec wrangler r2 object get dog-run-production-media/backups/2026-10-28.json --file backup.json --remote`
-- 復元は、まずタイムトラベル(`wrangler d1 time-travel restore DB --timestamp=...`)を使う。7日より前に戻すときは、空のデータベースにマイグレーションを当ててから、JSON の各表の行を INSERT する(表の順番は、外部キーの参照先から: staff_users・households・breeds → family_members・dogs → visits → ほか)。
+写真を R2 ではなく D1 に入れている(R2 を使わない。月額0円)ため、バックアップは次の3つ。どれもデータベースに入っている写真もふくむ。
+
+1. **D1 のタイムトラベル**: 無料プランで過去7日間の、どの時点にも戻せる。設定は要らない。
+2. **配信の前のバックアップ**: 配信(deploy.yml)のたびに、マイグレーションを当てる前のデータベースを書き出し、暗号化して GitHub の Actions の「Artifacts」に30日残す。
+3. **毎晩のバックアップ**: backup.yml が毎日 日本時間 3:40 に同じものを残す(30日)。GitHub の決まりで、予定の実行は main に入ってから動く。それまでは Actions の画面の「Backup」→「Run workflow」で手で動かせる。
+
+アプリの中の夜間のバックアップ(B-04、R2 に JSON を置く)は、R2 を使うときだけ動く。いまは「システムの状態」に「スキップしました(写真の保存先 R2 を使っていないため…)」と出る。
+
+### 合言葉を登録する(はじめに1回)
+
+リポジトリは公開なので、バックアップは必ず暗号化してから GitHub に置く。合言葉がないとバックアップは取らない(配信は続く)。
+
+1. 長い合言葉を決める(例: パスワード管理アプリで 30 文字以上を作る)。**なくすとバックアップを戻せない**ので、依頼主と製作者の両方で控える
+2. GitHub の Settings → Environments →「Secret」→「Add environment secret」で、名前 `BACKUP_PASSPHRASE`、値に合言葉を入れて保存する
+3. Actions の「Backup」→「Run workflow」で一度動かし、終わった画面の下の「Artifacts」に `backup-…` ができていることを確かめる
+
+### 戻す
+
+- まず、タイムトラベルで足りるか考える: `pnpm --filter @dr/api exec wrangler d1 time-travel restore DB --env production --timestamp=<日時>`
+- 7日より前、またはデータベースを作り直すとき:
+  1. Actions の該当の実行の「Artifacts」から `backup-…` か `before-deploy-…` をダウンロードして展開する(中身は `*.sql.gz.gpg`)
+  2. 復号して展開する: `gpg --decrypt backup.sql.gz.gpg > backup.sql.gz && gunzip backup.sql.gz`(合言葉を聞かれる)
+  3. 空のデータベースに流し込む: `pnpm --filter @dr/api exec wrangler d1 execute DB --env production --remote --file backup.sql`(作り直したデータベースには、先にマイグレーションを当てない。書き出しにはテーブルの作成もふくまれる)

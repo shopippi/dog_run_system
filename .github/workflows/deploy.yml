@@ -57,6 +57,23 @@ jobs:
       - name: 画面をビルドする(LIFF ID 入り)
         run: VITE_LIFF_ID="$LIFF_ID" pnpm build
 
+      # マイグレーションで何かあっても戻せるよう、当てる前のデータベースを暗号化して残す(30日)。合言葉がなければ飛ばす
+      - name: 配信の前のバックアップを取る
+        working-directory: apps/api
+        env:
+          BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: |
+          # まだデータベースが空(最初の配信)なら、書き出しに失敗しても配信は続ける
+          bash scripts/backup-d1.sh "$RUNNER_TEMP/before-deploy.sql.gz.gpg" || echo "::warning title=バックアップ::配信の前のバックアップが取れませんでした。配信は続けます。"
+
+      - name: 配信の前のバックアップを保存する
+        if: env.BACKUP_FILE != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: before-deploy-${{ github.run_number }}
+          path: ${{ env.BACKUP_FILE }}
+          retention-days: 30
+
       - name: データベースのマイグレーションを当てる
         working-directory: apps/api
         run: pnpm exec wrangler d1 migrations apply DB --remote --env production
