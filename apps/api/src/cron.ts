@@ -81,7 +81,7 @@ export function runWeatherJob(env: Bindings, now: Date, source?: WeatherSource) 
 export function runBackupJob(env: Bindings, now: Date) {
   return runJob(env.DB, 'backup', now, async () =>
     env.MEDIA_BACKEND === 'd1'
-      ? { message: 'スキップしました(写真の保存先 R2 を使っていないため。データベースは Cloudflare が過去7日分を自動で残しています)。' }
+      ? { message: 'スキップしました(写真の保存先 R2 を使っていないため。データベースは Cloudflare が過去7日分を自動で残し、GitHub にも毎晩・配信のたびに暗号化して30日分を残しています)。' }
       : backupDatabase(env.DB, env.MEDIA, now),
   );
 }

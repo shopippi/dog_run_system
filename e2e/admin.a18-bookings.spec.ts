@@ -126,7 +126,7 @@ test('A-19 確認待ちをお断りする(お客さんへの一言)。製作者�
 
 test('A-20・A-18 受付スタッフは今日の予約を入れられる。今日の来場と予約カレンダーに「預け・お迎え」が時刻の順に出る。預けの時間と定休日が見える', async ({ page, browser, request }) => {
   const today = jstToday();
-  const u = await registerApi(request, newLineUser('カシワモチノスケママ'), [{ name: 'カシワモチノスケ', size: 'medium' }]);
+  const u = await registerApi(request, newLineUser('ミタラシママ'), [{ name: 'ミタラシ', size: 'medium' }]);
   await adminLogin(page, 'staff', '/bookings/new');
   const picker = page.getByRole('group', { name: '予約を入れるおうち' });
   await picker.getByRole('searchbox', { name: '探す言葉' }).fill(u.memberNo);
@@ -142,30 +142,30 @@ test('A-20・A-18 受付スタッフは今日の予約を入れられる。今�
 
   await page.goto('/admin/');
   const sched = page.getByRole('region', { name: '今日の預け・お迎え' });
-  const rows = sched.getByRole('button', { name: /カシワモチノスケ/ });
+  const rows = sched.getByRole('button', { name: /ミタラシ/ });
   await expect(rows).toHaveCount(2);
-  await expect(rows.nth(0)).toHaveAccessibleName(/^9:00 預け カシワモチノスケ/);
-  await expect(rows.nth(1)).toHaveAccessibleName(/^12:30 お迎え カシワモチノスケ/);
-  await expect(rows.nth(0)).toContainText('カシワモチノスケ(プードル・中型)');
+  await expect(rows.nth(0)).toHaveAccessibleName(/^9:00 預け ミタラシ/);
+  await expect(rows.nth(1)).toHaveAccessibleName(/^12:30 お迎え ミタラシ/);
+  await expect(rows.nth(0)).toContainText('ミタラシ(プードル・中型)');
   await expect(rows.nth(0)).toContainText('お昼ごはんあり');
 
   // 製作者も見られる(見るだけ)
   const dev = await browser.newPage({ viewport: { width: 1024, height: 768 } });
   await adminLogin(dev, 'developer', '/');
-  await expect(dev.getByRole('region', { name: '今日の預け・お迎え' }).getByRole('button', { name: /カシワモチノスケ/ })).toHaveCount(2);
+  await expect(dev.getByRole('region', { name: '今日の預け・お迎え' }).getByRole('button', { name: /ミタラシ/ })).toHaveCount(2);
   await dev.close();
 });
 
 test('A-19 承認するときに「預かり経験あり」にでき、次の予約はすぐ確定する', async ({ page, request }) => {
-  const user = newLineUser('ワラビモチノスケママ');
-  const u = await registerApi(request, user, [{ name: 'ワラビモチノスケ' }]);
+  const user = newLineUser('ワラビモチママ');
+  const u = await registerApi(request, user, [{ name: 'ワラビモチ' }]);
   expect((await bookDaycareApi(request, user, [u.dogs[0]!.id], dayAhead(14))).status).toBe('pending');
   await adminLogin(page, 'admin', '/bookings/pending');
-  await page.getByRole('button', { name: /ワラビモチノスケ/ }).first().click();
+  await page.getByRole('button', { name: /ワラビモチ/ }).first().click();
   const dialog = page.getByRole('dialog', { name: '預かりの予約' });
   await dialog.getByRole('button', { name: '承認する' }).click();
-  await dialog.getByLabel('ワラビモチノスケを預かり経験ありにする').check();
+  await dialog.getByLabel('ワラビモチを預かり経験ありにする').check();
   await dialog.getByRole('button', { name: '承認する' }).click();
-  await expect(adminToast(page, /ワラビモチノスケを預かり経験ありにしました。/)).toBeVisible();
+  await expect(adminToast(page, /ワラビモチを預かり経験ありにしました。/)).toBeVisible();
   expect((await bookDaycareApi(request, user, [u.dogs[0]!.id], dayAhead(15))).status).toBe('confirmed');
 });
