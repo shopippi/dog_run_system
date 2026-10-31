@@ -113,16 +113,20 @@ export function HistoryPage() {
                       {v.dogs.length === 0
                         ? 'ワンちゃん'
                         : v.dogs.map((d, i) => (
+                            // 区切りの「・」は前の名前の後ろに付ける(行の頭に「・」が来ないように)
                             <span key={d.id} className="cu-nowrap">
-                              {i > 0 && '・'}
                               {d.name}
+                              {i < v.dogs.length - 1 && '・'}
                             </span>
                           ))}
                     </b>
                     <span className="sub-text">
-                      <span className="cu-nowrap">{v.time}</span>
-                      <span className="cu-nowrap">・{whoOf(v)}</span>
-                      {!v.cancelled && <span className="cu-nowrap hist-points">・+{v.pointsAwarded}ポイント</span>}
+                      <span className="cu-nowrap">{v.time}・</span>
+                      <span className="cu-nowrap">
+                        {whoOf(v)}
+                        {!v.cancelled && '・'}
+                      </span>
+                      {!v.cancelled && <span className="cu-nowrap hist-points">+{v.pointsAwarded}ポイント</span>}
                     </span>
                     {(v.cancelled || v.usedTicket || v.ticketsIssued > 0) && (
                       <span className="hist-badges">

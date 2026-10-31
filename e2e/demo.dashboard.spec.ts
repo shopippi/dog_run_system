@@ -27,6 +27,9 @@ test('デモ: ダッシュボードに、数字・グラフ・天気と来場・
   await expect(a.getByRole('list', { name: /天気ごとの1日あたりの来場/ })).toBeVisible();
   await expect(a.getByRole('table', { name: '市区町村ごとのおうちと来場' }).getByText('小野市')).toBeVisible();
   const cal = a.getByRole('group', { name: /のカレンダー$/ });
+  await expect(cal).toHaveAttribute('aria-busy', 'false');
+  // 月の初めの日は、初期データのメモ(今日より前の日)が前の月にしかないので、前の月を見る
+  if ((await cal.getByRole('button', { name: /メモ1件/ }).count()) === 0) await a.getByRole('button', { name: '前の月' }).click();
   await expect(cal.getByRole('button', { name: /メモ1件/ }).first()).toBeVisible();
   // AI に渡す分析パック(デモの初期データ)。SHOT_DIR があればサンプルとして保存する
   await a.getByRole('link', { name: 'CSV出力' }).click();

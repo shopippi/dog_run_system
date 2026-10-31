@@ -69,8 +69,12 @@ export function EstimateTable({ estimate }: { estimate: BookingEstimate }) {
         {estimate.lines.map((l, i) => (
           <div key={i}>
             <dt>
-              {l.dogName}({l.label}
-              {l.label.startsWith('お泊まり') ? ` × ${l.qty}泊` : ''})
+              {l.dogName}
+              {/* 「(お泊まり・大型 × 2泊)」は途中で切らない */}
+              <span className="nowrap-block">
+                ({l.label}
+                {l.label.startsWith('お泊まり') ? ` × ${l.qty}泊` : ''})
+              </span>
             </dt>
             <dd>{yen(l.amount)}</dd>
           </div>

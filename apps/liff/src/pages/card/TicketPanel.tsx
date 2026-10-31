@@ -70,8 +70,8 @@ export function TicketPanel({ card, onChanged }: { card: MemberCard; onChanged: 
                 <span className="tk-body">
                   <b>無料券(来場1回分)</b>
                   <span className="sub-text">
-                    <span className="cu-nowrap">{ymd(t.issuedAt)}に交換</span>
-                    <span className="cu-nowrap">・{t.expiresAt ? `期限 ${ymd(t.expiresAt)}` : '期限なし'}</span>
+                    <span className="cu-nowrap">{ymd(t.issuedAt)}に交換・</span>
+                    <span className="cu-nowrap">{t.expiresAt ? `期限 ${ymd(t.expiresAt)}` : '期限なし'}</span>
                   </span>
                 </span>
                 <SlideToUse label="スライドして使用する" busyLabel="使用しています…" onComplete={() => use(t.id)} />
@@ -129,7 +129,13 @@ export function ExchangeControl({ card, onChanged }: { card: MemberCard; onChang
             setOpId(newOpId());
           }}
         >
-          無料券と交換する({card.pointsPerTicket}ポイント)
+          {/* 幅 320 で2行になるときも「交換す/る」と割れないよう、語のまとまりで折り返す */}
+          {/* ボタンは flex なので、1つの span にまとめてから中で折り返す */}
+          <span>
+            <span className="nowrap">無料券と交換する</span>
+            <wbr />
+            <span className="nowrap">({card.pointsPerTicket}ポイント)</span>
+          </span>
         </PressButton>
       )}
       {error && !opId ? <ErrorNotice error={error} /> : null}

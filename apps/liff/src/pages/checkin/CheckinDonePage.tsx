@@ -56,7 +56,7 @@ export function CheckinDonePage() {
           </div>
           <div className="done-body">
             {detail.usedTicket && <p className="used-ticket">無料券を使用</p>}
-            <div className="stack">
+            <div className="stack wrap">
               {detail.dogs.map((d) => (
                 <DogAvatar key={d.id} name={d.name} breedName={d.breedName} url={d.thumbUrl} size={72} />
               ))}

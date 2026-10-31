@@ -224,6 +224,18 @@ button:disabled { cursor: not-allowed; }
 :focus-visible { outline: 2px solid var(--focus-color); outline-offset: 2px; }
 img { max-width: 100%; }
 .mono { font-family: var(--font-mono); letter-spacing: .02em; font-variant-numeric: tabular-nums; }
+/* 会員ID・時刻などの短い mono の語は、途中で改行しない(「DR-0000/38」にならないように) */
+span.mono { white-space: nowrap; }
+/*
+ * 改行の位置を整える: 最後の行が1文字だけ(「チェックイ/ン」)にならないようにする(受け継がれるので body に付ける)。
+ * 対応していない端末では、今までどおりの改行になるだけ(見出しとボタンは行の長さをそろえる)。
+ * 折り返さない指定(white-space: nowrap)を上書きしないよう、text-wrap ではなく text-wrap-style を使う
+ */
+/* 行の頭に「ー」「ッ」などの小さい字や長音が来ないようにする(日本語の組版の決まり) */
+body { text-wrap-style: pretty; line-break: strict; }
+h1, h2, h3, h4, button, .btn { text-wrap-style: balance; }
+/* 見出しとボタンは、文節で折り返す(「ポイ/ント」「交換す/る」にしない。対応している端末だけ) */
+h1, h2, h3, h4, button, .btn, summary { word-break: auto-phrase; }
 .sr-only {
   position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
   overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;

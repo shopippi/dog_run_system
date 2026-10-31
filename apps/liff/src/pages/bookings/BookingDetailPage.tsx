@@ -10,6 +10,7 @@ import { api, postJson } from '../../lib/api';
 import { BookingDetailSkeleton } from '../skeletons';
 import { StatusBadge } from './BookingsPage';
 import { EstimateBlock } from './EstimateBlock';
+import { KeepWords } from '../../components/KeepWords';
 
 /** "2026-11-03T18:00:00+09:00" → "11月3日 18:00" */
 function deadlineText(iso: string) {
@@ -93,7 +94,7 @@ export function BookingDetailPage() {
       <dl className="bk-summary rows">
         <div>
           <dt>日にち</dt>
-          <dd>{bookingWhenText(b)}</dd>
+          <dd><KeepWords text={bookingWhenText(b)} /></dd>
         </div>
         {b.note && (
           <div>

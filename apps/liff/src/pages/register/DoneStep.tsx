@@ -20,7 +20,7 @@ export function DoneStep({ result, drafts, photoFailed, onNext }: Props) {
       </div>
       <div className="welcome-card">
         <div className="welcome-who">
-          <div className="stack">
+          <div className="stack wrap">
             {result.dogs.map((d, i) => (
               <DogAvatar
                 key={d.id}

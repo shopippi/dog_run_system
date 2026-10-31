@@ -7,6 +7,9 @@ import { useAuthedImage } from '../hooks/useAuthedImage';
 import { DogAvatar } from './DogAvatar';
 import { Icon } from './Icon';
 
+/** 会員証の上段に並べる顔の数 */
+const MAX_FACES = 4;
+
 type Props = {
   displayName: string;
   memberNo: string;
@@ -71,10 +74,16 @@ export function MemberCard({
       </AnimatePresence>
       {/* ワンちゃんが主役: 犬の顔を先に(上段)、おうちの呼び名はその下 */}
       <div className="mc-head">
+        {/* 顔は 4 つまで(5 頭以上は 3 頭の顔と「+2」)。狭い画面でも途中で切れないように */}
         <div className="mc-dogs">
-          {dogs.map((d) => (
+          {(dogs.length > MAX_FACES ? dogs.slice(0, MAX_FACES - 1) : dogs).map((d) => (
             <DogAvatar key={d.id} name={d.name} breedName={d.breedName} url={d.thumbUrl} size={44} />
           ))}
+          {dogs.length > MAX_FACES ? (
+            <span className="av mc-more" role="img" aria-label={`ほか${dogs.length - MAX_FACES + 1}頭`}>
+              +{dogs.length - MAX_FACES + 1}
+            </span>
+          ) : null}
         </div>
         <p className="mc-facility">{facilityName}</p>
         {showChange ? (
