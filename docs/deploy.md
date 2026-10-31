@@ -78,13 +78,14 @@ STAFF_PASSWORD='<10文字以上>' pnpm staff:create --email dev@example.com --na
 2. 「Environment secrets」の「Add environment secret」を押す。
 3. Name に `LINE_MESSAGING_TOKEN`、Secret に手順2でコピーしたトークンを貼って「Add secret」。
 4. 「Actions」→ 左の「Deploy」→ 右の「Run workflow」で配信し直す(main に変更を入れたときも、自動で入ります)。
-   - 配信の記録に「LINE_MESSAGING_TOKEN を Worker の secret に入れました。」と出れば完了です。
+   - 配信の記録(Actions の実行の「Summary」の注釈)に「LINEのお知らせ: つながりました(グリーンドーム / @xxxx)」と出れば完了です。
+   - 「LINE 公式アカウントにつながりませんでした(HTTP 401)」と出たときは、トークンが違います。手順2で発行し直して、手順4で入れ直してください。配信そのものは止まりません。
 
 手で入れるときは、`printf '%s' '<トークン>' | pnpm --filter @dr/api exec wrangler secret put LINE_MESSAGING_TOKEN --env production`(コードやファイルには書かない)。
 
 ### 5. 確かめる
 
-1. 管理画面の「システムの状態」を開き、「今月のLINEのお知らせ」が「設定済み」になっているかを見る。
+1. 管理画面の「システムの状態」を開き、「LINEのお知らせ」の行が「つながっています(公式アカウントの名前)」になっているかを見る(5分ほど覚えておくので、入れ直した直後は少し待つ)。今月送った数と上限(200通)も出ます。
 2. 自分のLINEで会員証を開き、ワンちゃん(管理者の犬の編集で「預かり経験あり」に印を付けた子)を予約する。すぐ確定になり、LINEにお知らせが届けば完了。
 3. 届かないときは、管理画面の予約の内容(予約カレンダーで日を押して予約を開く)の「LINEのお知らせ」に理由が出ます。
    - 「お客さんがLINEの友だちに追加していないため、届きませんでした」: 公式アカウントを友だちに追加してから、もう一度試す。

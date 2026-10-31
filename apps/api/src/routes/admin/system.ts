@@ -1,5 +1,6 @@
 import { RUNNABLE_JOBS, type JobRunResult, type RunnableJob, type SystemStatusResponse } from '@dr/shared';
 import { Hono, type Context } from 'hono';
+import { lineBotInfo } from '../../services/line-push';
 import { runBackupJob, runDailyStatsJob, runHolidaysJob, runPostalAreasJob, runWeatherJob } from '../../cron';
 import type { AppEnv } from '../../env';
 import { requireRole } from '../../lib/staff-auth';
@@ -47,6 +48,7 @@ systemRoutes.get('/system-status', requireRole('admin'), async (c) => {
     contact: settings.developer_contact,
     lineLimit: settings.booking_notify.monthly_limit,
     lineConfigured: !!c.env.LINE_MESSAGING_TOKEN?.trim(),
+    lineBot: await lineBotInfo(c.env),
   });
   return c.json(body);
 });

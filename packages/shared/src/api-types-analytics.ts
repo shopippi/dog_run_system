@@ -214,7 +214,19 @@ export type SystemStatusResponse = {
    * 今月の LINE のお知らせ(予約の確定・お断り。21章)。sent は送った数(無料のプランは月200通まで)、
    * skipped・failed は送らなかった・送れなかった数。configured は Messaging API のトークンが設定されているか
    */
-  lineMessages: { month: string; sent: number; skipped: number; failed: number; limit: number; configured: boolean };
+  lineMessages: {
+    month: string;
+    sent: number;
+    skipped: number;
+    failed: number;
+    limit: number;
+    configured: boolean;
+    /**
+     * LINE 公式アカウントにつながるか(GET https://api.line.me/v2/bot/info をサーバーで呼び、少しのあいだ覚えておく)。
+     * connected: つながった / not_set: トークンがない / error: つながらない(message に次にすること) / mock: 練習用の環境なので確かめていない
+     */
+    bot: { state: 'connected' | 'not_set' | 'error' | 'mock'; displayName: string | null; basicId: string | null; message: string };
+  };
   /** 製作者だけ(D-02)。管理者には null */
   detail: {
     recentFailures: SystemJobRun[];

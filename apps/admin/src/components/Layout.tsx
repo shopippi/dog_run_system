@@ -15,17 +15,10 @@ const GROUPS: Group[] = [
     label: '受付',
     items: [
       { to: '/', label: '今日の来場', icon: 'calendar', end: true },
+      // 予約(21章)。確認待ち・予約を入れる・予約の設定は、予約カレンダーの上のボタンから開く(メニューを長くしない)。印は確認待ちの数
+      { to: '/bookings', label: '予約', icon: 'inbox', badge: true },
       { to: '/proxy', label: '代理チェックイン', icon: 'clipboard', writeOnly: true },
       { to: '/search', label: 'おうちを探す', icon: 'users' },
-    ],
-  },
-  {
-    label: '予約',
-    items: [
-      { to: '/bookings', label: '予約カレンダー', icon: 'calendar', end: true },
-      { to: '/bookings/pending', label: '確認待ちの予約', icon: 'inbox', badge: true },
-      { to: '/bookings/new', label: '予約を入れる', icon: 'plus', writeOnly: true },
-      { to: '/booking-settings', label: '予約の設定', icon: 'sliders', adminOnly: true },
     ],
   },
   {
@@ -89,7 +82,7 @@ export function Layout({ children }: { children: ReactNode }) {
                     <Icon name={it.icon} />
                     <span>{it.label}</span>
                     {it.badge && pendingBookings > 0 && (
-                      <span className="nav-badge" aria-label={`${pendingBookings}件`}>
+                      <span className="nav-badge" aria-label={`確認待ち${pendingBookings}件`}>
                         {pendingBookings}
                       </span>
                     )}

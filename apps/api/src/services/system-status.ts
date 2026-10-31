@@ -118,7 +118,13 @@ export const D1_DB_LIMIT_BYTES = 500 * 1024 ** 2;
 export async function systemStatus(
   db: D1Database,
   now: Date,
-  opts: { detail: boolean; contact: string; lineLimit?: number; lineConfigured?: boolean },
+  opts: {
+    detail: boolean;
+    contact: string;
+    lineLimit?: number;
+    lineConfigured?: boolean;
+    lineBot?: SystemStatusResponse['lineMessages']['bot'];
+  },
 ): Promise<SystemStatusResponse> {
   const month = toJstIso(now).slice(0, 7);
   const { results: lineRows } = await db
@@ -198,6 +204,7 @@ export async function systemStatus(
       failed: lineCount('failed'),
       limit: opts.lineLimit ?? 200,
       configured: opts.lineConfigured ?? false,
+      bot: opts.lineBot ?? { state: 'not_set', displayName: null, basicId: null, message: 'LINEのお知らせの設定がまだです。' },
     },
     detail,
   };

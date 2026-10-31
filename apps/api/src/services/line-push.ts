@@ -120,3 +120,59 @@ export async function notifyBooking(
     return { status: 'failed', reason: 'internal' };
   }
 }
+
+// ---------------------------------------------------------------
+// トークンが使えるかの確かめ(システムの状態。GET /v2/bot/info)
+// ---------------------------------------------------------------
+
+export const LINE_BOT_INFO_URL = 'https://api.line.me/v2/bot/info';
+export type LineBotState = { state: 'connected' | 'not_set' | 'error' | 'mock'; displayName: string | null; basicId: string | null; message: string };
+
+/** 少しのあいだ(5分)覚えておく。トークンが変われば確かめ直す */
+const BOT_CACHE_MS = 5 * 60_000;
+let botCache: { token: string; at: number; value: LineBotState } | null = null;
+
+/**
+ * LINE 公式アカウントにつながるかを確かめる。トークンは画面にもログにも出さない。
+ * 本番だけ LINE に問い合わせる。local・test は「練習用の環境なので確かめていない」。テストでは fetcher を差し込む
+ */
+export async function lineBotInfo(
+  env: Pick<Bindings, 'ENVIRONMENT' | 'LINE_MESSAGING_TOKEN'>,
+  opts: { fetcher?: typeof fetch; force?: boolean; now?: number } = {},
+): Promise<LineBotState> {
+  const token = env.LINE_MESSAGING_TOKEN?.trim();
+  if (!token) {
+    return {
+      state: 'not_set',
+      displayName: null,
+      basicId: null,
+      message: 'LINEのお知らせの設定がまだです。予約はそのまま使えます。お知らせを送るときは、製作者にトークンの設定を頼んでください(docs/deploy.md)。',
+    };
+  }
+  if (env.ENVIRONMENT !== 'production' && !opts.fetcher) {
+    return { state: 'mock', displayName: null, basicId: null, message: '練習用の環境のため、LINEには確かめていません(送ったつもりで記録します)。' };
+  }
+  const now = opts.now ?? Date.now();
+  if (!opts.force && botCache && botCache.token === token && now - botCache.at < BOT_CACHE_MS) return botCache.value;
+  let value: LineBotState;
+  try {
+    const res = await (opts.fetcher ?? fetch)(LINE_BOT_INFO_URL, { headers: { authorization: `Bearer ${token}` } });
+    if (res.ok) {
+      const info = (await res.json()) as { displayName?: string; basicId?: string };
+      value = { state: 'connected', displayName: info.displayName ?? null, basicId: info.basicId ?? null, message: 'LINE公式アカウントにつながっています。' };
+    } else if (res.status === 401 || res.status === 403) {
+      value = {
+        state: 'error',
+        displayName: null,
+        basicId: null,
+        message: `LINEにつながりませんでした(${res.status})。トークンが正しくないか、発行し直して古くなっています。LINE Developers でトークンを発行し直し、GitHub の Secret「LINE_MESSAGING_TOKEN」を入れ直して配信し直してください。`,
+      };
+    } else {
+      value = { state: 'error', displayName: null, basicId: null, message: `LINEにつながりませんでした(${res.status})。しばらくしてから、この画面を開き直してください。続くときは製作者に知らせてください。` };
+    }
+  } catch {
+    value = { state: 'error', displayName: null, basicId: null, message: 'LINEにつながりませんでした。しばらくしてから、この画面を開き直してください。' };
+  }
+  botCache = { token, at: now, value };
+  return value;
+}

@@ -22,6 +22,7 @@ export function BookingSettingsPage() {
   return (
     <div className="page cfg-page">
       <PageHead
+        crumbs={[{ label: '予約カレンダー', to: '/bookings' }, { label: '予約の設定' }]}
         title="予約の設定"
         howto="預かり・お泊まりの予約のきまりです。まとまりごとに「保存する」を押してください。日ごとに休みにする・頭数を変えるときは、予約カレンダーで日を押してください。"
       />

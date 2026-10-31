@@ -89,6 +89,27 @@ jobs:
           printf '%s' "$LINE_MESSAGING_TOKEN" | pnpm exec wrangler secret put LINE_MESSAGING_TOKEN --env production >/dev/null
           echo "LINE_MESSAGING_TOKEN を Worker の secret に入れました。"
 
+      - name: LINE のお知らせのトークンで LINE 公式アカウントにつながるか確かめる(配信は止めない)
+        continue-on-error: true
+        env:
+          LINE_MESSAGING_TOKEN: ${{ secrets.LINE_MESSAGING_TOKEN }}
+        run: |
+          if [ -z "$LINE_MESSAGING_TOKEN" ]; then
+            echo "LINE_MESSAGING_TOKEN がないので、確かめません。"
+            exit 0
+          fi
+          # トークンはヘッダーにだけ入れ、ログには出さない(curl の -v は使わない)
+          BODY="$RUNNER_TEMP/line-bot-info.json"
+          STATUS=$(curl -sS -o "$BODY" -w '%{http_code}' -H "Authorization: Bearer ${LINE_MESSAGING_TOKEN}" https://api.line.me/v2/bot/info || echo 000)
+          if [ "$STATUS" = "200" ]; then
+            INFO=$(node -e 'const j=require(process.argv[1]);process.stdout.write(`${j.displayName ?? ""} / ${j.basicId ?? ""}`)' "$BODY" 2>/dev/null || echo "")
+            echo "::notice title=LINEのお知らせ::つながりました(${INFO})"
+          else
+            echo "::warning title=LINEのお知らせ::LINE 公式アカウントにつながりませんでした(HTTP ${STATUS})。トークンが正しいか、LINE Developers で発行し直して Secret の LINE_MESSAGING_TOKEN を入れ直してください。予約はそのまま使えます。"
+          fi
+          rm -f "$BODY"
+          exit 0
+
       - name: 最初の管理者を作る(まだ1人もいないときだけ)
         working-directory: apps/api
         env:

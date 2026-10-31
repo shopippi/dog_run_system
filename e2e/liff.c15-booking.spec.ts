@@ -6,7 +6,7 @@ import { bookDaycareApi, dayAhead, markExperienced, registerApi, requestDaycareV
 
 test('C-15 預かりの経験がある子は、予約するとすぐ確定する(料金の目安つき)', async ({ page, request }) => {
   const user = newLineUser('ラテママ');
-  const u = await registerApi(request, user, [{ name: 'ラテ' }]);
+  const u = await registerApi(request, user, [{ name: 'ラテアート' }]);
   await markExperienced(request, u.dogs[0]!.id);
   const date = dayAhead(3);
 
@@ -33,7 +33,7 @@ test('C-15 預かりの経験がある子は、予約するとすぐ確定する
 
 test('C-15 はじめての子は確認待ち → 管理者が承認 → お客さんの画面が確定になる', async ({ page, browser, request }) => {
   const user = newLineUser('モカパパ');
-  await registerApi(request, user, [{ name: 'モカ' }]);
+  await registerApi(request, user, [{ name: 'モカブレンド' }]);
   const date = dayAhead(4);
 
   await openLiff(page, user, '/bookings/new');
@@ -49,7 +49,7 @@ test('C-15 はじめての子は確認待ち → 管理者が承認 → お客�
   const admin = await browser.newPage({ viewport: { width: 1024, height: 768 } });
   await adminLogin(admin, 'admin', '/bookings/pending');
   await admin.getByRole('heading', { name: '確認待ちの予約' }).waitFor();
-  await admin.getByRole('button', { name: /モカ/ }).first().click();
+  await admin.getByRole('button', { name: /モカブレンド/ }).first().click();
   const dialog = admin.getByRole('dialog', { name: '預かりの予約' });
   await expect(dialog).toContainText('はじめての預かり');
   await dialog.getByRole('button', { name: '承認する' }).click();
@@ -65,7 +65,7 @@ test('C-15 はじめての子は確認待ち → 管理者が承認 → お客�
 
 test('C-15 満員の日と休みの日は選べない(選んだワンちゃんのサイズで見る)', async ({ page, request }) => {
   const user = newLineUser('ハナママ');
-  await registerApi(request, user, [{ name: 'ハナ', size: 'large' }]);
+  await registerApi(request, user, [{ name: 'ハナミズキ', size: 'large' }]);
   const full = dayAhead(5);
   const closed = dayAhead(6);
   await setOverride(request, { date: full, service: 'daycare', caps: { small: null, medium: null, large: 0 } });
@@ -88,7 +88,7 @@ test('C-15 満員の日と休みの日は選べない(選んだワンちゃん�
 
 test('C-16 期限まではキャンセルできる。キャンセルした予約は「キャンセル」になる', async ({ page, request }) => {
   const user = newLineUser('ココママ');
-  const u = await registerApi(request, user, [{ name: 'ココ' }]);
+  const u = await registerApi(request, user, [{ name: 'ココナッツ' }]);
   const b = await bookDaycareApi(request, user, [u.dogs[0]!.id], dayAhead(8));
   await openLiff(page, user, `/bookings/${b.id}`);
   await expect(page.getByText(/キャンセルは .* までできます/)).toBeVisible();

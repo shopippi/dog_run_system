@@ -90,6 +90,7 @@ export function StatusPage() {
               {data.jobs.map((j) => (
                 <JobRow key={j.name} job={j} canRun={!readOnly && j.runnable} onDone={load} />
               ))}
+              <LineRow line={data.lineMessages} />
             </ul>
           </section>
           <p className="note">{when(data.checkedAt)} の時点の状態です。</p>
@@ -97,6 +98,36 @@ export function StatusPage() {
         </>
       )}
     </div>
+  );
+}
+
+/** 予約の LINE のお知らせ(21.6)。つながっているか(公式アカウントの名前)と、今月送った数 / ひと月の上限 */
+function LineRow({ line }: { line: SystemStatusResponse['lineMessages'] }) {
+  const level: StatusLevel = line.bot.state === 'error' ? 'red' : line.bot.state === 'not_set' ? 'yellow' : 'green';
+  const state =
+    line.bot.state === 'connected'
+      ? `つながっています(${line.bot.displayName ?? ''}${line.bot.basicId ? ` / ${line.bot.basicId}` : ''})`
+      : line.bot.state === 'not_set'
+        ? '設定がまだです'
+        : line.bot.state === 'mock'
+          ? '練習用の環境(送ったつもりで記録)'
+          : 'つながりません';
+  const [, m] = line.month.split('-').map(Number);
+  return (
+    <li className="status-row" aria-label={`LINEのお知らせ ${STATUS_LEVEL_LABELS[level]}`}>
+      <Level level={level} />
+      <span className="status-body">
+        <b>LINEのお知らせ(予約の確定・お断り)</b>
+        <span className="sub-text">
+          {state}
+          <span aria-hidden="true"> · </span>
+          {m}月に送った数 {line.sent}通 / 上限 {line.limit}通
+          {line.skipped + line.failed > 0 ? `(送っていない ${line.skipped}・送れなかった ${line.failed})` : ''}
+        </span>
+        <span className="status-summary">{line.bot.message}</span>
+      </span>
+      <span className="status-acts" />
+    </li>
   );
 }
 

@@ -60,6 +60,7 @@ export function BookingCalendarPage() {
     [service, from, to, view, tick],
   );
   const changed = () => setTick((t) => t + 1);
+  const { staff, readOnly } = useAuth();
 
   const setService = (s: BookingService) => {
     const p = new URLSearchParams(params);
@@ -77,9 +78,21 @@ export function BookingCalendarPage() {
         title="予約カレンダー"
         howto="預かり・お泊まりの予約を、日ごとに見られます。マスの「小 2/5」は、小型の予約の数 / 受け入れる頭数です。日を押すと、その日の予約が出ます。"
         aside={
-          <Link to="/bookings/pending" className="btn sub">
-            確認待ち{cal.data ? ` ${cal.data.pendingTotal}件` : ''}
-          </Link>
+          <div className="bk-head-acts">
+            {staff?.role === 'admin' && !readOnly && (
+              <Link to="/booking-settings" className="btn ghost">
+                予約の設定
+              </Link>
+            )}
+            {!readOnly && (
+              <Link to="/bookings/new" className="btn sub">
+                予約を入れる
+              </Link>
+            )}
+            <Link to="/bookings/pending" className="btn sub">
+              確認待ち{cal.data ? ` ${cal.data.pendingTotal}件` : ''}
+            </Link>
+          </div>
         }
       />
       <div className="bk-toolbar">
@@ -121,7 +134,7 @@ export function BookingCalendarPage() {
 
       {cal.error ? <ErrorNotice error={cal.error} onRetry={() => void cal.reload()} /> : null}
 
-      <section className="panel bk-cal-panel" aria-label={`${label}の${BOOKING_SERVICE_LABELS[service]}`}>
+      <section className="panel bk-cal-panel" aria-label={`${label}の${BOOKING_SERVICE_LABELS[service]}のカレンダー`}>
         {view === 'month' ? (
           <div className="bk-month" role="grid">
             {WEEK.map((w) => (

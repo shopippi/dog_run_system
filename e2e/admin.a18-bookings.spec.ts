@@ -14,14 +14,14 @@ test('A-20 手入力: 電話の予約を入れる。いっぱいの日は知ら�
     await markExperienced(request, u.dogs[0]!.id);
     expect((await bookDaycareApi(request, user, [u.dogs[0]!.id], date)).status).toBe('confirmed');
   }
-  const third = await registerApi(request, newLineUser('ゴンパパ'), [{ name: 'ゴン', size: 'large' }]);
+  const third = await registerApi(request, newLineUser('ゴンパパ'), [{ name: 'ゴンザブロウ', size: 'large' }]);
 
   await adminLogin(page, 'admin', '/bookings/new');
   await page.getByRole('heading', { name: '予約を入れる' }).waitFor();
   const picker = page.getByRole('group', { name: '予約を入れるおうち' });
   await picker.getByRole('searchbox', { name: '探す言葉' }).fill(third.memberNo);
   await picker.getByRole('list', { name: '予約を入れるおうちの候補' }).getByRole('button', { name: new RegExp(third.memberNo) }).click();
-  await expect(page.getByRole('checkbox', { name: /ゴン/ })).toBeChecked();
+  await expect(page.getByRole('checkbox', { name: /ゴンザブロウ/ })).toBeChecked();
   await page.getByLabel('日にち').fill(date);
   await page.getByLabel('受付のメモ').fill('電話で受けた');
   await expect(page.locator('.bk-adm-estimate')).toContainText('5,000円');
@@ -37,7 +37,7 @@ test('A-20 手入力: 電話の予約を入れる。いっぱいの日は知ら�
   await page.getByRole('heading', { name: '予約カレンダー' }).waitFor();
   const panel = page.getByRole('region', { name: /の預かり$/ });
   await expect(panel.locator('.bk-usage')).toContainText('大 3/2');
-  await expect(panel.getByRole('button', { name: /ゴン/ })).toBeVisible();
+  await expect(panel.getByRole('button', { name: /ゴンザブロウ/ })).toBeVisible();
 });
 
 test('A-20 受付スタッフは、いっぱいの日に入れられない(管理者に相談)', async ({ page, request }) => {
@@ -73,18 +73,18 @@ test('A-20 受付スタッフは、いっぱいの日に入れられない(管�
 test('A-18・A-21 カレンダーから予約を開き、利用開始 → 利用済み。確認待ちの数がメニューに出る', async ({ page, request }) => {
   const date = dayAhead(12);
   const user = newLineUser('ポチママ');
-  const u = await registerApi(request, user, [{ name: 'ポチ' }]);
+  const u = await registerApi(request, user, [{ name: 'ポチタロウ' }]);
   await markExperienced(request, u.dogs[0]!.id);
   await bookDaycareApi(request, user, [u.dogs[0]!.id], date);
   // 確認待ちを1件(はじめての子)
   const tamaUser = newLineUser('タマパパ');
-  const tama = await registerApi(request, tamaUser, [{ name: 'タマ' }]);
+  const tama = await registerApi(request, tamaUser, [{ name: 'タマサブロウ' }]);
   expect((await bookDaycareApi(request, tamaUser, [tama.dogs[0]!.id], date)).status).toBe('pending');
 
   await adminLogin(page, 'staff', `/bookings?service=daycare&date=${date}`);
   await page.getByRole('heading', { name: '予約カレンダー' }).waitFor();
   const panel = page.getByRole('region', { name: /の預かり$/ });
-  await panel.getByRole('button', { name: /ポチ/ }).click();
+  await panel.getByRole('button', { name: /ポチタロウ/ }).click();
   const dialog = page.getByRole('dialog', { name: '預かりの予約' });
   await expect(dialog.locator('.bk-adm-estimate')).toContainText('目安。お支払いは受付で');
   await dialog.getByRole('button', { name: '利用開始にする' }).click();
@@ -92,21 +92,21 @@ test('A-18・A-21 カレンダーから予約を開き、利用開始 → 利用
   await dialog.getByRole('button', { name: '利用済みにする' }).click();
   await expect(dialog.locator('.badge').first()).toHaveText('利用済み');
   await dialog.getByRole('button', { name: '閉じる' }).click();
-  await expect(panel.getByRole('button', { name: /ポチ/ })).toContainText('利用済み');
-  await expect(panel.getByRole('button', { name: /タマ/ })).toContainText('確認待ち');
+  await expect(panel.getByRole('button', { name: /ポチタロウ/ })).toContainText('利用済み');
+  await expect(panel.getByRole('button', { name: /タマサブロウ/ })).toContainText('確認待ち');
   await expect(page.locator('.nav-badge')).not.toHaveText('0');
 });
 
 test('A-19 確認待ちをお断りする(お客さんへの一言)。製作者は見るだけ', async ({ page, browser, request }) => {
   const date = dayAhead(13);
   const user = newLineUser('チョコママ');
-  const u = await registerApi(request, user, [{ name: 'チョコ' }]);
+  const u = await registerApi(request, user, [{ name: 'チョコチップ' }]);
   expect((await bookDaycareApi(request, user, [u.dogs[0]!.id], date)).status).toBe('pending');
 
   // 製作者は開けるが、操作のボタンはない
   const dev = await browser.newPage({ viewport: { width: 1024, height: 768 } });
   await adminLogin(dev, 'developer', '/bookings/pending');
-  await dev.getByRole('button', { name: /チョコ/ }).first().click();
+  await dev.getByRole('button', { name: /チョコチップ/ }).first().click();
   const devDialog = dev.getByRole('dialog', { name: '預かりの予約' });
   await expect(devDialog.getByRole('button', { name: '閉じる' })).toBeVisible();
   await expect(devDialog.getByRole('button', { name: '承認する' })).toHaveCount(0);
@@ -115,7 +115,7 @@ test('A-19 確認待ちをお断りする(お客さんへの一言)。製作者�
 
   await adminLogin(page, 'admin', '/bookings/pending');
   await expect(page.locator('.nav-badge')).toBeVisible();
-  await page.getByRole('button', { name: /チョコ/ }).first().click();
+  await page.getByRole('button', { name: /チョコチップ/ }).first().click();
   const dialog = page.getByRole('dialog', { name: '預かりの予約' });
   await dialog.getByRole('button', { name: 'お断りする' }).click();
   await dialog.getByLabel('お客さんへの一言(なくてもよい)').fill('その日は貸し切りのため、お受けできません');

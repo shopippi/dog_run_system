@@ -886,6 +886,9 @@ input::placeholder { color: var(--text-tertiary); }
   .side .nav { padding-top: var(--sp-1); }
   .nav-group { padding-bottom: var(--sp-1); }
   .nav-label { padding: 6px var(--sp-3) 2px; }
+  /* 2026-10-31 メニューに「予約」を足した分、行の間のすき間をなくす(押す高さ 40px はそのまま) */
+  .nav-group { gap: 0; padding-bottom: 2px; }
+  .nav-label { padding: 4px var(--sp-3) 0; }
 }
 
 /* ---- 押せる行: ホバーで surface-sunk、押した瞬間に少し縮む ---- */
@@ -1132,3 +1135,4 @@ ul > .list-head + li { border-top: 0; }
   .bk-week-head { min-height: var(--control-h); }
 }
 .bk-week-head { min-height: var(--control-h); }
+.bk-head-acts { display: flex; flex-wrap: wrap; gap: var(--sp-2); justify-content: flex-end; }

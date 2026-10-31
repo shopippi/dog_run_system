@@ -13,7 +13,7 @@ test('A-05 受付で旧カードを確かめて直接入力する。確認の印
   await page.getByRole('navigation', { name: 'メニュー' }).getByRole('link', { name: '旧カードの引き継ぎ' }).click();
   await expect(page.getByRole('heading', { name: '旧カードの引き継ぎ' })).toBeVisible();
   // 「確認待ち」のメニューと件数の印はない
-  await expect(page.getByRole('navigation', { name: 'メニュー' }).getByRole('link', { name: '確認待ち' })).toHaveCount(0);
+  await expect(page.getByRole('navigation', { name: 'メニュー' }).getByRole('link', { name: '確認待ち', exact: true })).toHaveCount(0);
 
   const picker = page.getByRole('group', { name: '引き継ぐおうちを探す' });
   await picker.getByRole('searchbox', { name: '探す言葉' }).fill(memberNo);

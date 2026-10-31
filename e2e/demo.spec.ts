@@ -249,8 +249,9 @@ test('手順9: 予約(はじめての子は確認待ち → 管理者が承認 �
 
   // 管理者が確認待ちから承認する
   const a = adminFrame(page);
-  await a.getByRole('link', { name: '予約カレンダー' }).click();
-  await a.getByRole('link', { name: /確認待ちの予約/ }).click();
+  await a.getByRole('navigation', { name: 'メニュー' }).getByRole('link', { name: /^予約/ }).click();
+  await a.getByRole('heading', { name: '予約カレンダー' }).waitFor();
+  await a.getByRole('link', { name: /^確認待ち \d+件/ }).click();
   await a.getByRole('button', { name: /こむぎ・だいずのおうち/ }).first().click();
   const dialog = a.getByRole('dialog', { name: '預かりの予約' });
   await dialog.getByRole('button', { name: '承認する' }).click();

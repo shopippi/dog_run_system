@@ -23,6 +23,7 @@ export function BookingPendingPage() {
   return (
     <div className="page">
       <PageHead
+        crumbs={[{ label: '予約カレンダー', to: '/bookings' }, { label: '確認待ちの予約' }]}
         title="確認待ちの予約"
         howto="はじめてのワンちゃんがいる予約は、お店が確認してから確定します。押して内容を確かめ、「承認する」か「お断りする」を選んでください。結果はお客さんにLINEで届きます。"
       />

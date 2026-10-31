@@ -1,5 +1,7 @@
 import { env } from 'cloudflare:test';
 import { beforeEach, describe, expect, it } from 'vitest';
+import { vi } from 'vitest';
+import { lineBotInfo } from '../src/services/line-push';
 import { adminCall, call, createStaff, dog, login, registerUser } from './helpers';
 
 // A-18 予約カレンダー・A-19 確認待ち・A-20 手入力・A-21 状態の変更・A-22 受け入れ数の上書き(要件定義書 21章)
@@ -346,6 +348,50 @@ describe('CSV とシステムの状態', () => {
       "INSERT INTO booking_notifications (booking_id, kind, status, message, month, created_at) SELECT id, 'confirmed', 'sent', 'x', '2026-10', 'x' FROM bookings",
     ).run();
     const s = await adminCall('/admin/api/system-status', { cookie: admin, now: NOW });
-    expect(s.body.lineMessages).toEqual({ month: '2026-10', sent: 1, skipped: 1, failed: 0, limit: 200, configured: false });
+    expect(s.body.lineMessages).toMatchObject({ month: '2026-10', sent: 1, skipped: 1, failed: 0, limit: 200, configured: false });
+    expect(s.body.lineMessages.bot.state).toBe('not_set');
+    expect(s.body.lineMessages.bot.message).toContain('予約はそのまま使えます');
+  });
+});
+
+describe('LINE のお知らせのトークンの確かめ(システムの状態。GET /v2/bot/info)', () => {
+  it('つながったら公式アカウントの名前。トークンは Authorization だけに入れる', async () => {
+    const fetcher = vi.fn(async () => Response.json({ displayName: 'グリーンドーム', basicId: '@123abcde' }));
+    const r = await lineBotInfo({ ENVIRONMENT: 'production', LINE_MESSAGING_TOKEN: 'tok-1' }, { fetcher: fetcher as unknown as typeof fetch, force: true });
+    expect(r).toMatchObject({ state: 'connected', displayName: 'グリーンドーム', basicId: '@123abcde' });
+    const [url, init] = fetcher.mock.calls[0] as unknown as [string, RequestInit];
+    expect(url).toBe('https://api.line.me/v2/bot/info');
+    expect((init.headers as Record<string, string>).authorization).toBe('Bearer tok-1');
+    expect(JSON.stringify(r)).not.toContain('tok-1');
+  });
+
+  it('トークンが違えば「発行し直して入れ直す」と次にすることを出す。つながらないときも', async () => {
+    const bad = vi.fn(async () => new Response('{"message":"Authentication failed"}', { status: 401 }));
+    const r = await lineBotInfo({ ENVIRONMENT: 'production', LINE_MESSAGING_TOKEN: 'tok-2' }, { fetcher: bad as unknown as typeof fetch, force: true });
+    expect(r.state).toBe('error');
+    expect(r.message).toContain('LINE_MESSAGING_TOKEN');
+    const down = vi.fn(async () => {
+      throw new TypeError('down');
+    });
+    const r2 = await lineBotInfo({ ENVIRONMENT: 'production', LINE_MESSAGING_TOKEN: 'tok-3' }, { fetcher: down as unknown as typeof fetch, force: true });
+    expect(r2.state).toBe('error');
+  });
+
+  it('少しのあいだ覚えておく(同じトークンなら LINE に何度も聞かない)', async () => {
+    const fetcher = vi.fn(async () => Response.json({ displayName: 'A', basicId: '@a' }));
+    const env = { ENVIRONMENT: 'production' as const, LINE_MESSAGING_TOKEN: 'tok-4' };
+    await lineBotInfo(env, { fetcher: fetcher as unknown as typeof fetch, force: true, now: 1000 });
+    await lineBotInfo(env, { fetcher: fetcher as unknown as typeof fetch, now: 2000 });
+    expect(fetcher).toHaveBeenCalledTimes(1);
+    await lineBotInfo(env, { fetcher: fetcher as unknown as typeof fetch, now: 1000 + 6 * 60_000 });
+    expect(fetcher).toHaveBeenCalledTimes(2);
+  });
+
+  it('トークンがない・練習用の環境では LINE を呼ばない', async () => {
+    const spy = vi.spyOn(globalThis, 'fetch');
+    expect((await lineBotInfo({ ENVIRONMENT: 'production' })).state).toBe('not_set');
+    expect((await lineBotInfo({ ENVIRONMENT: 'test', LINE_MESSAGING_TOKEN: 't' })).state).toBe('mock');
+    expect(spy.mock.calls.filter((c) => String(c[0]).includes('api.line.me'))).toHaveLength(0);
+    spy.mockRestore();
   });
 });
