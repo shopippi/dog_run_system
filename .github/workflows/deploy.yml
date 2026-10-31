@@ -3,6 +3,8 @@
 # - 必要な Secrets: CLOUDFLARE_API_TOKEN(Workers・D1・R2 を編集できるトークン)
 # - 任意の Secrets: STAFF_INITIAL_PASSWORD があれば、管理画面のアカウントがまだ1つもないときに、最初の管理者を作る
 #   (メールアドレスは Secret か Variable の ADMIN_EMAIL。なければ admin@greendome.example)
+# - 任意の Secrets: LINE_MESSAGING_TOKEN があれば、Worker の secret に入れる(予約の確定・お断りの LINE のお知らせ。21章)。
+#   なければお知らせは送らず、予約は今までどおり動く(管理画面の予約の内容に「送っていません(設定がまだ)」と出る)
 # アカウント ID と LIFF ID は公開してよい値なので、ここに書く(Variables の CLOUDFLARE_ACCOUNT_ID / LIFF_ID で上書きできる)。
 name: Deploy
 
@@ -73,6 +75,19 @@ jobs:
           echo "DEPLOY_URL=$URL" >> "$GITHUB_ENV"
           # 外(GitHub の画面以外)からも読めるよう、注釈にも出す
           echo "::notice title=配信先::${URL}/liff/ と ${URL}/admin/"
+
+      - name: LINE のお知らせのトークン(Messaging API)を Worker の secret に入れる(Secrets にあるときだけ)
+        working-directory: apps/api
+        env:
+          LINE_MESSAGING_TOKEN: ${{ secrets.LINE_MESSAGING_TOKEN }}
+        run: |
+          if [ -z "$LINE_MESSAGING_TOKEN" ]; then
+            echo "::notice title=LINE のお知らせ::Secrets に LINE_MESSAGING_TOKEN がないので、予約の確定・お断りの LINE のお知らせは送りません(予約はそのまま使えます)。手順は docs/deploy.md。"
+            exit 0
+          fi
+          # 値はログに出さない(標準入力から渡す)
+          printf '%s' "$LINE_MESSAGING_TOKEN" | pnpm exec wrangler secret put LINE_MESSAGING_TOKEN --env production >/dev/null
+          echo "LINE_MESSAGING_TOKEN を Worker の secret に入れました。"
 
       - name: 最初の管理者を作る(まだ1人もいないときだけ)
         working-directory: apps/api
