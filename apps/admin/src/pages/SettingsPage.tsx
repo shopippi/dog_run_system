@@ -67,7 +67,7 @@ export function SettingsPage() {
  * まとまりごとの下書きと保存。数の欄は入力中は文字のまま持ち、保存するときに数にする。
  * 入力チェックは API と同じもの(checkSettingsPatch)を先に画面で行う。
  */
-function useSettingsDraft(settings: Settings, keys: SettingKey[], onSaved: OnSaved) {
+export function useSettingsDraft(settings: Settings, keys: SettingKey[], onSaved: OnSaved) {
   const pick = (s: Settings): Draft => Object.fromEntries(keys.map((k) => [k, s[k]]));
   const base = JSON.stringify(pick(settings));
   const [draft, setDraft] = useState<Draft>(() => JSON.parse(base) as Draft);
@@ -126,7 +126,7 @@ function useSettingsDraft(settings: Settings, keys: SettingKey[], onSaved: OnSav
   return { draft, set, dirty, busy, saved, error, save };
 }
 
-function SettingsForm({
+export function SettingsForm({
   title,
   desc,
   state,
@@ -156,7 +156,7 @@ function SettingsForm({
 }
 
 /** 数を入れる欄(単位つき) */
-function NumField({
+export function NumField({
   label,
   hint,
   unit,

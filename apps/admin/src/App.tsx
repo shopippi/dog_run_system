@@ -24,6 +24,10 @@ import { DashboardPage } from './pages/DashboardPage';
 import { DogEditPage } from './pages/DogEditPage';
 import { MigrationPage } from './pages/MigrationPage';
 import { SwitchoverPage } from './pages/SwitchoverPage';
+import { BookingCalendarPage } from './pages/bookings/BookingCalendarPage';
+import { BookingPendingPage } from './pages/bookings/BookingPendingPage';
+import { BookingNewPage } from './pages/bookings/BookingNewPage';
+import { BookingSettingsPage } from './pages/bookings/BookingSettingsPage';
 
 export function App() {
   return (
@@ -80,6 +84,10 @@ function Gate() {
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/migration" element={<MigrationPage />} />
         <Route path="/switchover" element={<SwitchoverPage />} />
+        <Route path="/bookings" element={<BookingCalendarPage />} />
+        <Route path="/bookings/pending" element={<BookingPendingPage />} />
+        <Route path="/bookings/new" element={<BookingNewPage />} />
+        <Route path="/booking-settings" element={<BookingSettingsPage />} />
         <Route path="*" element={<Placeholder />} />
       </Routes>
     </Layout>

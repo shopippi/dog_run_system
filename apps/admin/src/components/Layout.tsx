@@ -4,6 +4,7 @@ import { useEffect, type ReactNode } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '../lib/auth';
 import { Icon, type IconName } from './Icon';
+import { usePendingBookings } from '../hooks/usePendingBookings';
 
 type Item = { to: string; label: string; icon: IconName; end?: boolean; adminOnly?: boolean; writeOnly?: boolean; badge?: boolean };
 type Group = { label: string; items: Item[] };
@@ -16,6 +17,15 @@ const GROUPS: Group[] = [
       { to: '/', label: '今日の来場', icon: 'calendar', end: true },
       { to: '/proxy', label: '代理チェックイン', icon: 'clipboard', writeOnly: true },
       { to: '/search', label: 'おうちを探す', icon: 'users' },
+    ],
+  },
+  {
+    label: '予約',
+    items: [
+      { to: '/bookings', label: '予約カレンダー', icon: 'calendar', end: true },
+      { to: '/bookings/pending', label: '確認待ちの予約', icon: 'inbox', badge: true },
+      { to: '/bookings/new', label: '予約を入れる', icon: 'plus', writeOnly: true },
+      { to: '/booking-settings', label: '予約の設定', icon: 'sliders', adminOnly: true },
     ],
   },
   {
@@ -62,6 +72,7 @@ export function Layout({ children }: { children: ReactNode }) {
   };
   useSlashToSearch();
   useActiveNavInView();
+  const pendingBookings = usePendingBookings(!!staff);
   return (
     <div className="shell">
       <aside className="side">
@@ -77,6 +88,11 @@ export function Layout({ children }: { children: ReactNode }) {
                   <NavLink key={it.to} to={it.to} end={it.end}>
                     <Icon name={it.icon} />
                     <span>{it.label}</span>
+                    {it.badge && pendingBookings > 0 && (
+                      <span className="nav-badge" aria-label={`${pendingBookings}件`}>
+                        {pendingBookings}
+                      </span>
+                    )}
                   </NavLink>
                 ))}
               </div>
