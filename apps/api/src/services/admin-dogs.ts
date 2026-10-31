@@ -109,9 +109,19 @@ export async function getAdminDogDetail(db: D1Database, id: number): Promise<Adm
     )
     .bind(id)
     .all<{ id: number; field: string; before_value: string | null; after_value: string | null; reason: string | null; actor_type: string; changed_at: string; actor_name: string | null }>();
+  const stay = await db
+    .prepare(
+      `SELECT d.stay_experience_at IS NOT NULL AS marked,
+              (SELECT COUNT(*) FROM booking_dogs bd JOIN bookings b ON b.id = bd.booking_id
+                WHERE bd.dog_id = d.id AND b.status IN ('checked_in', 'completed')) AS stays
+         FROM dogs d WHERE d.id = ?`,
+    )
+    .bind(id)
+    .first<{ marked: number; stays: number }>();
   return {
     dog,
     household,
+    stay: { experienced: !!stay && (stay.marked === 1 || stay.stays > 0), marked: stay?.marked === 1, stays: stay?.stays ?? 0 },
     breeds: breeds.filter((b) => shown.has(b.id)),
     changes: changes.map((c) => ({
       id: c.id,

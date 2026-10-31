@@ -1,4 +1,5 @@
 import {
+  datesBetween,
   addDays,
   DASHBOARD_MAX_DAYS,
   daysBetween,
@@ -71,11 +72,36 @@ export const ANALYSIS_COLUMNS: CsvColumn[] = [
   col('新しいおうち(軒)', 'その日に会員IDを発行したおうちの数'),
   col('無料券の発行(枚)', 'その日に発行した無料券(ポイントとの交換など)'),
   col('無料券の使用(枚)', 'その日に使われた無料券'),
+  // 2026-10-31 予約(21章)。列は後ろに足す
+  col('預かりの予約(頭)', 'その日の預かりの予約のワンちゃんの数(確定・お預かり中・利用済み。確認待ち・お断り・キャンセルは除く)'),
+  col('お泊まりの予約(頭)', 'その日の夜に泊まる予約のワンちゃんの数(確定・お預かり中・利用済み)'),
 ];
+
+/** 日ごとの予約のワンちゃんの数(「サービス:日付」→ 頭数)。確定・お預かり中・利用済みだけ */
+async function bookedDogsByDay(db: D1Database, from: string, to: string): Promise<Map<string, number>> {
+  const { results } = await db
+    .prepare(
+      `SELECT b.service, b.occupy_from, b.occupy_to, COUNT(*) AS n
+         FROM booking_dogs bd JOIN bookings b ON b.id = bd.booking_id
+        WHERE b.status IN ('confirmed', 'checked_in', 'completed') AND b.occupy_from <= ? AND b.occupy_to >= ?
+        GROUP BY b.id`,
+    )
+    .bind(to, from)
+    .all<{ service: string; occupy_from: string; occupy_to: string; n: number }>();
+  const out = new Map<string, number>();
+  for (const r of results) {
+    for (const d of datesBetween(r.occupy_from < from ? from : r.occupy_from, r.occupy_to > to ? to : r.occupy_to)) {
+      const k = `${r.service}:${d}`;
+      out.set(k, (out.get(k) ?? 0) + r.n);
+    }
+  }
+  return out;
+}
 
 /** 分析パック(1日1行) */
 export async function analysisPack(db: D1Database, period: Period, today: string): Promise<{ columns: CsvColumn[]; rows: CsvValue[][]; notes: string[] }> {
   const facts = await loadDayFacts(db, period.from, period.to, today);
+  const booked = await bookedDogsByDay(db, period.from, period.to);
   const rows: CsvValue[][] = facts.map((f) => [
     f.date,
     WEEKDAY[f.weekday],
@@ -98,6 +124,8 @@ export async function analysisPack(db: D1Database, period: Period, today: string
     f.newHouseholds,
     f.ticketsIssued,
     f.ticketsUsed,
+    booked.get(`daycare:${f.date}`) ?? 0,
+    booked.get(`boarding:${f.date}`) ?? 0,
   ]);
   return {
     columns: ANALYSIS_COLUMNS,

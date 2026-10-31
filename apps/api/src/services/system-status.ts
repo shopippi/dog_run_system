@@ -100,6 +100,11 @@ const TABLE_LABELS: Record<string, string> = {
   staff_sessions: 'ログイン状態',
   audit_log: '操作ログ',
   system_jobs: '自動処理の記録',
+  bookings: '予約',
+  booking_dogs: '予約のワンちゃん',
+  booking_capacity_overrides: '予約の受け入れ数の変更',
+  booking_notifications: '予約のLINEのお知らせ',
+  booking_guard: '予約の同時の見張り',
   d1_migrations: '記録の形の版',
 };
 
@@ -113,8 +118,14 @@ export const D1_DB_LIMIT_BYTES = 500 * 1024 ** 2;
 export async function systemStatus(
   db: D1Database,
   now: Date,
-  opts: { detail: boolean; contact: string },
+  opts: { detail: boolean; contact: string; lineLimit?: number; lineConfigured?: boolean },
 ): Promise<SystemStatusResponse> {
+  const month = toJstIso(now).slice(0, 7);
+  const { results: lineRows } = await db
+    .prepare('SELECT status, COUNT(*) AS n FROM booking_notifications WHERE month = ? GROUP BY status')
+    .bind(month)
+    .all<{ status: 'sent' | 'skipped' | 'failed'; n: number }>();
+  const lineCount = (s: string) => lineRows.find((r) => r.status === s)?.n ?? 0;
   const [lastRes, successRes] = await db.batch([
     db.prepare(
       `SELECT j.name, j.started_at, j.finished_at, j.status, j.message FROM system_jobs j
@@ -180,6 +191,14 @@ export async function systemStatus(
     overall,
     jobs,
     contact: overall === 'red' ? opts.contact || null : null,
+    lineMessages: {
+      month,
+      sent: lineCount('sent'),
+      skipped: lineCount('skipped'),
+      failed: lineCount('failed'),
+      limit: opts.lineLimit ?? 200,
+      configured: opts.lineConfigured ?? false,
+    },
     detail,
   };
 }

@@ -28,7 +28,7 @@ import { Loading, Skeleton, SkeletonText } from '../components/Skeleton';
 import { useToast } from '../components/Toast';
 import { useLoad } from '../hooks/useLoad';
 import { usePhotoSrc } from '../hooks/usePhotoSrc';
-import { ApiError, adminApi, adminPatch } from '../lib/api';
+import { ApiError, adminApi, adminPatch, adminPost } from '../lib/api';
 import { useAuth } from '../lib/auth';
 import { loadCurrentPhoto, loadImage, renderPhoto, uploadAdminDogPhoto, type RenderedPhoto, type Rotation } from '../lib/dog-photo';
 import { formatDateTime } from '../lib/jst-format';
@@ -76,7 +76,7 @@ const formOf = (d: AdminDogDetail): Form => ({
  */
 export function DogEditPage() {
   const { id } = useParams();
-  const { readOnly } = useAuth();
+  const { readOnly, staff } = useAuth();
   const { data, error, reload } = useLoad(() => adminApi<AdminDogDetail>(`/dogs/${id}`), [id]);
   const toast = useToast();
   const current = data && String(data.dog.id) === id ? data : null;
@@ -106,7 +106,55 @@ export function DogEditPage() {
           }}
         />
       )}
+      {data?.stay && <StaySection d={data} canEdit={!readOnly && staff?.role === 'admin'} onChanged={() => void reload()} />}
     </div>
+  );
+}
+
+/**
+ * 預かり・お泊まりの経験(21章)。紙の台帳のころに預かったことのある子は、管理者が「預かり経験あり」の印を付けると、
+ * 次の予約からすぐ確定になる(はじめての子は確認待ち)。操作ログから元に戻せる。
+ */
+function StaySection({ d, canEdit, onChanged }: { d: AdminDogDetail; canEdit: boolean; onChanged: () => void }) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<unknown>(null);
+  const toast = useToast();
+  const stay = d.stay!;
+  const toggle = async (experienced: boolean) => {
+    setBusy(true);
+    setError(null);
+    try {
+      const r = await adminPost<{ auditId: number | null }>(`/dogs/${d.dog.id}/stay-experience`, { experienced });
+      toast({ message: experienced ? `${d.dog.name}を「預かり経験あり」にしました。` : `${d.dog.name}の「預かり経験あり」を外しました。`, undo: { auditId: r.auditId, onUndone: onChanged } });
+      onChanged();
+    } catch (e) {
+      setError(e);
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <section className="panel hh-section" aria-labelledby="dg-stay-title">
+      <h2 id="dg-stay-title" className="hh-section-title">
+        預かり・お泊まり
+      </h2>
+      <div className="dg-stay">
+        <p>
+          {stay.stays > 0
+            ? `受付でお預かりしたことがあります(${stay.stays}回)。予約はすぐ確定します。`
+            : stay.marked
+              ? '「預かり経験あり」の印が付いています。予約はすぐ確定します。'
+              : 'まだお預かりしたことがありません。予約は、お店の確認を待ちます。'}
+        </p>
+        {canEdit && stay.stays === 0 && (
+          <label className="check">
+            <input type="checkbox" checked={stay.marked} disabled={busy} onChange={(e) => void toggle(e.target.checked)} />
+            預かり経験あり(紙の台帳のころに預かったことがある)
+          </label>
+        )}
+        {error ? <ErrorNotice error={error} /> : null}
+      </div>
+    </section>
   );
 }
 

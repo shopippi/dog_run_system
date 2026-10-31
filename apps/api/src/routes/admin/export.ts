@@ -1,4 +1,9 @@
 import {
+  BOOKING_SERVICE_LABELS,
+  BOOKING_STATUS_LABELS,
+  nightsOf,
+  type BookingService,
+  type BookingStatus,
   DOG_SEX_LABELS,
   DOG_SIZE_LABELS,
   DOG_SOCIABILITY_LABELS,
@@ -333,6 +338,84 @@ async function survey(db: D1Database): Promise<Table> {
   };
 }
 
+const BOOKING_SOURCE: Record<string, string> = { customer: 'お客さんがLINEから', staff: '受付で入力' };
+const APPROVAL: Record<string, string> = { first_time: 'はじめてのワンちゃん', approve_all: 'すべて承認制' };
+
+/** 預かり・お泊まりの予約(21章)。1つの予約で1行。期間は利用の初日で絞る */
+async function bookings(db: D1Database, period: Period): Promise<Table> {
+  const where: string[] = [];
+  const args: string[] = [];
+  if (period.from) {
+    where.push('b.start_date >= ?');
+    args.push(period.from);
+  }
+  if (period.to) {
+    where.push('b.start_date <= ?');
+    args.push(period.to);
+  }
+  const { results } = await db
+    .prepare(
+      `SELECT b.id, b.service, b.status, b.start_date, b.end_date, b.start_time, b.end_time, h.member_no, h.display_name,
+              (SELECT GROUP_CONCAT(d.name || '(' || CASE bd.size WHEN 'small' THEN '小型' WHEN 'medium' THEN '中型' ELSE '大型' END || ')', '・')
+                 FROM booking_dogs bd JOIN dogs d ON d.id = bd.dog_id WHERE bd.booking_id = b.id) AS dogs,
+              (SELECT COUNT(*) FROM booking_dogs bd WHERE bd.booking_id = b.id) AS dog_count,
+              (SELECT SUM(bd.first_time) FROM booking_dogs bd WHERE bd.booking_id = b.id) AS first_count,
+              b.estimate_total, b.source, b.approval_reason, b.created_at, b.decided_at, b.cancelled_at, b.cancel_reason
+         FROM bookings b JOIN households h ON h.id = b.household_id
+        ${where.length ? `WHERE ${where.join(' AND ')}` : ''}
+        ORDER BY b.start_date, b.id`,
+    )
+    .bind(...args)
+    .all<Record<string, string | number | null>>();
+  return {
+    columns: [
+      col('予約番号', '予約ごとの番号'),
+      col('種類', '預かり / お泊まり'),
+      col('状態', '確認待ち / 確定 / お断り / キャンセル / お預かり中 / 利用済み / 来なかった'),
+      col('利用の初日', '預かりはその日、お泊まりはチェックインの日(日本時間)'),
+      col('利用の最後の日', '預かりは同じ日、お泊まりはチェックアウトの日'),
+      col('預ける時刻', '預かりは預ける時刻、お泊まりはチェックインの時刻'),
+      col('お迎えの時刻', '預かりはお迎えの時刻、お泊まりはチェックアウトの時刻'),
+      col('泊数(泊)', 'お泊まりの泊数(預かりは 0)'),
+      col('会員ID', 'おうちの番号'),
+      col('おうちの呼び名', '画面に出るおうちの名前'),
+      col('ワンちゃん', '名前(サイズ)。・でつなぐ'),
+      col('頭数(頭)', '予約したワンちゃんの数'),
+      col('はじめての子(頭)', '予約したときに、預かりの経験がなかったワンちゃんの数'),
+      col('料金の目安(円)', '予約したときの設定で計算した目安。実際のお支払いは受付'),
+      col('受け付け方', 'お客さんがLINEから / 受付で入力'),
+      col('確認待ちにした理由', 'はじめてのワンちゃん / すべて承認制(すぐ確定なら空欄)'),
+      col('申し込んだ日時', '日本時間'),
+      col('確定・お断りの日時', '日本時間'),
+      col('キャンセルの日時', '日本時間'),
+      col('キャンセルの理由', 'お客さんか受付が入れた理由'),
+    ],
+    rows: results.map((r) => [
+      r.id,
+      BOOKING_SERVICE_LABELS[r.service as BookingService],
+      BOOKING_STATUS_LABELS[r.status as BookingStatus],
+      r.start_date,
+      r.end_date,
+      r.start_time,
+      r.end_time,
+      nightsOf(r.service as BookingService, r.start_date as string, r.end_date as string),
+      r.member_no,
+      r.display_name,
+      r.dogs,
+      r.dog_count,
+      r.first_count ?? 0,
+      r.estimate_total,
+      label(BOOKING_SOURCE, r.source as string),
+      label(APPROVAL, r.approval_reason as string | null),
+      r.created_at,
+      r.decided_at,
+      r.cancelled_at,
+      r.cancel_reason,
+    ]),
+    notes: ['料金は目安です。実際のお支払いは受付で行い、この表には入っていません。'],
+  };
+}
+
 // CSV を出力する。管理者だけ(製作者は見るだけなので出力できる)
 // 先頭に「#」で始まる説明行(施設名・出力日時・期間・各列の意味・注意・使い方)を付ける。?plain=1 のときは付けない(docs/design.md 12.2)
 exportRoutes.get('/export/:name', requireRole('admin'), async (c) => {
@@ -355,6 +438,7 @@ exportRoutes.get('/export/:name', requireRole('admin'), async (c) => {
     : name === 'dogs' ? await dogs(db)
     : name === 'visits' ? await visits(db, period)
     : name === 'ledger' ? await ledger(db, period)
+    : name === 'bookings' ? await bookings(db, period)
     : await survey(db);
 
   await auditStatement(db, {

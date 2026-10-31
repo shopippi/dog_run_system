@@ -68,6 +68,8 @@ const TYPE_LABELS: Record<string, string> = {
   visit: '来場',
   family_member: '家族',
   day_note: 'その日のメモ',
+  booking: '予約',
+  booking_override: '予約の受け入れ数',
 };
 
 const keyOf = (type: string, id: string | null) => `${type}:${id ?? ''}`;
@@ -134,6 +136,24 @@ export async function resolveTargets(db: D1Database, targets: { type: string; id
     for (const r of results) {
       out.set(keyOf('family_member', String(r.id)), {
         label: `${r.line_display_name ? `${r.line_display_name}さん` : '退会した家族'}(${r.display_name})`,
+        code: r.member_no,
+        householdId: r.household_id,
+      });
+    }
+  }
+
+  const bookingIds = idsOf('booking');
+  if (bookingIds.length) {
+    const { results } = await db
+      .prepare(
+        `SELECT b.id, b.service, b.start_date, b.household_id, h.display_name, h.member_no
+           FROM bookings b JOIN households h ON h.id = b.household_id WHERE b.id IN (${marks(bookingIds.length)})`,
+      )
+      .bind(...bookingIds)
+      .all<{ id: number; service: string; start_date: string; household_id: number; display_name: string; member_no: string }>();
+    for (const r of results) {
+      out.set(keyOf('booking', String(r.id)), {
+        label: `${r.display_name}の${md(r.start_date)}の${r.service === 'boarding' ? 'お泊まり' : '預かり'}`,
         code: r.member_no,
         householdId: r.household_id,
       });

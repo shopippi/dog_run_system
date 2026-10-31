@@ -45,6 +45,8 @@ systemRoutes.get('/system-status', requireRole('admin'), async (c) => {
   const body: SystemStatusResponse = await systemStatus(c.env.DB, c.get('now'), {
     detail: staff.role === 'developer',
     contact: settings.developer_contact,
+    lineLimit: settings.booking_notify.monthly_limit,
+    lineConfigured: !!c.env.LINE_MESSAGING_TOKEN?.trim(),
   });
   return c.json(body);
 });
