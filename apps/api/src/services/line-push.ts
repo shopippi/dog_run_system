@@ -146,7 +146,7 @@ export async function lineBotInfo(
       state: 'not_set',
       displayName: null,
       basicId: null,
-      message: 'LINEのお知らせの設定がまだです。予約はそのまま使えます。お知らせを送るときは、製作者にトークンの設定を頼んでください(docs/deploy.md)。',
+      message: 'LINEのお知らせの設定がまだです。予約はそのまま使えます。お知らせを送るときは、製作者にトークンの設定を頼んでください。',
     };
   }
   if (env.ENVIRONMENT !== 'production' && !opts.fetcher) {
