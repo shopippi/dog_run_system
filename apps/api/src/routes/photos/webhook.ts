@@ -1,8 +1,9 @@
 import { Hono, type Context } from 'hono';
 import type { AppEnv } from '../../env';
 import { AppError } from '../../lib/errors';
-import { notImplemented } from '../../lib/photos/availability';
+import { photoStorage } from '../../lib/photos/storage';
 import { verifyStripeSignature, webhookSecret } from '../../lib/photos/stripe';
+import { processStripeEvent } from '../../services/photos/webhook';
 
 // 段階1-C(決済)。Stripe の Webhook(POST /api/photos/stripe/webhook。認証なし、署名で守る)
 // 署名の確かめ(このファイルの上半分)は段階0で決めた。段階1-C は handleStripeEvent を作る:
@@ -16,8 +17,17 @@ export const webhookRoutes = new Hono<AppEnv>();
 export type StripeEvent = { id: string; type: string; created: number; livemode: boolean; data: { object: Record<string, unknown> } };
 
 /** 署名を確かめたイベントを処理する(段階1-C) */
-export async function handleStripeEvent(_c: Context<AppEnv>, _event: StripeEvent): Promise<Response> {
-  throw notImplemented();
+export async function handleStripeEvent(c: Context<AppEnv>, event: StripeEvent): Promise<Response> {
+  try {
+    const outcome = await processStripeEvent({ env: c.env, storage: photoStorage(c.env), now: c.get('now') }, event);
+    // 処理中(同じイベントがいま別に動いている)は 409。Stripe は少し待って送り直す
+    if (outcome.status === 'in_progress') return c.json({ received: false, status: outcome.status }, 409);
+    return c.json({ received: true, status: outcome.status });
+  } catch (e) {
+    // 失敗(webhook_events は failed)。500 を返すと Stripe が送り直す。続きから処理する
+    console.error('Webhook を処理できませんでした', event.id, event.type, e);
+    return c.json({ error: { code: 'webhook_failed', message: '処理できませんでした。Stripe が送り直します。' } }, 500);
+  }
 }
 
 /**
