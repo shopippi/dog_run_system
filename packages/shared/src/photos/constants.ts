@@ -143,4 +143,15 @@ export const PHOTO_FALLBACK_PREFIX = 'photo-sales/';
 Object.assign(AUDIT_ACTION_LABELS, {
   'photo_album.sale_end': '写真の販売終了(自動)',
   'photo_album.files_delete': '売れなかった写真のファイルの削除(自動)',
+  'photo_album.create': '写真のアルバムを作る',
+  'photo_album.update': '写真のアルバムの変更',
+  'photo_album.publish': '写真のアルバムを公開',
+  'photo_album.remove': '写真のアルバムを一覧から外す',
+  'photo_album.restore': '写真のアルバムを一覧に戻す',
+  'photo.bulk': '写真のまとめての変更',
+  'photo.upload': '写真のアップロード',
+  'photo.hash_mismatch': '写真の中身が合わない(アップロード)',
+  'price_list.create': '写真の価格表を作る',
+  'price_list.update': '写真の価格表の変更',
+  'price_list.defaults': '写真の価格表の既定を変える',
 });
