@@ -1,13 +1,14 @@
 import { expect, test } from '@playwright/test';
 import { checkScreen } from './households-helpers';
 import { newLineUser, openLiff } from './helpers';
-import { addToCartApi, checkoutApi, enablePhotoSales, payMockApi, seedAlbum, seedTwoAlbums } from './photos-checkout-helpers';
+import { addToCartApi, checkoutApi, disablePhotoSales, enablePhotoSales, payMockApi, seedAlbum, seedTwoAlbums } from './photos-checkout-helpers';
 
 // PU-5 カート → まねの支払い → PU-6 購入完了(段階1-C)。写真を選んでカートに入れる画面は 1-B の担当なので、入れるところは API で行う
 
 const PHONE = { viewport: { width: 393, height: 759 }, isMobile: true, hasTouch: true } as const;
 
 test.beforeAll(() => enablePhotoSales());
+test.afterAll(() => disablePhotoSales());
 
 test('複数の写真とまるごとをカートに入れる → まねの支払い → 購入完了', async ({ browser, request }) => {
   test.setTimeout(120_000);

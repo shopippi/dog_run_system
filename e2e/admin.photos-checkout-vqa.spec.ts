@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { adminLogin, newLineUser } from './helpers';
-import { addToCartApi, checkoutApi, enablePhotoSales, payMockApi, seedAlbum } from './photos-checkout-helpers';
+import { addToCartApi, checkoutApi, disablePhotoSales, enablePhotoSales, payMockApi, seedAlbum } from './photos-checkout-helpers';
 import { VqaLog, type AuditOptions } from './visual-qa-helpers';
 
 // PA-6 注文の見え方の点検(e2e/admin.visual-qa.spec.ts と同じ決まり)。CI は 768 と 390。VQA_FULL=1 で 1280・1024・768・390・360
@@ -15,6 +15,7 @@ const ALL = [
 const sizes = process.env.VQA_FULL === '1' ? ALL : ALL.filter((v) => ['admin-768', 'admin-390'].includes(v.id));
 
 test.beforeAll(() => enablePhotoSales());
+test.afterAll(() => disablePhotoSales());
 
 for (const v of sizes) {
   test(`見え方の点検 写真販売の注文 ${v.id}`, async ({ browser, request }) => {

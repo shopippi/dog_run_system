@@ -1,7 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { newLineUser, openLiff } from './helpers';
 import { liffShot } from './liff-shot';
-import { addToCartApi, checkoutApi, enablePhotoSales, seedAlbum } from './photos-checkout-helpers';
+import { addToCartApi, checkoutApi, disablePhotoSales, enablePhotoSales, seedAlbum } from './photos-checkout-helpers';
 import { applyDevice, contextOptions, vqaDeviceList, VqaLog, type AuditOptions } from './visual-qa-helpers';
 
 // 段階1-C の画面の見え方の点検(重なり・切れ・はみ出し・押しにくさ・下の帯に隠れる)。e2e/liff.visual-qa.spec.ts と同じ決まり。
@@ -11,6 +11,7 @@ const LIFF_AUDIT: AuditOptions = { ignore: ['.toast-region'] };
 const devices = vqaDeviceList(['se', 'narrow-text150-dark']);
 
 test.beforeAll(() => enablePhotoSales());
+test.afterAll(() => disablePhotoSales());
 
 async function check(log: VqaLog, page: Page, name: string) {
   await log.check(page, name, { ...LIFF_AUDIT, shoot: (p) => liffShot(page, p) });

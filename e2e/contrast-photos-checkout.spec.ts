@@ -1,11 +1,12 @@
 import { expect, test, type Page } from '@playwright/test';
 import { lowContrast } from './households-helpers';
 import { adminLogin, newLineUser, openLiff } from './helpers';
-import { addToCartApi, checkoutApi, enablePhotoSales, payMockApi, seedTwoAlbums } from './photos-checkout-helpers';
+import { addToCartApi, checkoutApi, disablePhotoSales, enablePhotoSales, payMockApi, seedTwoAlbums } from './photos-checkout-helpers';
 
 // 段階1-C の画面のコントラスト(4.5:1。ライトとダーク): PU-5 カート・まねの支払い・PU-6 購入完了・法定表示・PA-6 注文
 
 test.beforeAll(() => enablePhotoSales());
+test.afterAll(() => disablePhotoSales());
 
 async function measure(page: Page, name: string) {
   await page.waitForLoadState('networkidle');

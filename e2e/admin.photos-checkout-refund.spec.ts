@@ -2,11 +2,12 @@ import { expect, test, type APIRequestContext } from '@playwright/test';
 import { checkScreen } from './households-helpers';
 import { adminLogin, adminToast, newLineUser } from './helpers';
 import { sql } from './merge-helpers';
-import { addToCartApi, checkoutApi, enablePhotoSales, payMockApi, seedTwoAlbums } from './photos-checkout-helpers';
+import { addToCartApi, checkoutApi, disablePhotoSales, enablePhotoSales, payMockApi, seedTwoAlbums } from './photos-checkout-helpers';
 
 // PA-6 注文(段階1-C): 一覧 → 内容 → 返金(条件の内と外)・ダウンロードの記録。製作者は見るだけ
 
 test.beforeAll(() => enablePhotoSales());
+test.afterAll(() => disablePhotoSales());
 
 async function paidOrder(request: APIRequestContext, name: string) {
   const { a, b } = seedTwoAlbums(`${name} `);

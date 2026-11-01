@@ -12,6 +12,11 @@ export function enablePhotoSales() {
   );
 }
 
+/** 販売を止めた状態に戻す(データベースはテスト全体で共有するので、段階0の「準備中」の確かめを壊さないように) */
+export function disablePhotoSales() {
+  sql("UPDATE settings SET value = 'false' WHERE key = 'photo_sales_enabled'");
+}
+
 export type SeededAlbum = { albumId: number; photoIds: number[] };
 
 /** 公開中のアルバム(価格表を新しく作る)と、公開中の写真を入れる。原本は代わりの置き場所に置く */
