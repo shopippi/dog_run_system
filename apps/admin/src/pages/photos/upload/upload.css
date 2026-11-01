@@ -1,0 +1,56 @@
+/* PA-2 アップロード(段階1-A)。docs/design.md に従う(破線にしない・色を足さない。落とせる場所は 1px の線、上に乗せている間だけ accent の枠) */
+
+.ph-up-drop {
+  display: flex; flex-direction: column; align-items: flex-start; gap: var(--sp-2);
+  padding: var(--sp-6) var(--sp-5);
+  transition: border-color var(--dur-fast) var(--ease-out), background-color var(--dur-fast) var(--ease-out);
+}
+.ph-up-drop.over { border-color: var(--accent); background: var(--accent-50); }
+.ph-up-drop-title { font-size: var(--fs-17); font-weight: var(--fw-strong); font-feature-settings: "palt"; }
+.ph-up-drop .sub-text { max-width: 640px; }
+.ph-up-pick { position: relative; margin-top: var(--sp-2); cursor: pointer; }
+.ph-up-pick:focus-within { outline: 2px solid var(--focus-color); outline-offset: 2px; }
+
+.ph-up-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--sp-1) var(--sp-4); padding: var(--sp-4) var(--sp-5); border-bottom: 1px solid var(--border); }
+.ph-up-head h2 { font-size: var(--fs-14); font-weight: var(--fw-strong); }
+.ph-up-head .sub-text { flex-basis: 100%; }
+.ph-up-pad { padding: var(--sp-4) var(--sp-5); }
+
+.ph-up-batches, .ph-up-albums { list-style: none; margin: 0; padding: 0; }
+.ph-up-batch { display: flex; flex-direction: column; gap: var(--sp-2); padding: var(--sp-4) var(--sp-5); border-top: 1px solid var(--border); }
+.ph-up-batch:first-child { border-top: 0; }
+.ph-up-batch-top { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--sp-1) var(--sp-3); }
+.ph-up-batch-name { display: inline-flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2); min-width: 0; overflow-wrap: anywhere; }
+.ph-up-batch-name b { font-size: var(--fs-15); font-weight: var(--fw-strong); }
+.ph-up-batch-count { font-size: var(--fs-13); color: var(--text-secondary); font-variant-numeric: tabular-nums; white-space: nowrap; }
+/* 進み具合: 色を足さず、墨の細い線 */
+.ph-up-bar { height: 4px; border-radius: 2px; background: var(--surface-sunk); overflow: hidden; }
+.ph-up-bar span { display: block; height: 100%; background: var(--ink); transition: width var(--dur) var(--ease-out); }
+.ph-up-batch-meta { font-variant-numeric: tabular-nums; }
+.ph-up-nowrap { white-space: nowrap; }
+.ph-up-fail { font-size: var(--fs-13); }
+.ph-up-fail summary { display: inline-flex; align-items: center; min-height: var(--control-h); cursor: pointer; color: var(--text); }
+.ph-up-fail ul { margin: 0 0 var(--sp-2); padding-left: 1.2em; color: var(--text-secondary); }
+.ph-up-fail-name { color: var(--text); overflow-wrap: anywhere; }
+.ph-up-open { display: inline-flex; align-items: center; align-self: flex-start; min-height: var(--control-h); color: var(--accent-text); font-size: var(--fs-14); }
+
+.ph-up-album {
+  display: grid; grid-template-columns: 48px minmax(0, 1fr) auto; align-items: center; gap: var(--sp-3) var(--sp-4);
+  min-height: 72px; padding: var(--sp-3) var(--sp-5); border-top: 1px solid var(--border);
+  transition: background-color var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out);
+}
+.ph-up-album:first-child { border-top: 0; }
+.ph-up-album.over { background: var(--accent-50); box-shadow: inset 0 0 0 1px var(--accent); }
+.ph-up-album.focus { background: var(--surface-sunk); }
+.ph-up-cover { display: block; width: 48px; height: 48px; border-radius: var(--radius-sm); object-fit: cover; background: var(--surface-sunk); }
+.ph-up-album-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.ph-up-album-name { display: inline-flex; align-items: center; align-self: flex-start; min-height: var(--control-h); color: var(--text); font-size: var(--fs-15); font-weight: var(--fw-strong); text-decoration: none; overflow-wrap: anywhere; }
+.ph-up-album-name:hover { text-decoration: underline; }
+.ph-up-album .ph-up-pick { margin-top: 0; }
+@media (max-width: 560px) {
+  .ph-up-album { grid-template-columns: 48px minmax(0, 1fr); }
+  .ph-up-album .ph-up-pick { grid-column: 1 / -1; justify-self: start; }
+  .ph-up-drop { padding: var(--sp-5) var(--sp-4); }
+}
+/* 見えないファイルの選択欄(押すのはラベル)。入力欄の文字の決まり(16px 以上)にそろえる */
+.ph-up-pick input[type="file"] { font-size: var(--fs-input); }
