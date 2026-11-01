@@ -19,6 +19,8 @@ ENVIRONMENT = "local"
 LINE_CHANNEL_ID = "0000000000"
 # local のときだけ、LINE の代わりにモックのIDトークンを受け付ける
 LINE_LOGIN_MOCK = "1"
+# local のときだけ、写真販売の支払いを Stripe の代わりのまねにする(docs/photo-requirements.md 8.3。本番では効かない)
+STRIPE_MOCK = "1"
 
 [[d1_databases]]
 binding = "DB"
@@ -44,6 +46,10 @@ ENVIRONMENT = "production"
 # グリーンドームの LINE ログインチャネル(LIFF ID 2012268866-TDSM6zyj の前半)
 LINE_CHANNEL_ID = "2012268866"
 LINE_LOGIN_MOCK = "0"
+STRIPE_MOCK = "0"
+# 写真販売の R2(docs/photo-requirements.md 7章)。R2 を有効にしたら、次の2行の # を外して値を入れる(どちらも公開してよい値)。
+# R2_ACCOUNT_ID = "<Cloudflare のアカウントID>"
+# PHOTOS_BUCKET_NAME = "dog-run-production-photos"
 
 [[env.production.d1_databases]]
 binding = "DB"
@@ -57,6 +63,17 @@ migrations_dir = "migrations"
 # [[env.production.r2_buckets]]
 # binding = "MEDIA"
 # bucket_name = "dog-run-production-media"
+
+# 写真販売の写真の置き場所(R2。非公開のバケット。r2.dev の公開URLもカスタムドメインも付けない)。
+# いまは使わない(写真販売は「準備中」のまま)。R2 を有効にしたら、次の手順で使い始める(docs/photo-requirements.md 7.4):
+#   1. `wrangler r2 bucket create dog-run-production-photos`
+#   2. R2 の「API トークン」で、このバケットだけの「オブジェクトの読み書き」のトークンを作り、
+#      `wrangler secret put R2_ACCESS_KEY_ID --env production` と `wrangler secret put R2_SECRET_ACCESS_KEY --env production` で入れる
+#   3. バケットの CORS に、管理画面のドメインからの PUT(ETag ヘッダーを見せる)を足す
+#   4. 上の R2_ACCOUNT_ID・PHOTOS_BUCKET_NAME と、次の3行の # を外して配信する
+# [[env.production.r2_buckets]]
+# binding = "PHOTOS"
+# bucket_name = "dog-run-production-photos"
 
 [env.production.triggers]
 crons = ["10 18 * * *", "10 20 * * *"]

@@ -85,3 +85,34 @@ export function makeCardPhoto(): Promise<Uint8Array> {
 export function makeCardBackground(): Promise<Uint8Array> {
   return svgToJpeg(dogSvg(3, 'photo'), 1200, 900);
 }
+
+// ---------------------------------------------------------------- 写真販売の見本の写真(docs/photo-requirements.md 11章)
+// 著作物の写真は使わない。ブラウザの canvas で、ドッグランの景色と犬の絵を描いた JPEG を作る(原本の代わり)。
+// 透かし付きのプレビュー・サムネイルは、段階1-A のブラウザの処理(管理画面と同じ部品)で作るのが本来の形。
+// デモの初期データでは、ここで作った小さな JPEG をそのまま使う(段階1-A が置き換えてよい)。
+
+const SKIES = ['#CFE0EE', '#E4E9EF', '#F2E3D2', '#D7E4D9'];
+const GROUNDS = ['#8DAA6E', '#9DB27A', '#A9A07A', '#7F9C68'];
+
+/** 見本の写真の SVG(横長 3:2)。variant で空・地面・犬の色と位置を変える */
+export function samplePhotoSvg(variant: number): string {
+  const sky = SKIES[variant % SKIES.length]!;
+  const ground = GROUNDS[(variant * 3 + 1) % GROUNDS.length]!;
+  const dx = 40 + ((variant * 97) % 260);
+  const dog = dogSvg(variant, 'photo')
+    .replace(/^<svg[^>]*>/, '')
+    .replace(/<\/svg>\s*$/, '')
+    .replace(/<rect x="0" y="0" width="400" height="300"[^>]*\/>/, '')
+    .replace(/<rect x="0" y="232"[^>]*\/>/, '');
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 400">
+  <rect width="600" height="400" fill="${sky}"/>
+  <rect y="250" width="600" height="150" fill="${ground}"/>
+  <rect x="0" y="236" width="600" height="14" fill="${shade(ground, 0.85)}"/>
+  <g transform="translate(${dx} 110) scale(0.75)">${dog}</g>
+</svg>`;
+}
+
+/** 見本の写真(JPEG)。longEdge は長辺の px(原本の代わりは 1800、プレビューは 1200、サムネイルは 400) */
+export function makeSamplePhoto(variant: number, longEdge = 1800): Promise<Uint8Array> {
+  return svgToJpeg(samplePhotoSvg(variant), longEdge, Math.round((longEdge * 2) / 3));
+}

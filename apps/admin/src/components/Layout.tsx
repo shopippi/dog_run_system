@@ -47,6 +47,9 @@ const GROUPS: Group[] = [
       { to: '/status', label: 'システムの状態', icon: 'activity', adminOnly: true },
     ],
   },
+  // 写真販売(docs/photo-requirements.md 9.2)。管理者だけ(受付スタッフには出さない。API も 403)。中の画面は上のタブで切り替える。
+  // 1280×800 で「操作ログ」まで見えるよう、いちばん下のまとまりに置く(上のまとまりを長くしない)
+  { label: '販売', items: [{ to: '/photos', label: '写真販売', icon: 'image', adminOnly: true }] },
   { label: '', items: [{ to: '/help', label: '使い方・困ったとき', icon: 'help' }] },
 ];
 

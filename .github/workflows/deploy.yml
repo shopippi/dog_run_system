@@ -4,6 +4,7 @@
 # - 任意の Secrets: STAFF_INITIAL_PASSWORD があれば、管理画面のアカウントがまだ1つもないときに、最初の管理者を作る
 #   (メールアドレスは Secret か Variable の ADMIN_EMAIL。なければ admin@greendome.example)
 # - 任意の Secrets: LINE_MESSAGING_TOKEN があれば、Worker の secret に入れる(予約の確定・お断りの LINE のお知らせ。21章)。
+# - 任意の Secrets: STRIPE_SECRET_KEY・STRIPE_WEBHOOK_SECRET・R2_ACCESS_KEY_ID・R2_SECRET_ACCESS_KEY があれば入れる(写真販売。docs/photo-requirements.md)。
 #   なければお知らせは送らず、予約は今までどおり動く(管理画面の予約の内容に「送っていません(設定がまだ)」と出る)
 # アカウント ID と LIFF ID は公開してよい値なので、ここに書く(Variables の CLOUDFLARE_ACCOUNT_ID / LIFF_ID で上書きできる)。
 name: Deploy
@@ -105,6 +106,30 @@ jobs:
           # 値はログに出さない(標準入力から渡す)
           printf '%s' "$LINE_MESSAGING_TOKEN" | pnpm exec wrangler secret put LINE_MESSAGING_TOKEN --env production >/dev/null
           echo "LINE_MESSAGING_TOKEN を Worker の secret に入れました。"
+
+      - name: 写真販売の秘密(Stripe・R2)を Worker の secret に入れる(Secrets にあるものだけ)
+        working-directory: apps/api
+        env:
+          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+          STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+        run: |
+          # どれも任意。無ければ写真販売は「準備中」のまま(ほかの機能はそのまま使える)。手順は docs/photo-requirements.md 7.4・8.4
+          missing=""
+          for name in STRIPE_SECRET_KEY STRIPE_WEBHOOK_SECRET R2_ACCESS_KEY_ID R2_SECRET_ACCESS_KEY; do
+            value="${!name}"
+            if [ -z "$value" ]; then
+              missing="$missing $name"
+              continue
+            fi
+            # 値はログに出さない(標準入力から渡す)
+            printf '%s' "$value" | pnpm exec wrangler secret put "$name" --env production >/dev/null
+            echo "$name を Worker の secret に入れました。"
+          done
+          if [ -n "$missing" ]; then
+            echo "::notice title=写真販売::Secrets に${missing} がないので、写真販売は「準備中」のままです(ほかの機能はそのまま使えます)。手順は docs/photo-requirements.md。"
+          fi
 
       - name: LINE のお知らせのトークンで LINE 公式アカウントにつながるか確かめる(配信は止めない)
         continue-on-error: true

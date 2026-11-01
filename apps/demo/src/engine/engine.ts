@@ -6,6 +6,7 @@ import { hashPassword } from '@api-src/lib/password';
 import { toJstDate, toJstIso } from '@dr/shared';
 import type { Database, SqlJsStatic } from 'sql.js';
 import { seedDemo, type SeedOptions } from '../seed/seed';
+import { seedPhotoSales } from '../seed/photos';
 import { CookieJar } from './cookies';
 import { DemoD1 } from './d1';
 import { installResponsePatch, withHeaders } from './http-patch';
@@ -39,7 +40,7 @@ export type EngineOptions = {
   /** 保存しない(テスト用) */
   memoryOnly?: boolean;
   /** 初期データの写真を作る(ブラウザだけ) */
-  photos?: Pick<SeedOptions, 'makeDogPhoto' | 'makeCardBackground'>;
+  photos?: Pick<SeedOptions, 'makeDogPhoto' | 'makeCardBackground' | 'makeSamplePhoto'>;
   /** テスト用: 実際の時刻の代わり */
   clock?: () => number;
 };
@@ -119,6 +120,16 @@ export class DemoEngine {
         await r2.put(key, bytes, { httpMetadata: { contentType: 'image/jpeg' } });
       },
     });
+    // 写真販売の見本(段階0のつなぎ口。販売は止めたまま)
+    if (this.opts.photos?.makeSamplePhoto) {
+      await seedPhotoSales(this.sql, {
+        now: this.now(),
+        makeSamplePhoto: this.opts.photos.makeSamplePhoto,
+        putMedia: async (key, bytes) => {
+          await r2.put(key, bytes, { httpMetadata: { contentType: 'image/jpeg' } });
+        },
+      });
+    }
     r2.onChange = onChange;
     if (!this.opts.memoryOnly) {
       for (const [k, v] of r2.objects) await store.putMedia(k, v as StoredObject);
@@ -169,7 +180,8 @@ export class DemoEngine {
   private env() {
     // OFFLINE: ブラウザの中だけで動くので、天気・祝日は外に取りに行かない(スキップとして成功にする)
     // LINE_MESSAGING_TOKEN: 予約のお知らせを「送ったつもり」で記録する(local なので LINE には送らない。トークの画面に出す)
-    return { DB: this.d1, MEDIA: this.r2, ENVIRONMENT: 'local', LINE_CHANNEL_ID: 'demo', LINE_LOGIN_MOCK: '1', OFFLINE: '1', LINE_MESSAGING_TOKEN: 'demo' };
+    // STRIPE_MOCK: 写真販売の支払いは、まねの Stripe(本物には送らない)。写真は代わりの置き場所(MEDIA の photo-sales/ の下)
+    return { DB: this.d1, MEDIA: this.r2, ENVIRONMENT: 'local', LINE_CHANNEL_ID: 'demo', LINE_LOGIN_MOCK: '1', OFFLINE: '1', LINE_MESSAGING_TOKEN: 'demo', STRIPE_MOCK: '1' };
   }
 
   /** 画面から届いた要求を、API(Hono)で処理する。クッキーは画面ごとの入れ物で保つ */

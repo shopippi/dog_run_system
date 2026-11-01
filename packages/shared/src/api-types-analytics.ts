@@ -1,6 +1,7 @@
 import type { WeatherKind } from './analytics';
 import type { DayType } from './constants';
 import type { DashboardAreas, DashboardTrend, WeatherVisitsRow } from './api-types-dashboard';
+import type { PhotoAvailability } from './photos/schemas';
 
 // API の応答の型(analytics: 分析と自動処理)
 
@@ -227,6 +228,11 @@ export type SystemStatusResponse = {
      */
     bot: { state: 'connected' | 'not_set' | 'error' | 'mock'; displayName: string | null; basicId: string | null; message: string };
   };
+  /**
+   * 写真販売の置き場所(R2)・お支払い(Stripe)・設定の状態(docs/photo-requirements.md)。
+   * storage が missing なら「写真の置き場所(R2)がまだ設定されていません」
+   */
+  photoSales?: PhotoAvailability;
   /** 製作者だけ(D-02)。管理者には null */
   detail: {
     recentFailures: SystemJobRun[];

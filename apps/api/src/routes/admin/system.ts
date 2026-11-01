@@ -8,6 +8,7 @@ import { auditStatement } from '../../services/audit';
 import { errors } from '../../lib/errors';
 import { loadSettings } from '../../lib/settings';
 import { systemStatus } from '../../services/system-status';
+import { photoAvailability } from '../../lib/photos/availability';
 
 // A-17・D-02 システムの状態、B-02 祝日データの手動取り込み
 export const systemRoutes = new Hono<AppEnv>();
@@ -50,6 +51,7 @@ systemRoutes.get('/system-status', requireRole('admin'), async (c) => {
     lineConfigured: !!c.env.LINE_MESSAGING_TOKEN?.trim(),
     lineBot: await lineBotInfo(c.env),
   });
+  body.photoSales = photoAvailability(c.env, settings);
   return c.json(body);
 });
 

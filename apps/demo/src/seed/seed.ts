@@ -29,6 +29,8 @@ export type SeedOptions = {
   makeCardBackground?: () => Promise<Uint8Array>;
   /** 写真をつけるおうちの数(先頭から) */
   photoHouseholds?: number;
+  /** 写真販売の見本の写真(JPEG)を作る。あれば、写真販売の見本のアルバムを作る(seed/photos.ts) */
+  makeSamplePhoto?: (variant: number, longEdge?: number) => Promise<Uint8Array>;
 };
 
 export type SeedSummary = { households: number; visits: number; walkins: number; tickets: number };

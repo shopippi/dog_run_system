@@ -21,6 +21,8 @@ describe('マイグレーション', () => {
     ).all<{ name: string }>();
     expect(results.map((r) => r.name)).toEqual(
       [
+        'album_photos',
+        'albums',
         'audit_log',
         'booking_capacity_overrides',
         'booking_dogs',
@@ -30,11 +32,14 @@ describe('マイグレーション', () => {
         'bookings',
         'breeds',
         'calendar',
+        'cart_items',
         'daily_stats',
         'daily_weather',
         'day_notes',
+        'download_logs',
         'dog_changes',
         'dogs',
+        'entitlements',
         'events',
         'family_members',
         'households',
@@ -43,8 +48,15 @@ describe('マイグレーション', () => {
         'media_objects',
         'merges',
         'migration_cards',
+        'order_items',
+        'orders',
+        'photo_customers',
+        'photo_notifications',
+        'photo_uploads',
+        'photos',
         'point_ledger',
         'postal_areas',
+        'price_lists',
         'requests',
         'settings',
         'staff_sessions',
@@ -55,6 +67,7 @@ describe('マイグレーション', () => {
         'tickets',
         'visit_dogs',
         'visits',
+        'webhook_events',
       ].sort(),
     );
   });
@@ -139,5 +152,71 @@ describe('API の土台', () => {
     const res = await call('/api/nothing', { user: 'U001:パパ' });
     expect(res.status).toBe(404);
     expect(res.body.error.message).toMatch(/見つかりません/);
+  });
+});
+
+describe('写真販売のテーブル(マイグレーション 0021。docs/photo-requirements.md 5章)', () => {
+  const T2 = '2026-11-03T10:00:00+09:00';
+  async function base() {
+    await env.DB.batch([
+      env.DB.prepare(`INSERT INTO photo_customers (id, line_user_id, created_at, updated_at) VALUES (1, 'U1', ?, ?)`).bind(T2, T2),
+      env.DB.prepare(`INSERT INTO albums (id, name, kind, event_date, price_list_id, created_at, updated_at) VALUES (1, '2026/11/03', 'date', '2026-11-03', 1, ?, ?)`).bind(T2, T2),
+      env.DB.prepare(
+        `INSERT INTO photos (id, original_key, sha256, bytes, content_type, original_filename, created_at) VALUES (1, 'originals/a/b.jpg', ?, 100, 'image/jpeg', 'IMG_1.JPG', ?)`,
+      ).bind('a'.repeat(64), T2),
+      env.DB.prepare(`INSERT INTO orders (id, customer_id, amount, payment_mode, created_at, updated_at) VALUES (1, 1, 500, 'mock', ?, ?)`).bind(T2, T2),
+      env.DB.prepare(`INSERT INTO order_items (id, order_id, kind, album_id, photo_id, unit_price, label) VALUES (1, 1, 'photo', 1, 1, 500, 'x')`),
+    ]);
+  }
+
+  it('価格表の初期案: 通常 500円(日付の既定)・イベント 800円(イベントの既定)。まるごとの価格は未設定', async () => {
+    const { results } = await env.DB.prepare('SELECT name, unit_price, album_price, is_default_for FROM price_lists ORDER BY id').all();
+    expect(results).toEqual([
+      { name: '通常', unit_price: 500, album_price: null, is_default_for: 'date' },
+      { name: 'イベント', unit_price: 800, album_price: null, is_default_for: 'event' },
+    ]);
+  });
+
+  it('同じ人の同じ写真の、有効な権利は1つだけ(返金で無効にしたあとは、もう一度持てる)', async () => {
+    await base();
+    const grant = () => env.DB.prepare(`INSERT INTO entitlements (customer_id, photo_id, order_item_id, granted_at) VALUES (1, 1, 1, ?)`).bind(T2).run();
+    await grant();
+    await expect(grant()).rejects.toThrow(/UNIQUE/);
+    await env.DB.prepare('UPDATE entitlements SET revoked_at = ?').bind(T2).run();
+    await grant();
+  });
+
+  it('カートに同じ写真は2回入らない。外したあとは入れ直せる', async () => {
+    await base();
+    const add = () => env.DB.prepare(`INSERT INTO cart_items (customer_id, kind, album_id, photo_id, added_at) VALUES (1, 'photo', 1, 1, ?)`).bind(T2).run();
+    await add();
+    await expect(add()).rejects.toThrow(/UNIQUE/);
+    await env.DB.prepare('UPDATE cart_items SET removed_at = ?').bind(T2).run();
+    await add();
+    await env.DB.prepare(`INSERT INTO cart_items (customer_id, kind, album_id, added_at) VALUES (1, 'album', 1, ?)`).bind(T2).run();
+    await expect(env.DB.prepare(`INSERT INTO cart_items (customer_id, kind, album_id, added_at) VALUES (1, 'album', 1, ?)`).bind(T2).run()).rejects.toThrow(/UNIQUE/);
+  });
+
+  it('明細: 写真1枚なら写真が要り、まるごとなら写真を持たない。価格は50円以上', async () => {
+    await base();
+    await expect(env.DB.prepare(`INSERT INTO order_items (order_id, kind, album_id, unit_price, label) VALUES (1, 'photo', 1, 500, 'x')`).run()).rejects.toThrow(/CHECK/);
+    await expect(env.DB.prepare(`INSERT INTO order_items (order_id, kind, album_id, photo_id, unit_price, label) VALUES (1, 'album', 1, 1, 500, 'x')`).run()).rejects.toThrow(/CHECK/);
+    await expect(env.DB.prepare(`INSERT INTO price_lists (name, unit_price, created_at, updated_at) VALUES ('安い', 10, ?, ?)`).bind(T2, T2).run()).rejects.toThrow(/CHECK/);
+  });
+
+  it('Stripe の同じ Checkout・同じイベントは1つだけ', async () => {
+    await base();
+    await env.DB.prepare(`UPDATE orders SET stripe_session_id = 'cs_1' WHERE id = 1`).run();
+    await expect(
+      env.DB.prepare(`INSERT INTO orders (customer_id, amount, payment_mode, stripe_session_id, created_at, updated_at) VALUES (1, 1, 'mock', 'cs_1', ?, ?)`).bind(T2, T2).run(),
+    ).rejects.toThrow(/UNIQUE/);
+    const ev = () => env.DB.prepare(`INSERT INTO webhook_events (stripe_event_id, type, status, received_at) VALUES ('evt_1', 't', 'processing', ?)`).bind(T2).run();
+    await ev();
+    await expect(ev()).rejects.toThrow(/UNIQUE|PRIMARY/);
+  });
+
+  it('写真販売の表にも、残高・金額の残りの列を持たない(権利は entitlements から)', async () => {
+    const { results } = await env.DB.prepare("SELECT name FROM pragma_table_info('photo_customers')").all<{ name: string }>();
+    expect(results.some((r) => /balance|credit/.test(r.name))).toBe(false);
   });
 });

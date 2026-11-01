@@ -9,7 +9,7 @@ export default defineConfig(async () => {
       cloudflareTest({
         wrangler: { configPath: './wrangler.toml' },
         miniflare: {
-          bindings: { TEST_MIGRATIONS: migrations, ENVIRONMENT: 'test', LINE_LOGIN_MOCK: '1' },
+          bindings: { TEST_MIGRATIONS: migrations, ENVIRONMENT: 'test', LINE_LOGIN_MOCK: '1', STRIPE_MOCK: '1' },
         },
       }),
     ],

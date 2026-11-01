@@ -9,3 +9,11 @@ declare module '@api-src/cron' {
 declare module '@api-src/lib/password' {
   export function hashPassword(password: string): Promise<string>;
 }
+declare module '@api-src/lib/photos/storage' {
+  /** 写真販売の代わりの置き場所(デモの写真の保存先 DemoR2 の上で動く) */
+  export class FallbackPhotoStorage {
+    constructor(bucket: unknown, secret: string);
+    sha256(key: string): Promise<string | null>;
+    get(key: string): Promise<{ body: ReadableStream; size: number; contentType: string | null } | null>;
+  }
+}

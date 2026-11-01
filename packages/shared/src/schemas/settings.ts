@@ -43,6 +43,15 @@ export const SETTING_FIELDS: Record<SettingKey, { label: string; hint: string }>
   booking_checklist: { label: '予約のときに確かめてもらうこと', hint: '1つ80文字まで、10個までにしてください。空の行は入れられません。' },
   booking_checklist_required: { label: '確かめてもらうことへの印', hint: '必ず付けてもらうかを選んでください。' },
   booking_notify: { label: 'LINEでのお知らせ', hint: '送る・送らないと、ひと月の上限(0〜100,000通)を入れてください。' },
+  photo_sales_enabled: { label: '写真の販売', hint: '始める・止めるを選んでください。' },
+  photo_watermark_text: { label: '透かしの文字', hint: '40文字までで入れてください。空なら「施設の名前 SAMPLE」になります。' },
+  photo_sale_months: { label: '写真の販売期間', hint: '1〜36か月で入れてください。' },
+  photo_deletion_notice_days: { label: '写真を消す前のお知らせ', hint: '1〜60日前で入れてください。' },
+  photo_download_limit: { label: 'ダウンロードの回数の上限', hint: '1〜100回と、1〜168時間で入れてください。' },
+  photo_refund_days: { label: '返金を受ける期間', hint: '0〜60日で入れてください。' },
+  photo_notify_purchase: { label: '購入完了のLINEのお知らせ', hint: '送る・送らないを選んでください。' },
+  photo_tokushoho_text: { label: '特定商取引法に基づく表記', hint: '20,000文字までで入れてください。' },
+  photo_terms_text: { label: '写真販売の利用規約', hint: '20,000文字までで入れてください。' },
 };
 
 const ymd = /^\d{4}-\d{2}-\d{2}$/;

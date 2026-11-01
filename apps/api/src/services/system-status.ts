@@ -106,6 +106,18 @@ const TABLE_LABELS: Record<string, string> = {
   booking_notifications: '予約のLINEのお知らせ',
   booking_guard: '予約の同時の見張り',
   booking_dog_guard: '予約のワンちゃんの重なりの見張り',
+  photo_customers: '写真の購入者',
+  price_lists: '写真の価格表',
+  albums: '写真のアルバム',
+  photos: '写真',
+  album_photos: 'アルバムに載せた写真',
+  photo_uploads: '写真のアップロードの途中の記録',
+  orders: '写真の注文',
+  order_items: '写真の注文の明細',
+  entitlements: '購入した写真の権利',
+  download_logs: '写真のダウンロードの記録',
+  webhook_events: 'お支払いの知らせ(Stripe)の記録',
+  photo_notifications: '写真の購入完了のLINEのお知らせ',
   d1_migrations: '記録の形の版',
 };
 
@@ -129,7 +141,13 @@ export async function systemStatus(
 ): Promise<SystemStatusResponse> {
   const month = toJstIso(now).slice(0, 7);
   const { results: lineRows } = await db
-    .prepare('SELECT status, COUNT(*) AS n FROM booking_notifications WHERE month = ? GROUP BY status')
+    // 予約のお知らせと、写真の購入完了のお知らせを合わせて数える(ひと月の上限は両方で1つ)
+    .prepare(
+      `SELECT status, COUNT(*) AS n FROM (
+         SELECT status FROM booking_notifications WHERE month = ?1
+         UNION ALL SELECT status FROM photo_notifications WHERE month = ?1
+       ) GROUP BY status`,
+    )
     .bind(month)
     .all<{ status: 'sent' | 'skipped' | 'failed'; n: number }>();
   const lineCount = (s: string) => lineRows.find((r) => r.status === s)?.n ?? 0;

@@ -91,6 +91,7 @@ export function StatusPage() {
                 <JobRow key={j.name} job={j} canRun={!readOnly && j.runnable} onDone={load} />
               ))}
               <LineRow line={data.lineMessages} />
+              {data.photoSales && <PhotoSalesRow photo={data.photoSales} />}
             </ul>
           </section>
           <p className="note">{when(data.checkedAt)} の時点の状態です。</p>
@@ -117,7 +118,7 @@ function LineRow({ line }: { line: SystemStatusResponse['lineMessages'] }) {
     <li className="status-row" aria-label={`LINEのお知らせ ${STATUS_LEVEL_LABELS[level]}`}>
       <Level level={level} />
       <span className="status-body">
-        <b>LINEのお知らせ(予約の確定・お断り)</b>
+        <b>LINEのお知らせ(予約の確定・お断り、写真の購入完了)</b>
         <span className="sub-text">
           {state}
           <span aria-hidden="true"> · </span>
@@ -125,6 +126,36 @@ function LineRow({ line }: { line: SystemStatusResponse['lineMessages'] }) {
           {line.skipped + line.failed > 0 ? `(送っていない ${line.skipped}・送れなかった ${line.failed})` : ''}
         </span>
         <span className="status-summary">{line.bot.message}</span>
+      </span>
+      <span className="status-acts" />
+    </li>
+  );
+}
+
+/** 写真販売の置き場所(R2)とお支払い(Stripe)。設定がまだなら、そう出す(docs/photo-requirements.md) */
+function PhotoSalesRow({ photo }: { photo: NonNullable<SystemStatusResponse['photoSales']> }) {
+  const level: StatusLevel = photo.storage === 'missing' || photo.payments === 'missing' ? 'yellow' : 'green';
+  const storage =
+    photo.storage === 'r2'
+      ? '写真の置き場所(R2): 設定済み'
+      : photo.storage === 'fallback'
+        ? '写真の置き場所: 練習用の環境(データベースに保存)'
+        : '写真の置き場所(R2)がまだ設定されていません';
+  const payments =
+    photo.payments === 'live' ? 'お支払い(Stripe): 設定済み' : photo.payments === 'mock' ? 'お支払い: 練習用の環境(本物の支払いはしない)' : 'お支払い(Stripe)の設定がまだです';
+  return (
+    <li className="status-row" aria-label={`写真販売 ${STATUS_LEVEL_LABELS[level]}`}>
+      <Level level={level} />
+      <span className="status-body">
+        <b>写真販売</b>
+        <span className="sub-text">
+          {storage}
+          <span aria-hidden="true"> · </span>
+          {payments}
+          <span aria-hidden="true"> · </span>
+          {photo.available ? 'お客さんに見せています' : '準備中'}
+        </span>
+        {photo.message && <span className="status-summary">{photo.message}</span>}
       </span>
       <span className="status-acts" />
     </li>

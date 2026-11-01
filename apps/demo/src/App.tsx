@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { startBridge } from './bridge';
 import { DemoEngine } from './engine/engine';
 import { loadSqlJs } from './engine/sqljs';
-import { makeCardBackground, makeDogPhoto } from './seed/art';
+import { makeCardBackground, makeDogPhoto, makeSamplePhoto } from './seed/art';
 import { ACCOUNTS, DEMO_PASSWORD, STAFF } from './seed/fixtures';
 import { SCENES } from './scenes';
 import { LiffBar, LineTalk } from './LineTalk';
@@ -45,7 +45,7 @@ let booting: Promise<DemoEngine> | null = null;
 function boot(): Promise<DemoEngine> {
   booting ??= (async () => {
     const SQL = await loadSqlJs();
-    const engine = await DemoEngine.create({ SQL, photos: { makeDogPhoto, makeCardBackground } });
+    const engine = await DemoEngine.create({ SQL, photos: { makeDogPhoto, makeCardBackground, makeSamplePhoto } });
     if (!engine.jar('admin').header(engine.now().getTime())) {
       await engine.loginAs('admin', 'admin@example.com', DEMO_PASSWORD);
     }

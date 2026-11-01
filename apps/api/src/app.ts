@@ -41,6 +41,7 @@ import { dashboardDaysRoutes } from './routes/admin/dashboard-days';
 import { dayNotesRoutes } from './routes/admin/day-notes';
 import { bookingRoutes } from './routes/customer/bookings';
 import { adminBookingRoutes } from './routes/admin/bookings';
+import { photoAdminRoutes, photoCustomerRoutes, photoPublicRoutes } from './routes/photos';
 
 export function createApp() {
   const app = new Hono<AppEnv>();
@@ -79,6 +80,8 @@ export function createApp() {
   // 施設の名前(認証なし。ログインの前の画面でも使う)
   app.get('/api/public-settings', privateRevalidate, facilityHandler);
   app.get('/admin/api/public-settings', facilityHandler);
+  // 写真販売の認証なしの口(Stripe の Webhook・法定表示・署名つきの受け取り口。docs/photo-requirements.md 6章)
+  app.route('/api/photos', photoPublicRoutes);
 
   // お客さん向け API(LINE の IDトークンで認証)
   const customer = new Hono<AppEnv>();
@@ -103,6 +106,7 @@ export function createApp() {
   customer.route('/', ticketRoutes);
   customer.route('/', cardBackgroundRoutes);
   customer.route('/', bookingRoutes);
+  customer.route('/photos', photoCustomerRoutes);
   app.route('/api', customer);
 
   // 管理画面向け API(ログインのセッションで認証)。ログインだけは認証の前に置く
@@ -129,6 +133,7 @@ export function createApp() {
   admin.route('/', dashboardDaysRoutes);
   admin.route('/', dayNotesRoutes);
   admin.route('/', adminBookingRoutes);
+  admin.route('/photos', photoAdminRoutes);
   app.route('/admin/api', admin);
 
   app.all('/api/*', (c) =>

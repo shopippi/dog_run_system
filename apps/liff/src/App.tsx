@@ -52,6 +52,7 @@ const BookingNewPage = lazyPage(() => import('./pages/bookings/BookingNewPage').
 const BookingDetailPage = lazyPage(() =>
   import('./pages/bookings/BookingDetailPage').then((x) => ({ default: x.BookingDetailPage })),
 );
+const PhotoRoutes = lazyPage(() => import('./pages/photos/PhotoRoutes').then((x) => ({ default: x.PhotoRoutes })));
 const CardBackgroundPage = lazyPage(() =>
   import('./pages/card/CardBackgroundPage').then((x) => ({ default: x.CardBackgroundPage })),
 );
@@ -63,8 +64,12 @@ export function App() {
 
   // 招待を開いたときは、登録の有無にかかわらず招待の画面を出す(C-12)
   const invite = location.pathname.startsWith('/invite/');
+  // 写真販売(docs/photo-requirements.md)。会員登録をしていない LINE ユーザーも買えるので、登録の確認より前に分ける
+  const photos = location.pathname === '/photos' || location.pathname.startsWith('/photos/');
   let content: ReactNode;
-  if (invite) {
+  if (photos) {
+    content = <PhotoRoutes />;
+  } else if (invite) {
     content = (
       <Routes>
         <Route
@@ -97,7 +102,7 @@ export function App() {
 
   return (
     <Shell>
-      <AppHeader back={!invite && me?.registered ? backFor(location.pathname) : null} />
+      <AppHeader back={photos ? photoBackFor(location.pathname) : !invite && me?.registered ? backFor(location.pathname) : null} />
       <RouteView>
         {/* 画面ごとのエラーの境界と、分けて読み込む画面の読み込み中(その画面のスケルトン) */}
         <ErrorBoundary key={location.pathname}>
@@ -148,6 +153,16 @@ function RouteView({ children }: { children: ReactNode }) {
       {children}
     </m.div>
   );
+}
+
+/** 写真販売の画面の戻り先(会員でない人もいるので、会員証には戻さない) */
+function photoBackFor(path: string): HeaderBack | null {
+  const viewer = /^\/photos\/albums\/(\d+)\/photos\/\d+$/.exec(path);
+  if (viewer) return { to: `/photos/albums/${viewer[1]}`, label: 'アルバム' };
+  if (/^\/photos\/albums\/\d+$/.test(path)) return { to: '/photos', label: '写真' };
+  if (path === '/photos/cart' || path === '/photos/purchased' || path === '/photos/legal') return { to: '/photos', label: '写真' };
+  if (/^\/photos\/orders\/\d+$/.test(path)) return { to: '/photos/purchased', label: '購入した写真' };
+  return null;
 }
 
 /** 下の階層の画面では、ヘッダーに戻り先を出す */

@@ -1,0 +1,12 @@
+/* 写真販売の管理画面の共通の見た目(段階0)。docs/design.md に従う。画面ごとの見た目は、各画面の隣に別の CSS を作る */
+.ph-tabs { display: flex; flex-wrap: wrap; gap: var(--sp-1) var(--sp-5); border-bottom: 1px solid var(--border); }
+.ph-tabs a { display: inline-flex; align-items: center; min-height: 44px; padding: 0; margin-bottom: -1px; border-bottom: 2px solid transparent; color: var(--text-secondary); font-size: var(--fs-14); text-decoration: none; }
+.ph-tabs a:hover { color: var(--text); }
+.ph-tabs a.active { color: var(--text); font-weight: var(--fw-strong); border-bottom-color: var(--accent); }
+.ph-tabs a:focus-visible { outline: 2px solid var(--focus-color); outline-offset: 2px; }
+.ph-agrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: var(--sp-2); list-style: none; margin: 0; padding: 0; }
+.ph-acell { position: relative; display: block; width: 100%; aspect-ratio: 1 / 1; padding: 0; border: 1px solid var(--border); border-radius: 6px; background: var(--surface-sunk); overflow: hidden; cursor: pointer; }
+.ph-acell img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.ph-acell.selected { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); }
+.ph-acell:focus-visible { outline: 2px solid var(--focus-color); outline-offset: 2px; }
+.ph-acell-label { position: absolute; left: 0; right: 0; bottom: 0; padding: 2px 6px; background: var(--surface); color: var(--text-secondary); font-size: var(--fs-12); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

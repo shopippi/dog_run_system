@@ -47,10 +47,17 @@ export function transportFor(env: Pick<Bindings, 'ENVIRONMENT'>): PushTransport 
   return env.ENVIRONMENT === 'production' ? lineTransport() : mockTransport;
 }
 
+/**
+ * その月に LINE で送った数(予約のお知らせ + 写真の購入完了のお知らせ)。ひと月の上限は、両方を合わせて数える
+ * (docs/photo-requirements.md 3.6)。?1 は月("2026-11")
+ */
+export const LINE_SENT_IN_MONTH_SQL =
+  "((SELECT COUNT(*) FROM booking_notifications WHERE month = ?1 AND status = 'sent') + (SELECT COUNT(*) FROM photo_notifications WHERE month = ?1 AND status = 'sent'))";
+
 /** その月に送った数(ひと月の上限と、システムの状態の画面に使う) */
 export async function sentThisMonth(db: D1Database, now: Date): Promise<number> {
   const r = await db
-    .prepare("SELECT COUNT(*) AS n FROM booking_notifications WHERE month = ? AND status = 'sent'")
+    .prepare(`SELECT ${LINE_SENT_IN_MONTH_SQL} AS n`)
     .bind(bookingMonthOf(now))
     .first<{ n: number }>();
   return r?.n ?? 0;
@@ -117,7 +124,7 @@ export async function notifyBooking(
       .prepare(
         `INSERT INTO booking_notifications (booking_id, kind, member_id, status, reason, detail, message, month, created_at)
          SELECT ?1, ?2, ?3, 'sent', NULL, NULL, ?4, ?5, ?6
-          WHERE (SELECT COUNT(*) FROM booking_notifications WHERE month = ?5 AND status = 'sent') < ?7
+          WHERE ${LINE_SENT_IN_MONTH_SQL.replaceAll('?1', '?5')} < ?7
          RETURNING id`,
       )
       .bind(b.id, kind, recipient.id, text, month, toJstIso(now), settings.booking_notify.monthly_limit)

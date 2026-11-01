@@ -133,6 +133,29 @@ export const settingsSchema = z.object({
     declined: z.boolean(),
     monthly_limit: z.number().int().min(0).max(100000),
   }),
+
+  // ---- 写真販売(docs/photo-requirements.md。2026-11-01) ----
+  /**
+   * 写真の販売をお客さんに見せるか(初期値 false)。true でも、写真の置き場所(R2)と Stripe の設定がなければ「準備中」のまま
+   * (本番のとき。local・test は代わりの置き場所とまねの Stripe で動く)
+   */
+  photo_sales_enabled: z.boolean(),
+  /** 透かしの文字。空なら「施設の名前 + SAMPLE」(photoWatermarkText) */
+  photo_watermark_text: z.string().trim().max(40),
+  /** 販売期間の既定(公開から何か月。アルバムごとに延長できる) */
+  photo_sale_months: z.number().int().min(1).max(36),
+  /** 削除の何日前に、管理者にお知らせを出すか */
+  photo_deletion_notice_days: z.number().int().min(1).max(60),
+  /** ダウンロードの回数の上限(写真1枚につき hours 時間で count 回まで) */
+  photo_download_limit: z.object({ count: z.number().int().min(1).max(100), hours: z.number().int().min(1).max(168) }),
+  /** 返金を受ける期間(購入から何日。ダウンロードしていない写真だけ) */
+  photo_refund_days: z.number().int().min(0).max(60),
+  /** 購入完了を LINE で知らせるか(予約のお知らせと同じ、ひと月の上限に数える) */
+  photo_notify_purchase: z.boolean(),
+  /** 特定商取引法に基づく表記の本文(施設の名義) */
+  photo_tokushoho_text: z.string().max(20000),
+  /** 写真販売の利用規約の本文(返金の条件を含む) */
+  photo_terms_text: z.string().max(20000),
 });
 export type Settings = z.infer<typeof settingsSchema>;
 export type SettingKey = keyof Settings;
@@ -179,6 +202,23 @@ export const DEFAULT_SETTINGS: Omit<Settings, 'checkin_passphrase'> = {
   booking_checklist: ['狂犬病の予防注射と混合ワクチンを、1年以内に受けています', 'ノミ・ダニの予防をしています'],
   booking_checklist_required: true,
   booking_notify: { confirmed: true, declined: true, monthly_limit: 200 },
+  // 写真販売(2026-11-01 の決定。20章は docs/photo-requirements.md)
+  photo_sales_enabled: false,
+  photo_watermark_text: '',
+  photo_sale_months: 6,
+  photo_deletion_notice_days: 7,
+  photo_download_limit: { count: 10, hours: 24 },
+  photo_refund_days: 7,
+  photo_notify_purchase: true,
+  photo_tokushoho_text:
+    '(特定商取引法に基づく表記は準備中です。販売者(施設の名義)・所在地・連絡先・販売価格・支払い方法・引き渡しの時期・返品についてを、管理画面の写真販売の設定から入れてください)',
+  photo_terms_text: [
+    '(写真販売の利用規約の本文は準備中です。管理画面の写真販売の設定から差し替えてください)',
+    '',
+    '・購入した写真は、ご本人の個人的な利用に限ります。',
+    '・写真はデータのため、原則として返品はできません。',
+    '・ただし、購入から7日以内で、まだ一度もダウンロードしていない写真に限り、返金を受け付けます。お店にご連絡ください。',
+  ].join('\n'),
 };
 
 /** ログインの前でも読める、施設の名前だけ(GET /api/public-settings・GET /admin/api/public-settings) */

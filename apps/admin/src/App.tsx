@@ -28,6 +28,13 @@ import { BookingCalendarPage } from './pages/bookings/BookingCalendarPage';
 import { BookingPendingPage } from './pages/bookings/BookingPendingPage';
 import { BookingNewPage } from './pages/bookings/BookingNewPage';
 import { BookingSettingsPage } from './pages/bookings/BookingSettingsPage';
+import { PhotoDashboardPage } from './pages/photos/PhotoDashboardPage';
+import { PhotoUploadPage } from './pages/photos/PhotoUploadPage';
+import { PhotoAlbumsPage } from './pages/photos/PhotoAlbumsPage';
+import { PhotoAlbumEditPage } from './pages/photos/PhotoAlbumEditPage';
+import { PhotoPriceListsPage } from './pages/photos/PhotoPriceListsPage';
+import { PhotoOrdersPage } from './pages/photos/PhotoOrdersPage';
+import { PhotoSettingsPage } from './pages/photos/PhotoSettingsPage';
 
 export function App() {
   return (
@@ -88,6 +95,15 @@ function Gate() {
         <Route path="/bookings/pending" element={<BookingPendingPage />} />
         <Route path="/bookings/new" element={<BookingNewPage />} />
         <Route path="/booking-settings" element={<BookingSettingsPage />} />
+        {/* 写真販売(docs/photo-requirements.md 9.2。PA-1〜PA-7) */}
+        <Route path="/photos" element={<PhotoDashboardPage />} />
+        <Route path="/photos/upload" element={<PhotoUploadPage />} />
+        <Route path="/photos/albums" element={<PhotoAlbumsPage />} />
+        <Route path="/photos/albums/:id" element={<PhotoAlbumEditPage />} />
+        <Route path="/photos/price-lists" element={<PhotoPriceListsPage />} />
+        <Route path="/photos/orders" element={<PhotoOrdersPage />} />
+        <Route path="/photos/orders/:id" element={<PhotoOrdersPage />} />
+        <Route path="/photos/settings" element={<PhotoSettingsPage />} />
         <Route path="*" element={<Placeholder />} />
       </Routes>
     </Layout>

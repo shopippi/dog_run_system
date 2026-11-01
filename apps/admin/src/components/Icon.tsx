@@ -76,6 +76,13 @@ const PATHS = {
   x: <path d="M6 6l12 12M18 6 6 18" />,
   check: <path d="m5 12.5 4.5 4.5L19 7.5" />,
   undo: <path d="M8.5 7.5H4v-4.5M4.3 7.5A8.5 8.5 0 1 1 3.5 12" />,
+  image: (
+    <>
+      <rect x="3.5" y="4.5" width="17" height="15" rx="2" />
+      <circle cx="9" cy="10" r="1.75" />
+      <path d="m20.5 16-4.5-4.5-8.5 8" />
+    </>
+  ),
 } satisfies Record<string, ReactNode>;
 
 export type IconName = keyof typeof PATHS;

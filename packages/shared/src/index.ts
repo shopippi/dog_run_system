@@ -41,3 +41,4 @@ export * from './offline';
 export * from './booking';
 export * from './schemas/booking';
 export * from './api-types-booking';
+export * from './photos';
