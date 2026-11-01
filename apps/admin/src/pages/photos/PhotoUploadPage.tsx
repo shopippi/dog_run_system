@@ -322,7 +322,7 @@ export function PhotoUploadPage() {
   );
 }
 
-const mb = (n: number) => `${(n / 1024 / 1024).toFixed(n >= 100 * 1024 * 1024 ? 0 : 1)}MB`;
+const mb = (n: number) => (n < 1024 * 1024 ? `${Math.ceil(n / 1024)}KB` : `${(n / 1024 / 1024).toFixed(n >= 100 * 1024 * 1024 ? 0 : 1)}MB`);
 
 function BatchRow({ b }: { b: Batch }) {
   const finished = b.uploaded + b.duplicate + b.failed;
