@@ -21,6 +21,12 @@ describe('デモのリッチメニュー', () => {
   it('会員証は上の段の左 2 マス(A・B)をまとめた一番大きな場所で、ほかは 1 マスずつ', () => {
     const card = RICH_MENU_AREAS.find((a) => a.label === '会員証');
     expect(card).toMatchObject({ x: 0, y: 0, w: 1667, h: 843, route: '/' });
-    expect(RICH_MENU_AREAS.map((a) => a.label)).toEqual(['会員証', 'チェックイン', '来場の記録', 'ワンちゃん', '使い方']);
+    expect(RICH_MENU_AREAS.map((a) => [a.label, a.route])).toEqual([
+      ['会員証', '/'],
+      ['チェックイン', 'checkin'],
+      ['預かり・お泊まり', '/bookings/new'],
+      ['写真を買う', 'photos'],
+      ['使い方', '/help'],
+    ]);
   });
 });

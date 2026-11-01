@@ -6,7 +6,7 @@ import { loadSqlJs } from './engine/sqljs';
 import { makeCardBackground, makeDogPhoto } from './seed/art';
 import { ACCOUNTS, DEMO_PASSWORD, STAFF } from './seed/fixtures';
 import { SCENES } from './scenes';
-import { LiffBar, LineTalk } from './LineTalk';
+import { LiffBar, LineTalk, PhotosSoon } from './LineTalk';
 
 type Account = { userId: string; name: string };
 type Talk = { id: number; from: string; text: string; at: string };
@@ -123,7 +123,7 @@ function Demo({ engine }: { engine: DemoEngine }) {
   const [, setTick] = useState(0);
   const [phone, setPhone] = useState<{ route: string; key: number }>({ route: '/', key: 0 });
   // LINE のトーク画面を出しているか / トーク画面のリッチメニューから開いたか(上に LINE の帯を出す)
-  const [lineView, setLineView] = useState<'app' | 'talk' | 'liff'>('app');
+  const [lineView, setLineView] = useState<'app' | 'talk' | 'liff' | 'photos'>('app');
   const [admin, setAdmin] = useState<{ route: string; key: number }>({ route: '/', key: 0 });
   const [status, setStatus] = useState('');
   const [busy, setBusy] = useState(false);
@@ -192,8 +192,13 @@ function Demo({ engine }: { engine: DemoEngine }) {
     setLineView('app');
     setPhone((p) => ({ route, key: p.key + 1 }));
   };
-  /** リッチメニューから開く(LINE の中で開いたように、上に LINE の帯を出す)。チェックインは受付の QR を読んだことにする */
+  /** リッチメニューから開く(LINE の中で開いたように、上に LINE の帯を出す)。チェックインは受付の QR を読んだことにする。
+   * 写真を買う(photos)は、写真の販売ができるまで準備中の画面を出す */
   const openFromRichMenu = (route: string) => {
+    if (route === 'photos') {
+      setLineView('photos');
+      return;
+    }
     const r = route === 'checkin' ? `/checkin?k=${encodeURIComponent(engine.passphrase())}` : route;
     setPhone((p) => ({ route: r, key: p.key + 1 }));
     setLineView('liff');
@@ -426,6 +431,11 @@ function Demo({ engine }: { engine: DemoEngine }) {
           <div className="phone">
             {lineView === 'talk' ? (
               <LineTalk facility="グリーンドーム" onOpen={openFromRichMenu} notices={bookingNotices(account.userId)} />
+            ) : lineView === 'photos' ? (
+              <>
+                <LiffBar title="グリーンドーム 写真" onClose={() => setLineView('talk')} />
+                <PhotosSoon />
+              </>
             ) : (
               <>
             {lineView === 'liff' && <LiffBar title="グリーンドーム 会員証" onClose={() => setLineView('talk')} />}

@@ -191,7 +191,7 @@ test('管理画面: 写真は API から読んでから出し(404 にならな�
   await expect(list.getByRole('listitem', { name: '天気の取得 正常' })).toBeVisible();
 });
 
-test('LINE のトーク画面: リッチメニューから会員証・来場の記録・チェックインを開き、× でトークに戻る', async ({ page }) => {
+test('LINE のトーク画面: リッチメニューから会員証・預かり・お泊まり・写真を買う・使い方・チェックインを開き、× でトークに戻る', async ({ page }) => {
   await openDemo(page);
   await page.getByRole('button', { name: 'LINE のトーク画面' }).click();
   const talk = page.getByRole('region', { name: 'LINE のトーク画面' });
@@ -205,8 +205,17 @@ test('LINE のトーク画面: リッチメニューから会員証・来場の�
   await page.getByRole('button', { name: '閉じて LINE のトークに戻る' }).click();
   await expect(talk).toBeVisible();
 
-  await menu.getByRole('button', { name: 'リッチメニューの「来場の記録」' }).click();
-  await expect(phone(page).getByRole('heading', { name: '来場履歴' })).toBeVisible();
+  await menu.getByRole('button', { name: 'リッチメニューの「預かり・お泊まり」' }).click();
+  await expect(phone(page).getByRole('heading', { name: '予約する' })).toBeVisible();
+  await page.getByRole('button', { name: '閉じて LINE のトークに戻る' }).click();
+
+  // 写真の販売はまだないので、準備中の画面が出る
+  await menu.getByRole('button', { name: 'リッチメニューの「写真を買う」' }).click();
+  await expect(page.getByRole('region', { name: '写真を買う(準備中)' })).toContainText('写真の販売は準備中です');
+  await page.getByRole('button', { name: '閉じて LINE のトークに戻る' }).click();
+
+  await menu.getByRole('button', { name: 'リッチメニューの「使い方」' }).click();
+  await expect(phone(page).getByRole('heading', { name: '使い方・よくある質問' })).toBeVisible();
   await page.getByRole('button', { name: '閉じて LINE のトークに戻る' }).click();
 
   // チェックインは、受付の QR を読み取ったことにして開く

@@ -72,6 +72,19 @@ for (const name of names) {
     process.exitCode = 1;
     continue;
   }
+  // 文字がマスからはみ出していないか(マスの端から 40px 以上あける)
+  const overflow = await page.evaluate(() =>
+    [...document.querySelectorAll('h1, .label, .sub')].flatMap((el) => {
+      const box = el.closest('.cell, .card')?.getBoundingClientRect();
+      const r = el.getBoundingClientRect();
+      return box && (r.right > box.right - 40 || el.scrollWidth > el.clientWidth + 1) ? [`「${el.textContent.trim()}」`] : [];
+    }),
+  );
+  if (overflow.length) {
+    console.error(`${v.html}: 文字がマスからはみ出しています(${overflow.join('・')})。文字を小さくするか、短くしてください。`);
+    process.exitCode = 1;
+    continue;
+  }
   // 1MB を超えないように(できれば 800KB 以下に)画質を下げながら保存する
   const out = join(dir, v.out);
   let quality = 88;
