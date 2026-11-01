@@ -15,6 +15,7 @@ import { useFacilityName } from '../../hooks/useFacilityName';
 import { canScan, scanCheckinCode } from '../../lib/liff';
 import { CardSkeleton } from '../skeletons';
 import { outboxStatus, subscribeOutbox, type OutboxStatus } from '../../lib/checkin-outbox';
+import { PhotoMenuLink } from '../photos/gallery/PhotoMenuLink';
 import { StampPanel } from './StampPanel';
 import { TicketPanel } from './TicketPanel';
 
@@ -137,6 +138,7 @@ function Card({
             ワンちゃん
           </MenuLink>
           <MenuLink to="/bookings">預かり・お泊まりの予約</MenuLink>
+          <PhotoMenuLink />
           <MenuLink to="/family">家族を招待</MenuLink>
           <MenuLink to="/card/background">背景を変える</MenuLink>
         </div>

@@ -128,7 +128,7 @@ const albums = async (query = '', now = NOW) => {
   expect(r.status).toBe(200);
   return galleryAlbumsResponseSchema.parse(r.body);
 };
-const detail = (id: number, user = ME, now = NOW) => call<GalleryAlbumDetail>(`/api/photos/albums/${id}`, { user, now });
+const detail = (id: number, user = ME, now = NOW) => call<GalleryAlbumDetail & { error: { message: string } }>(`/api/photos/albums/${id}`, { user, now });
 
 beforeEach(async () => {
   await enablePhotoSales();

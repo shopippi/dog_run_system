@@ -1,0 +1,110 @@
+/* ギャラリー(PU-2 アルバム一覧・PU-3 アルバム詳細・PU-4 写真ビューア。段階1-B)の見た目。docs/design.md に従う:
+   色を足さない(主ボタンは墨色、選んだ印は墨色の塗り。購入済み・カートの印は灰色)、角丸は 6・8・12・16 だけ、飾りを置かない。
+   共通の見た目は photos.css(統合の担当)、このファイルはギャラリーの画面だけ */
+
+.ph-gallery { position: relative; }
+.ph-nowrap { white-space: nowrap; }
+.ph-nums { font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* 見出しと、右のカートの入口(ヘッダーの近くにカートの数を出す) */
+.ph-title-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--sp-2) var(--sp-3); }
+/* 見出しが細い列にならないよう、狭い画面・大きな文字ではカートの入口を次の行へ回す */
+.ph-title-row > h2 { flex: 1 1 7em; min-width: 0; word-break: auto-phrase; text-wrap: balance; }
+.ph-title-row > .ph-cart-link { margin-left: auto; }
+.ph-cart-link {
+  flex: none; display: inline-flex; align-items: center; gap: 6px;
+  min-height: 44px; padding: 0 var(--sp-3); border: 1px solid var(--border-strong); border-radius: var(--radius-lg);
+  background: var(--surface); color: var(--text); font-size: var(--fs-15); text-decoration: none; white-space: nowrap;
+  -webkit-tap-highlight-color: transparent; transition: background-color var(--ease);
+}
+.ph-cart-link:active { background: var(--surface-sunk); }
+.ph-cart-link:focus-visible { outline: 2px solid var(--focus-color); outline-offset: 2px; }
+.ph-cart-count {
+  display: inline-flex; align-items: center; justify-content: center; min-width: 22px; height: 22px; padding: 0 6px;
+  border-radius: var(--radius-sm); background: var(--ink); color: var(--on-ink);
+  font-size: var(--fs-12); font-weight: var(--fw-strong); font-variant-numeric: tabular-nums;
+}
+
+/* ---- PU-2 アルバム一覧 ---- */
+.ph-filters { display: flex; flex-direction: column; gap: var(--sp-3); }
+.ph-albums { --row-inset: 92px; }
+.ph-album-row {
+  display: flex; align-items: center; gap: var(--sp-3);
+  min-height: 88px; padding: var(--sp-3) var(--sp-3) var(--sp-3) var(--sp-4);
+  color: var(--text); text-decoration: none; -webkit-tap-highlight-color: transparent;
+  transition: background-color var(--ease);
+}
+a.ph-album-row:active { background: var(--surface-sunk); }
+a.ph-album-row:focus-visible { outline: 2px solid var(--focus-color); outline-offset: -2px; }
+.ph-album-row > .icon { flex: none; color: var(--text-tertiary); }
+.ph-album-cover {
+  flex: none; width: 64px; height: 64px; border-radius: var(--radius); object-fit: cover; display: block;
+  background: var(--surface-sunk); -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
+}
+.ph-album-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.ph-album-name { font-size: var(--fs-17); font-weight: var(--fw-strong); line-height: 1.4; font-feature-settings: "palt"; }
+.ph-album-meta { display: flex; flex-wrap: wrap; column-gap: var(--sp-2); font-size: var(--fs-13); color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+.ph-album-end { font-size: var(--fs-13); color: var(--text-tertiary); }
+
+/* ---- PU-3 アルバム詳細 ---- */
+.ph-sale-end { margin-top: calc(var(--sp-1) * -1); }
+.ph-album-buy {
+  display: flex; flex-direction: column; gap: var(--sp-3); padding: var(--sp-4);
+  border: 1px solid var(--border); border-radius: var(--radius-xl); background: var(--surface); box-shadow: var(--shadow-card);
+}
+.ph-album-buy-text { display: flex; align-items: baseline; justify-content: space-between; gap: var(--sp-3); flex-wrap: wrap; }
+.ph-album-buy-title { font-size: var(--fs-15); font-weight: var(--fw-strong); }
+.ph-album-buy-price { font-size: var(--fs-20); font-weight: var(--fw-strong); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.ph-photos { display: flex; flex-direction: column; gap: var(--sp-3); }
+/* グリッドは画面の端まで広げる(写真を大きく見せる) */
+.ph-photos .ph-lazy { margin: 0 calc(var(--sp-5) * -1); }
+.ph-select-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; column-gap: var(--sp-2); min-height: 44px; }
+/* 狭い画面・大きな文字では、ボタンを次の行へ回す(文が細い列にならないように) */
+.ph-select-status { flex: 1 1 9em; min-width: 0; font-size: var(--fs-15); color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+.ph-select-acts { display: flex; align-items: center; justify-content: flex-end; gap: var(--sp-1); flex: none; margin-left: auto; }
+.btn.ph-inline-btn { width: auto; min-height: 44px; padding: 0 14px; font-size: var(--fs-15); flex: none; }
+.btn.ghost.ph-inline-btn { padding: 0 var(--sp-2); }
+.ph-bar-sum { font-size: var(--fs-13); color: var(--text-secondary); text-align: center; font-variant-numeric: tabular-nums; }
+
+/* 選ぶ状態: 左上に四角い印(選んだら墨色の塗りに白のチェック)。印は CSS で描く(共通の PhotoGrid は変えない) */
+.ph-gallery.selecting .ph-cell[aria-pressed]::after {
+  content: ""; position: absolute; left: 6px; top: 6px; width: 22px; height: 22px; box-sizing: border-box;
+  border: 1.5px solid var(--on-card); border-radius: 4px; background: rgba(0, 0, 0, .28);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .3);
+}
+.ph-gallery.selecting .ph-cell[aria-pressed="true"]::after { background: var(--ink); border-color: var(--ink); }
+.ph-gallery.selecting .ph-cell[aria-pressed="true"]::before {
+  content: ""; position: absolute; z-index: 1; left: 14px; top: 10px; width: 6px; height: 11px;
+  border: solid var(--on-ink); border-width: 0 2px 2px 0; transform: rotate(45deg);
+}
+/* 選べない写真(購入済み・カートに入っている。右上に印がある)は、写真を薄くして印を出さない */
+.ph-gallery.selecting .ph-cell:has(.ph-badge)::after { display: none; }
+.ph-gallery.selecting .ph-cell:has(.ph-badge) img { opacity: .5; }
+
+/* ---- PU-4 写真ビューア ---- */
+.ph-viewer-title { font-size: var(--fs-17); }
+.ph-stage {
+  position: relative; display: flex; align-items: center; justify-content: center; overflow: hidden;
+  margin: 0 calc(var(--sp-5) * -1); aspect-ratio: var(--ph-ar, 3 / 2); max-height: 62dvh;
+  background: var(--surface-sunk);
+  /* 横のスワイプは自前で扱い、縦のスクロールと拡大はブラウザに任せる */
+  touch-action: pan-y pinch-zoom;
+  -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
+}
+.ph-stage-img {
+  display: block; width: 100%; height: 100%; object-fit: contain;
+  -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
+  transition: transform 220ms var(--ease-out);
+}
+.ph-stage.dragging .ph-stage-img { transition: none; }
+.ph-stage-sk { margin: 0 calc(var(--sp-5) * -1); width: calc(100% + var(--sp-5) * 2) !important; }
+.ph-viewer-nav { display: flex; justify-content: space-between; gap: var(--sp-2); margin-top: calc(var(--sp-2) * -1); }
+.ph-viewer-nav .btn { gap: 2px; }
+.ph-viewer-buy { display: flex; flex-direction: column; gap: var(--sp-3); }
+.ph-viewer-price { font-size: var(--fs-24); font-weight: var(--fw-strong); font-variant-numeric: tabular-nums; }
+.ph-viewer-state { font-size: var(--fs-15); color: var(--text-secondary); }
+
+@media (prefers-reduced-motion: reduce) {
+  .ph-stage-img { transition: none; }
+}
+.ph-select-row > .btn { margin-left: auto; }
