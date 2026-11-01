@@ -1,0 +1,54 @@
+/* PU-5 カート・まねの支払い・PU-6 購入完了・法定表示(段階1-C)。docs/design.md に従う:
+   色を足さない(印は灰色。主ボタンは墨色)・角丸は 16 まで・飾りを置かない。共通の photos.css は変えない */
+
+/* ---- 明細の行(カート・注文・まねの支払いで同じ形) ---- */
+.co-lines { --row-inset: 84px; }
+.co-line {
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2) var(--sp-3);
+  min-height: 72px; padding: var(--sp-3) var(--sp-2) var(--sp-3) var(--sp-4);
+}
+.co-lines.no-thumb { --row-inset: 16px; }
+.co-lines.no-thumb .co-line { min-height: 60px; padding-right: var(--sp-4); }
+.co-thumb {
+  flex: none; width: 56px; height: 56px; border-radius: var(--radius); overflow: hidden;
+  background: var(--surface-sunk); display: block;
+}
+.co-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+.co-body { flex: 1 1 9em; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.co-body b { font-size: var(--fs-15); font-weight: var(--fw-strong); overflow-wrap: anywhere; }
+.co-album { font-size: var(--fs-13); color: var(--text-secondary); overflow-wrap: anywhere; }
+.co-flag { align-self: flex-start; margin-top: 2px; white-space: normal; }
+/* 幅が足りないとき(幅 320・文字 150%)は、金額と「外す」を名前の下の行へ回す */
+.co-side { flex: 0 0 auto; margin-left: auto; display: flex; flex-direction: column; align-items: flex-end; gap: 0; }
+.co-price { font-size: var(--fs-15); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.co-line.muted .co-body b, .co-line.muted .co-price { color: var(--text-tertiary); }
+.co-line.muted .co-price { text-decoration: line-through; }
+.co-remove {
+  min-height: 44px; min-width: 44px; padding: 0 var(--sp-2); border: 0; border-radius: var(--radius);
+  background: transparent; color: var(--text-secondary); font-size: var(--fs-14);
+  -webkit-tap-highlight-color: transparent;
+}
+.co-remove:hover { background: var(--surface-sunk); }
+.co-remove:focus-visible { outline: 2px solid var(--focus-color); outline-offset: 2px; }
+.co-remove:disabled { opacity: .45; }
+
+/* ---- 合計 ---- */
+.co-total {
+  display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--sp-3);
+  padding: var(--sp-4); border: 1px solid var(--border); border-radius: var(--radius-xl);
+  background: var(--surface); box-shadow: var(--shadow-card);
+}
+.co-total-label { flex: 1 1 8em; display: flex; flex-direction: column; gap: 2px; font-size: var(--fs-15); }
+.co-total-label .sub-text { white-space: nowrap; }
+.co-total-value { margin-left: auto; font-size: var(--fs-24); font-weight: var(--fw-strong); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.co-notes { display: flex; flex-direction: column; gap: var(--sp-2); }
+.co-legal-link { display: inline-flex; align-items: center; align-self: flex-start; min-height: 44px; color: var(--accent-text); font-size: var(--fs-14); }
+.co-notes a:focus-visible { outline: 2px solid var(--focus-color); outline-offset: 2px; }
+
+/* ---- 購入完了(処理中) ---- */
+.co-waiting { display: flex; align-items: center; gap: var(--sp-3); font-size: var(--fs-15); color: var(--text-secondary); }
+.co-waiting .spinner { flex: none; }
+
+/* ---- 法定表示 ---- */
+.co-legal { display: flex; flex-direction: column; gap: var(--sp-6); }
+.co-legal-text { white-space: pre-wrap; overflow-wrap: anywhere; font-size: var(--fs-14); color: var(--text-secondary); line-height: 1.7; }

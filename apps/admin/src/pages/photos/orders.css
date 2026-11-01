@@ -1,0 +1,72 @@
+/* PA-6 注文(段階1-C)。docs/design.md に従う: 色を足さない(状態の印は灰色。返金の確定だけ danger)・行は線で区切る */
+
+.po-filter { display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--sp-3) var(--sp-4); }
+.po-filter .field { width: 180px; max-width: 100%; }
+.po-filter .po-q { width: 260px; }
+.po-filter select { appearance: auto; }
+
+.po-list { list-style: none; margin: 0; padding: 0; }
+.po-list > li + li { border-top: 1px solid var(--border); }
+.po-row {
+  display: grid; grid-template-columns: 120px minmax(0, 1fr) minmax(112px, auto) 64px 120px; align-items: center;
+  gap: var(--sp-4); min-height: 64px; padding: var(--sp-3) var(--sp-5);
+  color: var(--text); text-decoration: none;
+}
+a.po-row:hover { background: var(--surface-sunk); }
+a.po-row:focus-visible { outline: 2px solid var(--focus-color); outline-offset: -2px; }
+.po-head { min-height: 0; padding-top: var(--sp-2); padding-bottom: var(--sp-2); }
+.po-no { display: flex; flex-direction: column; line-height: 1.4; }
+.po-no b { font-size: var(--fs-14); font-variant-numeric: tabular-nums; }
+.po-no span { font-size: var(--fs-13); color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+.po-who { display: flex; flex-direction: column; min-width: 0; gap: 2px; }
+.po-who b { font-size: var(--fs-15); overflow-wrap: anywhere; }
+.po-num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.po-amount { display: flex; flex-direction: column; align-items: flex-end; line-height: 1.4; }
+.po-amount b { font-size: var(--fs-15); font-variant-numeric: tabular-nums; }
+.po-amount span { font-size: var(--fs-13); color: var(--text-secondary); white-space: nowrap; }
+.po-more { display: flex; justify-content: center; padding: var(--sp-3); border-top: 1px solid var(--border); }
+@media (max-width: 720px) {
+  .po-row { grid-template-columns: minmax(0, 1fr) auto; row-gap: var(--sp-1); }
+  .po-row > .po-no { grid-column: 1 / -1; flex-direction: row; flex-wrap: wrap; gap: 0 var(--sp-2); }
+  .po-row > .po-st, .po-row > .po-count { display: none; }
+  .po-head { display: none; }
+}
+
+/* ---- 内容 ---- */
+.po-summary { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: var(--sp-4) var(--sp-5); padding: var(--sp-5); margin: 0; }
+.po-summary > div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.po-summary dt { font-size: var(--fs-12); color: var(--text-secondary); }
+.po-summary dd { margin: 0; font-size: var(--fs-15); overflow-wrap: anywhere; }
+.po-summary dd.po-big { font-size: var(--fs-20); font-weight: var(--fw-strong); font-variant-numeric: tabular-nums; }
+
+.po-panel-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--sp-3); padding: var(--sp-4) var(--sp-5); border-bottom: 1px solid var(--border); }
+.po-panel-head h2 { font-size: var(--fs-14); font-weight: var(--fw-strong); margin: 0; }
+
+.po-item {
+  display: grid; grid-template-columns: 32px 48px minmax(0, 1fr) 96px minmax(200px, 280px); align-items: center;
+  gap: var(--sp-3) var(--sp-4); min-height: 72px; padding: var(--sp-3) var(--sp-5);
+}
+.po-item.no-check { grid-template-columns: 48px minmax(0, 1fr) 96px minmax(200px, 280px); }
+.po-item .check { min-height: 44px; justify-content: center; }
+.po-thumb { width: 48px; height: 48px; border-radius: var(--radius-sm); overflow: hidden; background: var(--surface-sunk); border: 1px solid var(--border); }
+.po-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.po-item-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.po-item-body b { font-size: var(--fs-15); overflow-wrap: anywhere; }
+.po-refund { display: flex; flex-direction: column; gap: 2px; font-size: var(--fs-13); color: var(--text-secondary); }
+.po-refund b { color: var(--text); font-size: var(--fs-13); }
+.po-item.refunded .po-item-body b, .po-item.refunded .po-num { color: var(--text-tertiary); }
+@media (max-width: 860px) {
+  .po-item, .po-item.no-check { grid-template-columns: 32px 48px minmax(0, 1fr) auto; }
+  .po-item.no-check { grid-template-columns: 48px minmax(0, 1fr) auto; }
+  .po-refund { grid-column: 1 / -1; }
+}
+
+.po-dl { width: 100%; border-collapse: collapse; font-size: var(--fs-14); }
+.po-dl th, .po-dl td { text-align: left; padding: var(--sp-3) var(--sp-5); border-top: 1px solid var(--border); vertical-align: top; }
+.po-dl th { font-size: var(--fs-12); font-weight: var(--fw-strong); color: var(--text-secondary); border-top: 0; }
+.po-dl td.po-ua { color: var(--text-secondary); font-size: var(--fs-13); overflow-wrap: anywhere; }
+.po-dl-wrap { overflow-x: auto; }
+
+.po-dialog-list { margin: 0; padding-left: 1.2em; display: flex; flex-direction: column; gap: var(--sp-1); }
+.po-dialog-total { font-variant-numeric: tabular-nums; }
+.po-dialog .field textarea { width: 100%; min-height: 88px; padding: 10px var(--sp-3); line-height: var(--lh); resize: vertical; }
