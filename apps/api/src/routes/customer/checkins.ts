@@ -1,10 +1,10 @@
-import { addVisitDogsSchema, checkinSchema, toJstDate, type CheckinDetail, type CheckinStatus } from '@dr/shared';
+import { addVisitDogsSchema, checkinSchema, resolveCheckinTime, toJstDate, type CheckinDetail, type CheckinStatus } from '@dr/shared';
 import { Hono } from 'hono';
 import type { AppEnv } from '../../env';
 import { errors } from '../../lib/errors';
 import { loadSettings } from '../../lib/settings';
 import { parseJson } from '../../lib/validate';
-import { addDogsToVisit, recordCheckin, requireActiveDogs, todayVisit } from '../../services/checkins';
+import { addDogsToVisit, householdVisitCount, recordCheckin, requireActiveDogs, todayVisit, visitPoints } from '../../services/checkins';
 import { listHouseholdDogs, listVisitDogs } from '../../services/dogs';
 import { requireMember } from '../../services/members';
 import { pointBalance, unusedTicketCount } from '../../services/points';
@@ -38,7 +38,14 @@ checkinRoutes.post('/checkins', async (c) => {
     );
   }
   const dogIds = await requireActiveDogs(c.env.DB, member.householdId, input.dogIds);
-  const now = c.get('now');
+  // 電波が弱くて送信が遅れたときは、「確定」を押した時刻をチェックインの時刻にする。
+  // ただし 30 分以内・日本時間で同じ日のときだけ。それ以外はサーバーの時刻(要件定義書 15.3)
+  const clientNow = Number(c.req.header('x-client-now'));
+  const { at: now } = resolveCheckinTime({
+    serverNow: c.get('now'),
+    pressedAt: input.pressedAt,
+    clientNow: Number.isFinite(clientNow) ? clientNow : null,
+  });
   const result = await recordCheckin(c.env.DB, {
     householdId: member.householdId,
     memberId: member.memberId,
@@ -99,10 +106,6 @@ checkinRoutes.get('/checkins/:id', async (c) => {
   if (!v || v.household_id !== member.householdId) {
     throw errors.notFound('チェックインが見つかりませんでした。会員証から開き直してください。');
   }
-  const awarded = await db
-    .prepare("SELECT COALESCE(SUM(delta), 0) AS n FROM point_ledger WHERE visit_id = ? AND kind = 'visit'")
-    .bind(v.id)
-    .first<{ n: number }>();
   const now = c.get('now');
   const settings = await loadSettings(db);
   const body: CheckinDetail = {
@@ -115,11 +118,12 @@ checkinRoutes.get('/checkins/:id', async (c) => {
     isToday: v.visit_date === toJstDate(now),
     cancelled: v.cancelled_at !== null,
     dogs: await listVisitDogs(db, v.id, MEDIA_BASE),
-    pointsAwarded: awarded?.n ?? 0,
+    pointsAwarded: await visitPoints(db, v.id),
     usedTicket: v.used_ticket === 1,
     balance: await pointBalance(db, member.householdId),
     unusedTickets: await unusedTicketCount(db, member.householdId, now),
     pointsPerTicket: settings.points_per_ticket,
+    visitCount: v.cancelled_at === null ? await householdVisitCount(db, member.householdId, v.visit_date) : 0,
   };
   return c.json(body);
 });

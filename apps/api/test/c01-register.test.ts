@@ -87,6 +87,15 @@ describe('C-01 初回登録', () => {
     expect(nos).toEqual(['DR-000001', 'DR-000002', 'DR-000003', 'DR-000004', 'DR-000005', 'DR-000006']);
   });
 
+  it('一度にたくさん(12件)登録しても、全員が登録でき、会員IDは続き番号で重ならない', async () => {
+    // 以前は番号の取り直しが5回までで、同時に6件以上来ると最後の人が「混み合っています」になることがあった
+    const users = Array.from({ length: 12 }, (_, i) => `U2${String(i).padStart(2, '0')}:ユーザー${i}`);
+    const results = await Promise.all(users.map((user) => call('/api/register', { user, body: { consent: true, dogs: [dog('アル')], survey: survey() } })));
+    expect(results.map((r) => r.status)).toEqual(users.map(() => 201));
+    const nos = results.map((r) => r.body.memberNo).sort();
+    expect(nos).toEqual(Array.from({ length: 12 }, (_, i) => `DR-${String(i + 1).padStart(6, '0')}`));
+  });
+
   it('おうちから抜けた人は、新しいおうちとして登録し直せる', async () => {
     await call('/api/register', { user: PAPA, body: { consent: true, dogs: [dog('アル')], survey: survey() } });
     await env.DB.prepare("UPDATE family_members SET status = 'left'").run();

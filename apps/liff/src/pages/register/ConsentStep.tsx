@@ -3,6 +3,9 @@ import { useState } from 'react';
 import { ErrorNotice } from '../../components/ErrorNotice';
 import { Progress } from '../../components/Progress';
 import { Terms } from '../../components/Terms';
+import { ActionBar } from '../../components/ActionBar';
+import { BusyLabel } from '../../components/BusyLabel';
+import { PressButton } from '../../components/PressButton';
 
 /** L-01 同意・はじめての方へ(C-01) */
 export function ConsentStep({ me, onSubmit }: { me: MeUnregistered; onSubmit: () => Promise<void> }) {
@@ -52,9 +55,13 @@ export function ConsentStep({ me, onSubmit }: { me: MeUnregistered; onSubmit: ()
         <span>利用規約とプライバシーポリシーに同意します</span>
       </label>
       {error ? <ErrorNotice error={error} /> : null}
-      <button type="button" className="btn" disabled={!agreed || busy} onClick={next}>
-        {busy ? '登録しています…' : '同意して次へ'}
-      </button>
+      <ActionBar>
+        <PressButton type="button" className="btn" disabled={!agreed || busy} onClick={next}>
+          <BusyLabel busy={busy} busyText="登録しています…">
+            同意して次へ
+          </BusyLabel>
+        </PressButton>
+      </ActionBar>
     </main>
   );
 }

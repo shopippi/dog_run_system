@@ -30,7 +30,7 @@ for (const v of VIEWPORTS) {
     const section = page.getByRole('region', { name: '直接入力' });
     await section.getByRole('radio', { name: '紙のスタンプカード' }).check();
     await section.getByLabel('旧カードのポイント数').fill('31');
-    await section.getByText('引き継げるポイントは最大30ポイントです。').waitFor();
+    await section.getByText(/引き継げるのは最大30ポイントです。/).waitFor();
     await checkScreen(page, v.name, 'M-09 旧カードの引き継ぎ(上限を超えたとき)', v.touch);
     await section.getByLabel('旧カードのポイント数').fill('8');
     await section.getByLabel('旧カードを目で確かめた').check();

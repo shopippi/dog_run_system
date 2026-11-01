@@ -3,9 +3,10 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { startBridge } from './bridge';
 import { DemoEngine } from './engine/engine';
 import { loadSqlJs } from './engine/sqljs';
-import { makeDogPhoto } from './seed/art';
+import { makeCardBackground, makeDogPhoto } from './seed/art';
 import { ACCOUNTS, DEMO_PASSWORD, STAFF } from './seed/fixtures';
 import { SCENES } from './scenes';
+import { LiffBar, LineTalk, PhotosSoon } from './LineTalk';
 
 type Account = { userId: string; name: string };
 type Talk = { id: number; from: string; text: string; at: string };
@@ -44,7 +45,7 @@ let booting: Promise<DemoEngine> | null = null;
 function boot(): Promise<DemoEngine> {
   booting ??= (async () => {
     const SQL = await loadSqlJs();
-    const engine = await DemoEngine.create({ SQL, photos: { makeDogPhoto } });
+    const engine = await DemoEngine.create({ SQL, photos: { makeDogPhoto, makeCardBackground } });
     if (!engine.jar('admin').header(engine.now().getTime())) {
       await engine.loginAs('admin', 'admin@example.com', DEMO_PASSWORD);
     }
@@ -108,7 +109,7 @@ export function App() {
 function Header() {
   return (
     <header className="head">
-      <h1>ドッグラン会員証デモ</h1>
+      <h1>グリーンドーム 会員証デモ</h1>
       <p className="lede">
         左がお客さんの LINE の画面、右が受付・管理画面です。どちらも本物の画面と本物の処理が、このブラウザの中だけで動いています(データは架空です)。
         ポイントは「おうち」ごとにたまり、家族の LINE アカウントをつなげられます。
@@ -121,6 +122,8 @@ function Demo({ engine }: { engine: DemoEngine }) {
   const [ui, setUi] = useState<Ui>(loadUi);
   const [, setTick] = useState(0);
   const [phone, setPhone] = useState<{ route: string; key: number }>({ route: '/', key: 0 });
+  // LINE のトーク画面を出しているか / トーク画面のリッチメニューから開いたか(上に LINE の帯を出す)
+  const [lineView, setLineView] = useState<'app' | 'talk' | 'liff' | 'photos'>('app');
   const [admin, setAdmin] = useState<{ route: string; key: number }>({ route: '/', key: 0 });
   const [status, setStatus] = useState('');
   const [busy, setBusy] = useState(false);
@@ -186,7 +189,19 @@ function Demo({ engine }: { engine: DemoEngine }) {
 
   const openPhone = (route: string, who = ui.who) => {
     if (who !== ui.who) update({ who });
+    setLineView('app');
     setPhone((p) => ({ route, key: p.key + 1 }));
+  };
+  /** リッチメニューから開く(LINE の中で開いたように、上に LINE の帯を出す)。チェックインは受付の QR を読んだことにする。
+   * 写真を買う(photos)は、写真の販売ができるまで準備中の画面を出す */
+  const openFromRichMenu = (route: string) => {
+    if (route === 'photos') {
+      setLineView('photos');
+      return;
+    }
+    const r = route === 'checkin' ? `/checkin?k=${encodeURIComponent(engine.passphrase())}` : route;
+    setPhone((p) => ({ route: r, key: p.key + 1 }));
+    setLineView('liff');
   };
   const openAdmin = (route: string) => setAdmin((p) => ({ route, key: p.key + 1 }));
 
@@ -201,6 +216,14 @@ function Demo({ engine }: { engine: DemoEngine }) {
       setBusy(false);
     }
   };
+
+  /** 予約のお知らせ(デモでは LINE に送らず、トーク画面に「届くメッセージ」として出す) */
+  const bookingNotices = (userId: string) =>
+    engine.select<{ id: number; message: string; created_at: string; status: string }>(
+      `SELECT n.id, n.message, n.created_at, n.status FROM booking_notifications n JOIN family_members m ON m.id = n.member_id
+        WHERE m.line_user_id = ? AND n.status = 'sent' ORDER BY n.id`,
+      [userId],
+    );
 
   const isMember = (userId: string) =>
     engine.select("SELECT 1 FROM family_members WHERE line_user_id = ? AND status = 'active'", [userId]).length > 0;
@@ -266,6 +289,10 @@ function Demo({ engine }: { engine: DemoEngine }) {
     } else if (n === 8) {
       await loginAs('staff');
       openAdmin('/search');
+    } else if (n === 9) {
+      openPhone('/bookings', 'U-demo-mama');
+      if (ui.role !== 'admin') await loginAs('admin');
+      openAdmin('/bookings/pending');
     }
     update({ hint: `${n}. ${scene.title} — ${hint}` });
   };
@@ -390,7 +417,10 @@ function Demo({ engine }: { engine: DemoEngine }) {
               {accountNote(account.userId)}
             </p>
           </div>
-          <div className="launch">
+          <div className="launch three">
+            <button type="button" className="btn sub" onClick={() => setLineView('talk')} aria-pressed={lineView === 'talk'}>
+              LINE のトーク画面
+            </button>
             <button type="button" className="btn sub" onClick={() => openPhone(`/checkin?k=${encodeURIComponent(engine.passphrase())}`)}>
               受付の QR を読み取る
             </button>
@@ -399,12 +429,24 @@ function Demo({ engine }: { engine: DemoEngine }) {
             </button>
           </div>
           <div className="phone">
+            {lineView === 'talk' ? (
+              <LineTalk facility="グリーンドーム" onOpen={openFromRichMenu} notices={bookingNotices(account.userId)} />
+            ) : lineView === 'photos' ? (
+              <>
+                <LiffBar title="グリーンドーム 写真" onClose={() => setLineView('talk')} />
+                <PhotosSoon />
+              </>
+            ) : (
+              <>
+            {lineView === 'liff' && <LiffBar title="グリーンドーム 会員証" onClose={() => setLineView('talk')} />}
             <iframe
               key={`${phone.key}:${ui.who}`}
               ref={phoneRef}
               title="お客さんのスマホ"
               src={`liff/index.html${liffHash(phone.route, account)}`}
             />
+              </>
+            )}
           </div>
 
           <section className="panel talk" aria-labelledby="talk-h">

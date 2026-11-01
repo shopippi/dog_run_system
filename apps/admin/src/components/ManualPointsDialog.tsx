@@ -1,7 +1,8 @@
-import { MANUAL_POINT_REASONS, type HouseholdDetail, type ManualPointReason, type ManualPointsPreview } from '@dr/shared';
+import { MANUAL_POINT_REASONS, type HouseholdDetail, type ManualPointReason, type ManualPointsPreview, type WithAuditId } from '@dr/shared';
 import { useEffect, useState } from 'react';
 import { adminPost } from '../lib/api';
 import { Dialog } from './Dialog';
+import { BusyLabel } from './BusyLabel';
 import { ErrorNotice } from './ErrorNotice';
 import { Icon } from './Icon';
 
@@ -15,7 +16,7 @@ export function ManualPointsDialog({
 }: {
   d: HouseholdDetail;
   onClose: () => void;
-  onDone: (result: ManualPointsPreview) => void;
+  onDone: (result: ManualPointsPreview & Partial<WithAuditId>) => void;
 }) {
   const [points, setPoints] = useState(0);
   const [tickets, setTickets] = useState(0);
@@ -43,7 +44,7 @@ export function ManualPointsDialog({
     setBusy(true);
     setError(null);
     try {
-      onDone(await adminPost<ManualPointsPreview>(`/households/${d.id}/points`, body));
+      onDone(await adminPost<ManualPointsPreview & WithAuditId>(`/households/${d.id}/points`, body));
     } catch (e) {
       setError(e);
       setBusy(false);
@@ -70,7 +71,9 @@ export function ManualPointsDialog({
               戻る
             </button>
             <button type="button" className="btn" disabled={busy} onClick={submit}>
-              {busy ? '登録しています…' : '登録する'}
+              <BusyLabel busy={busy} pending="登録しています…">
+                登録する
+              </BusyLabel>
             </button>
           </>
         }
@@ -112,7 +115,9 @@ export function ManualPointsDialog({
             やめる
           </button>
           <button type="button" className="btn" disabled={busy || !ready} onClick={check}>
-            {busy ? '確かめています…' : '内容を確かめる'}
+            <BusyLabel busy={busy} pending="確かめています…">
+              内容を確かめる
+            </BusyLabel>
           </button>
         </>
       }

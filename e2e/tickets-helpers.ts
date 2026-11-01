@@ -1,4 +1,4 @@
-import { expect, type APIRequestContext, type Page } from '@playwright/test';
+import { expect, type APIRequestContext, type Locator, type Page } from '@playwright/test';
 import { authHeaders, checkinOn } from './customer-helpers';
 import { checkinPassphrase } from './helpers';
 
@@ -33,4 +33,22 @@ export async function householdIdOf(admin: Page, memberNo: string): Promise<numb
   const res = await admin.request.get(`/admin/api/households?q=${encodeURIComponent(memberNo)}`);
   const { households } = (await res.json()) as { households: { id: number; memberNo: string }[] };
   return households.find((h) => h.memberNo === memberNo)!.id;
+}
+
+/**
+ * 会員証の無料券を、指(マウス)で右へスライドする(C-06)。to は右端までの割合(1 で右端。途中で離す確かめに 0.5 など)。
+ * scope は券の行(listitem)など、スライダーを含む範囲。
+ */
+export async function slideToUse(page: Page, scope: Locator | Page, to = 1) {
+  const knob = scope.getByRole('slider', { name: 'スライドして使用する' }).first();
+  await knob.scrollIntoViewIfNeeded();
+  const k = (await knob.boundingBox())!;
+  const t = (await knob.locator('..').boundingBox())!;
+  const y = k.y + k.height / 2;
+  const startX = k.x + k.width / 2;
+  const endX = startX + (t.x + t.width - 4 - k.width / 2 - startX) * to;
+  await page.mouse.move(startX, y);
+  await page.mouse.down();
+  await page.mouse.move(endX, y, { steps: 10 });
+  await page.mouse.up();
 }

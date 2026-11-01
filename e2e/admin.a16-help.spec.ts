@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { adminLogin } from './helpers';
+import { adminLogin, adminToast } from './helpers';
 
 // A-16 使い方と「困ったとき」(M-16)
 
@@ -11,7 +11,7 @@ test('A-16 管理者が入れた製作者の連絡先が、受付スタッフの
   const section = admin.getByRole('region', { name: '製作者の連絡先' });
   await section.getByLabel('連絡先').fill('山田(製作者)\n090-0000-0000 平日10時〜18時');
   await section.getByRole('button', { name: '保存する' }).click();
-  await expect(section.getByRole('status')).toHaveText('保存しました。');
+  await expect(adminToast(admin, '保存しました。')).toBeVisible();
 
   const staff = await browser.newPage({ viewport: { width: 1024, height: 768 } });
   try {

@@ -8,6 +8,8 @@ import { fetchWeather, type WeatherSource } from './services/weather';
 import { backupDatabase } from './services/backup';
 import { expirePointsAndTickets } from './services/expiry';
 import { deleteMigrationImages } from './services/migration-images';
+import { lookupPostalAreas } from './services/postal-areas';
+import { purgeIdempotencyKeys } from './lib/idempotency';
 
 /** 日本時間 3:10(UTC 18:10)。日別集計の再計算、有効期限の処理、バックアップ、移行期間終了後の画像削除 */
 export const CRON_NIGHTLY = '10 18 * * *';
@@ -38,6 +40,9 @@ export async function runNightly(env: Bindings, now: Date): Promise<void> {
   await runBackupJob(env, now);
   await runMigrationImagesJob(env, now);
   if (await shouldImportHolidays(env.DB, now)) await runHolidaysJob(env, now);
+  await runPostalAreasJob(env, now);
+  // 7日より古い送信の印(二重送信を防ぐための一時的な記録。業務の記録ではない)を消す。失敗しても、ほかの処理に影響させない
+  await purgeIdempotencyKeys(env.DB, now).catch((e) => console.error('送信の印の整理に失敗しました', e));
 }
 
 export async function runMorning(env: Bindings, now: Date): Promise<void> {
@@ -74,7 +79,11 @@ export function runWeatherJob(env: Bindings, now: Date, source?: WeatherSource) 
 
 /** B-04 バックアップ(毎晩 3:10 と、管理画面の手動の実行から呼ぶ) */
 export function runBackupJob(env: Bindings, now: Date) {
-  return runJob(env.DB, 'backup', now, () => backupDatabase(env.DB, env.MEDIA, now));
+  return runJob(env.DB, 'backup', now, async () =>
+    env.MEDIA_BACKEND === 'd1'
+      ? { message: 'スキップしました(写真の保存先 R2 を使っていないため。データベースは Cloudflare が過去7日分を自動で残し、GitHub にも毎晩・配信のたびに暗号化して30日分を残しています)。' }
+      : backupDatabase(env.DB, env.MEDIA, now),
+  );
 }
 
 /** B-05 有効期限の処理(毎晩 3:10) */
@@ -86,5 +95,12 @@ export function runExpiryJob(env: Bindings, now: Date) {
 export function runMigrationImagesJob(env: Bindings, now: Date) {
   return runJob(env.DB, 'migration_images', now, async () =>
     deleteMigrationImages(env.DB, env.MEDIA, now, await loadSettings(env.DB)),
+  );
+}
+
+/** 郵便番号から地域を調べる(毎晩 3:10 と、管理画面の「今すぐ調べる」から呼ぶ。docs/design.md 12.3) */
+export function runPostalAreasJob(env: Bindings, now: Date) {
+  return runJob(env.DB, 'postal_areas', now, async () =>
+    isOffline(env) ? { message: OFFLINE_SKIP_MESSAGE } : lookupPostalAreas(env.DB, now),
   );
 }

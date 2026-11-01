@@ -4,6 +4,9 @@ import { DogForm, draftToInput, emptyDogDraft, type DogDraft } from '../../compo
 import { ErrorNotice, MessageNotice } from '../../components/ErrorNotice';
 import { Icon } from '../../components/Icon';
 import { Progress } from '../../components/Progress';
+import { ActionBar } from '../../components/ActionBar';
+import { BusyLabel } from '../../components/BusyLabel';
+import { PressButton } from '../../components/PressButton';
 
 type Props = {
   breeds: Breed[];
@@ -58,9 +61,13 @@ export function DogsStep({ breeds, drafts, onChange, onNext, nextLabel, error, b
       )}
       {message && <MessageNotice message={message} />}
       {error ? <ErrorNotice error={error} /> : null}
-      <button type="button" className="btn" disabled={busy} onClick={next}>
-        {busy ? '登録しています…' : nextLabel}
-      </button>
+      <ActionBar>
+        <PressButton type="button" className="btn" disabled={busy} onClick={next}>
+          <BusyLabel busy={!!busy} busyText="登録しています…">
+            {nextLabel}
+          </BusyLabel>
+        </PressButton>
+      </ActionBar>
     </main>
   );
 }

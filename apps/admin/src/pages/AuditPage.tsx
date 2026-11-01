@@ -3,7 +3,10 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Dialog } from '../components/Dialog';
 import { ErrorNotice } from '../components/ErrorNotice';
+import { BusyLabel } from '../components/BusyLabel';
 import { PageHead } from '../components/PageHead';
+import { Loading, SkeletonGhost, SkeletonText } from '../components/Skeleton';
+import { useToast } from '../components/Toast';
 import { useLoad } from '../hooks/useLoad';
 import { adminApi, adminPost } from '../lib/api';
 import { useAuth } from '../lib/auth';
@@ -19,7 +22,7 @@ export function AuditPage() {
   const { readOnly } = useAuth();
   const [filter, setFilter] = useState<Filter>({ from: '', to: '', action: '', page: 1 });
   const [target, setTarget] = useState<AuditEntry | null>(null);
-  const [done, setDone] = useState<string | null>(null);
+  const toast = useToast();
   const { data, error, reload } = useLoad(() => {
     const p = new URLSearchParams();
     if (filter.from) p.set('from', filter.from);
@@ -30,7 +33,6 @@ export function AuditPage() {
   }, [filter.from, filter.to, filter.action, filter.page]);
 
   const set = (patch: Partial<Filter>) => {
-    setDone(null);
     setFilter((f) => ({ ...f, page: 1, ...patch }));
   };
   const pages = data ? Math.max(1, Math.ceil(data.total / data.pageSize)) : 1;
@@ -63,19 +65,15 @@ export function AuditPage() {
         </div>
       </div>
       {error ? <ErrorNotice error={error} onRetry={reload} /> : null}
-      {done && (
-        <div className="alert info" role="status">
-          <p>{done}</p>
-        </div>
-      )}
       {!data ? (
-        error ? null : <p className="loading">読み込んでいます…</p>
+        error ? null : <AuditSkeleton />
       ) : (
         <section className="panel list-panel">
           {data.entries.length === 0 ? (
             <p className="empty">この条件の操作はありません。</p>
           ) : (
             <ul className="audit-list" aria-label="操作の一覧">
+              <AuditHead />
               {data.entries.map((e) => (
                 <AuditRowView key={e.id} e={e} canEdit={!readOnly} onUndo={() => setTarget(e)} />
               ))}
@@ -111,13 +109,52 @@ export function AuditPage() {
           e={target}
           onClose={() => setTarget(null)}
           onDone={() => {
-            setDone(`「${target.actionLabel}」を元に戻しました。`);
+            toast(`「${target.actionLabel}」を元に戻しました。`);
             setTarget(null);
             void reload();
           }}
         />
       )}
     </div>
+  );
+}
+
+/** 一覧の見出し(列の名前)。スクロールしても上に残る */
+function AuditHead() {
+  return (
+    <li className="audit-row audit-head list-head" aria-hidden="true">
+      <span>日時</span>
+      <span>操作と対象</span>
+      <span>した人</span>
+      <span />
+    </li>
+  );
+}
+
+/** 読み込み中: 見出しと、操作の行 6 つ */
+function AuditSkeleton() {
+  return (
+    <Loading>
+      <section className="panel list-panel">
+        <ul className="audit-list">
+          <AuditHead />
+          {Array.from({ length: 6 }, (_, i) => (
+            <li key={i} className="audit-row">
+              <span className="audit-at">
+                <SkeletonText size={13} lh={1.4} w={72} />
+                <SkeletonText size={13} lh={1.4} w={40} />
+              </span>
+              <span className="audit-body">
+                <SkeletonText size={15} w={[140, 120, 180, 100, 150, 130][i]} />
+                <SkeletonText size={14} w={[200, 160, 220, 180, 140, 210][i]} />
+              </span>
+              <SkeletonText size={13} w={56} />
+              <span className="audit-acts">{i % 2 === 0 ? <SkeletonGhost w={56} /> : null}</span>
+            </li>
+          ))}
+        </ul>
+      </section>
+    </Loading>
   );
 }
 
@@ -189,7 +226,9 @@ function UndoConfirm({ e, onClose, onDone }: { e: AuditEntry; onClose: () => voi
             やめる
           </button>
           <button type="button" className="btn" disabled={busy} onClick={submit}>
-            {busy ? '戻しています…' : '元に戻す'}
+            <BusyLabel busy={busy} pending="戻しています…">
+              元に戻す
+            </BusyLabel>
           </button>
         </>
       }

@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { adminLogin, newLineUser, openLiff, registerViaUi } from './helpers';
+import { adminLogin, adminToast, newLineUser, openLiff, registerViaUi } from './helpers';
 
 test('A-06 受付で招待QRを出して家族を追加し、確認してから外し、操作ログから元に戻す', async ({ browser }) => {
   const customer = await browser.newPage();
@@ -43,11 +43,11 @@ test('A-06 受付で招待QRを出して家族を追加し、確認してから�
   await expect(confirm).toContainText('ポイント(0ポイント)・無料券(0枚)・来場の記録は、おうちに残ります');
   await expect(confirm).toContainText('残る家族: パパさん');
   await confirm.getByRole('button', { name: '外す' }).click();
-  await expect(page.getByRole('status')).toContainText('ママさんを外しました');
+  await expect(adminToast(page, 'ママさんを外しました')).toBeVisible();
   await expect(family.getByRole('listitem').filter({ hasText: 'ママさん' })).toContainText('外れた');
 
   // 操作ログから元に戻す
-  await page.getByRole('status').getByRole('link', { name: '操作ログ' }).click();
+  await page.getByRole('navigation', { name: 'メニュー' }).getByRole('link', { name: '操作ログ' }).click();
   const row = page
     .getByRole('list', { name: '操作の一覧' })
     .getByRole('listitem')

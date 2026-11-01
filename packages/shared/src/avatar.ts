@@ -1,6 +1,7 @@
 // 写真がない犬の代わりに出す絵(犬種の色と名前の頭文字。要件定義書 6.2)。画面ごとに同じ絵になるよう共通にする。
 
-const PALETTE = ['#2e7a4e', '#b9741b', '#3d6a9e', '#8a4f9e', '#bf3f35', '#4f7f8a', '#7a6a2e'];
+// 落ち着いた濃い色だけ(白い頭文字が読める濃さ)。緑は使わない(docs/design.md 3章)
+const PALETTE = ['#5A6472', '#8A6346', '#3D5A80', '#6B5B7A', '#8A4B45', '#4F5F6E', '#6E6450'];
 
 export function placeholderColor(breedName: string, name = ''): string {
   let h = 0;

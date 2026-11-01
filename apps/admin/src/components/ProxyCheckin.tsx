@@ -2,7 +2,9 @@ import { toJstIso, type CheckinResult, type HouseholdHit, type ProxyStatus } fro
 import { useEffect, useState } from 'react';
 import { adminApi, adminPost } from '../lib/api';
 import { DogFace } from './DogFace';
+import { BusyLabel } from './BusyLabel';
 import { ErrorNotice } from './ErrorNotice';
+import { useToast } from './Toast';
 
 const today = () => toJstIso(new Date()).slice(0, 10);
 
@@ -14,6 +16,7 @@ export function ProxyCheckin({ h }: { h: HouseholdHit }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
   const [done, setDone] = useState<CheckinResult | null>(null);
+  const toast = useToast();
 
   useEffect(() => {
     let alive = true;
@@ -39,12 +42,16 @@ export function ProxyCheckin({ h }: { h: HouseholdHit }) {
     setBusy(true);
     setError(null);
     try {
-      setDone(
-        await adminPost<CheckinResult>('/checkins/proxy', {
-          householdId: h.id,
-          dogIds: [...selected],
-          date,
-        }),
+      const r = await adminPost<CheckinResult>('/checkins/proxy', {
+        householdId: h.id,
+        dogIds: [...selected],
+        date,
+      });
+      setDone(r);
+      toast(
+        `${h.displayName}を代理でチェックインしました。${r.pointsAwarded > 0 ? `${r.pointsAwarded}ポイントを付けました。` : ''}${
+          r.usedTicket ? 'この日に使った無料券があります。料金を調整してください。' : ''
+        }`,
       );
     } catch (e) {
       setError(e);
@@ -86,12 +93,8 @@ export function ProxyCheckin({ h }: { h: HouseholdHit }) {
           ))}
         </div>
       </div>
-      {done ? (
-        <div className="alert info" role="status">
-          チェックインしました。
-          {done.pointsAwarded > 0 ? `${done.pointsAwarded}ポイントを付けました。` : ''}
-          {done.usedTicket ? 'この日に使った無料券があります。料金を調整してください。' : ''}
-        </div>
+      {done?.usedTicket ? (
+        <div className="alert warning">この日に使った無料券があります。料金を調整してください。</div>
       ) : status?.visitId ? (
         <div className="alert info">この日は、すでにチェックイン済みです(ポイントは1日1回)。</div>
       ) : null}
@@ -99,7 +102,9 @@ export function ProxyCheckin({ h }: { h: HouseholdHit }) {
       {!done && !status?.visitId && (
         <div className="proxy-actions">
           <button type="button" className="btn" disabled={busy || selected.size === 0 || !status} onClick={submit}>
-            {busy ? 'チェックインしています…' : '代理でチェックインする'}
+            <BusyLabel busy={busy} pending="チェックインしています…">
+              代理でチェックインする
+            </BusyLabel>
           </button>
         </div>
       )}

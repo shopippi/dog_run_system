@@ -1,10 +1,11 @@
 import type { WeatherKind } from './analytics';
 import type { DayType } from './constants';
+import type { DashboardAreas, DashboardTrend, WeatherVisitsRow } from './api-types-dashboard';
 
 // API の応答の型(analytics: 分析と自動処理)
 
 /** 自動処理の種類(system_jobs.name)。要件定義書 9.5 */
-export const SYSTEM_JOB_NAMES = ['weather', 'holidays', 'daily_stats', 'backup', 'expiry', 'migration_images'] as const;
+export const SYSTEM_JOB_NAMES = ['weather', 'holidays', 'daily_stats', 'backup', 'expiry', 'migration_images', 'postal_areas'] as const;
 export type SystemJobName = (typeof SYSTEM_JOB_NAMES)[number];
 export const SYSTEM_JOB_LABELS: Record<SystemJobName, string> = {
   weather: '天気の取得',
@@ -13,6 +14,7 @@ export const SYSTEM_JOB_LABELS: Record<SystemJobName, string> = {
   backup: 'バックアップ',
   expiry: '有効期限の処理',
   migration_images: '引き継ぎ申請の写真の削除',
+  postal_areas: '郵便番号から地域を調べる',
 };
 
 /** 1回の実行の結果。warning は「一部だけできた」 */
@@ -163,6 +165,12 @@ export type DashboardResponse = {
   dormant: { total: number; households: DormantHousehold[] } | null;
   family: { households: number; multi: number; rate: number | null; avgVisitsMulti: number | null; avgVisitsSingle: number | null } | null;
   surveys: SurveySummary[] | null;
+  /** 2026-10-29 の作り直し(docs/design.md 12章): KPI のカード・大きなグラフの推移と前の期間 */
+  trend: DashboardTrend;
+  /** 天気ごとの来場(会員・会員以外、土日祝/平日) */
+  weatherVisits: WeatherVisitsRow[];
+  /** どこから来ているか(郵便番号から調べた市区町村) */
+  areas: DashboardAreas;
 };
 
 /** システムの状態の色(A-17)。green: 正常 / yellow: 注意 / red: 止まっている */
@@ -170,7 +178,7 @@ export type StatusLevel = 'green' | 'yellow' | 'red';
 export const STATUS_LEVEL_LABELS: Record<StatusLevel, string> = { green: '正常', yellow: '注意', red: '止まっています' };
 
 /** 手動で「今すぐ実行」できる自動処理 */
-export const RUNNABLE_JOBS = ['weather', 'holidays', 'backup', 'daily_stats'] as const;
+export const RUNNABLE_JOBS = ['weather', 'holidays', 'backup', 'daily_stats', 'postal_areas'] as const;
 export type RunnableJob = (typeof RUNNABLE_JOBS)[number];
 
 export type SystemJobRun = {
@@ -202,6 +210,23 @@ export type SystemStatusResponse = {
   }[];
   /** 赤のときに出す、製作者への連絡方法(settings.developer_contact) */
   contact: string | null;
+  /**
+   * 今月の LINE のお知らせ(予約の確定・お断り。21章)。sent は送った数(無料のプランは月200通まで)、
+   * skipped・failed は送らなかった・送れなかった数。configured は Messaging API のトークンが設定されているか
+   */
+  lineMessages: {
+    month: string;
+    sent: number;
+    skipped: number;
+    failed: number;
+    limit: number;
+    configured: boolean;
+    /**
+     * LINE 公式アカウントにつながるか(GET https://api.line.me/v2/bot/info をサーバーで呼び、少しのあいだ覚えておく)。
+     * connected: つながった / not_set: トークンがない / error: つながらない(message に次にすること) / mock: 練習用の環境なので確かめていない
+     */
+    bot: { state: 'connected' | 'not_set' | 'error' | 'mock'; displayName: string | null; basicId: string | null; message: string };
+  };
   /** 製作者だけ(D-02)。管理者には null */
   detail: {
     recentFailures: SystemJobRun[];

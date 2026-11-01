@@ -206,6 +206,26 @@ export type RequestListResponse = {
   pending: number;
 };
 
+/** 旧カードを引き継ぐ家族(だれのカードか) */
+export type MigrationMember = {
+  id: number;
+  /** LINE の表示名(なければ null) */
+  name: string | null;
+  done: Record<import('./constants').MigrationSource, { date: string; points: number } | null>;
+};
+
+/** 引き継いだカード1枚 */
+export type MigrationCardView = {
+  /** だれのカードか(以前の記録で分からなければ null) */
+  memberId: number | null;
+  memberName: string | null;
+  source: import('./constants').MigrationSource;
+  points: number;
+  cardPoints: number;
+  tickets: number;
+  date: string;
+};
+
 /** 旧カードの移行の状態(GET /admin/api/households/:id/migration) */
 export type MigrationStatus = {
   householdId: number;
@@ -215,11 +235,24 @@ export type MigrationStatus = {
   pointsPerTicket: number;
   /** 一度に引き継げるポイントの上限(設定 migration_max_points) */
   maxPoints: number;
-  /** 移行元ごとの、引き継ぎ済みの記録(統合でまとめたおうちの分を含む)。まだなら null */
-  migrated: Record<import('./constants').MigrationSource, { date: string; points: number } | null>;
+  /**
+   * おうちの家族(LINE アカウント)と、その人のカードの引き継ぎ済みの記録(2026-10-30 の決定。カード1枚ごとに1回)。
+   * 移行元ごとに、まだなら null
+   */
+  members: MigrationMember[];
+  /** だれのカードかの初めの選択(今日チェックインした家族。いなければ、家族が1人ならその人。決められなければ null) */
+  defaultMemberId: number | null;
+  /** このおうち(統合でまとめたおうちを含む)で引き継いだカード(新しい順。元に戻したものは除く) */
+  cards: MigrationCardView[];
   period: { start: string | null; end: string | null };
   /** 今日が移行期間の中か(期間が未設定なら true) */
   inPeriod: boolean;
+  /** 移行期間に対する今日の位置。after で設定 migration_late_entry が true なら、理由を書けば受け付ける */
+  phase: 'before' | 'open' | 'after';
+  /** 移行期間のあとも、理由を書けば受け付けるか(設定 migration_late_entry) */
+  lateEntry: boolean;
+  /** 旧カードの特典から一度に出せる無料券の上限(設定 migration_max_tickets。0 なら出さない) */
+  maxTickets: number;
 };
 
 /** 旧カードの移行の結果(直接入力・申請の承認) */
@@ -227,7 +260,14 @@ export type MigrationResult = {
   householdId: number;
   memberNo: string;
   source: import('./constants').MigrationSource;
+  /** だれのカードか */
+  memberId: number;
+  memberName: string | null;
   points: number;
+  /** 旧カードの特典から出した無料券の枚数 */
+  tickets: number;
+  /** 旧カードに残っていたポイント(上限で切ったときは points より大きい) */
+  cardPoints: number;
   /** 引き継ぎ後のポイント残高 */
   balance: number;
 };

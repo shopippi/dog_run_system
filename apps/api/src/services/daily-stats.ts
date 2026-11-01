@@ -113,15 +113,14 @@ export async function refreshDailyStatsForHouseholdsQuietly(db: D1Database, hous
   try {
     const ids = householdIds.filter((n) => Number.isInteger(n));
     if (ids.length === 0) return;
-    const marks = ids.map(() => '?').join(',');
     const row = await db
       .prepare(
         `SELECT MIN(d) AS from_date FROM (
-           SELECT MIN(visit_date) AS d FROM visits WHERE household_id IN (${marks})
-           UNION ALL SELECT MIN(substr(registered_at, 1, 10)) FROM households WHERE id IN (${marks})
+           SELECT MIN(visit_date) AS d FROM visits WHERE household_id IN (SELECT value FROM json_each(?))
+           UNION ALL SELECT MIN(substr(registered_at, 1, 10)) FROM households WHERE id IN (SELECT value FROM json_each(?))
          )`,
       )
-      .bind(...ids, ...ids)
+      .bind(JSON.stringify(ids), JSON.stringify(ids))
       .first<{ from_date: string | null }>();
     const to = toJstDate(now);
     const from = row?.from_date && row.from_date < to ? row.from_date : to;

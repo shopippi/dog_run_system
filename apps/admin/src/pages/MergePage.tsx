@@ -5,7 +5,10 @@ import { Dialog } from '../components/Dialog';
 import { DogFace } from '../components/DogFace';
 import { ErrorNotice } from '../components/ErrorNotice';
 import { HouseholdPicker } from '../components/HouseholdPicker';
+import { BusyLabel } from '../components/BusyLabel';
 import { PageHead } from '../components/PageHead';
+import { Loading, Skeleton, SkeletonText } from '../components/Skeleton';
+import { useToast } from '../components/Toast';
 import { adminPost } from '../lib/api';
 import { useAuth } from '../lib/auth';
 
@@ -41,6 +44,7 @@ export function MergePage() {
   const [error, setError] = useState<unknown>(null);
   const [confirming, setConfirming] = useState(false);
   const [done, setDone] = useState<{ result: MergeResult; absorbedNo: string } | null>(null);
+  const toast = useToast();
 
   const [a, b] = slots;
   const both = a !== null && b !== null;
@@ -93,7 +97,19 @@ export function MergePage() {
     reset();
   };
 
-  if (done) return <MergeDone result={done.result} absorbedNo={done.absorbedNo} />;
+  if (done) {
+    return (
+      <MergeDone
+        result={done.result}
+        absorbedNo={done.absorbedNo}
+        onBack={() => {
+          setDone(null);
+          setSlots([null, null]);
+          reset();
+        }}
+      />
+    );
+  }
 
   const nextSlot: 0 | 1 | null = a === null ? 0 : b === null ? 1 : null;
   const ready = preview !== null && preview.kept.id === keep;
@@ -133,7 +149,7 @@ export function MergePage() {
                           ))}
                         </span>
                         <span className="mg-slot-body">
-                          <b>{brief?.displayName ?? '読み込んでいます…'}</b>
+                          {brief ? <b>{brief.displayName}</b> : <SkeletonText size={15} w={140} />}
                           <span className="mono sub-text">{brief?.memberNo}</span>
                         </span>
                         <button type="button" className="btn ghost" onClick={() => clear(slot)}>
@@ -177,7 +193,22 @@ export function MergePage() {
               </div>
             </>
           )}
-          {both && !ready && !error && <p className="loading">まとめた後の内容を確かめています…</p>}
+          {both && !ready && !error && (
+            <Loading label="まとめた後の内容を確かめています">
+              <section className="panel mg-section">
+                <SkeletonText size={17} lh={1.35} w={120} />
+                <SkeletonText size={13} w="80%" />
+                <div className="mg-keep">
+                  <Skeleton h={56} r={10} />
+                  <Skeleton h={56} r={10} />
+                </div>
+              </section>
+              <section className="panel mg-section">
+                <SkeletonText size={17} lh={1.35} w={220} />
+                <SkeletonText size={13} lines={2} />
+              </section>
+            </Loading>
+          )}
         </>
       )}
       {confirming && preview && (
@@ -188,6 +219,7 @@ export function MergePage() {
           onDone={(r) => {
             setConfirming(false);
             setDone({ result: r, absorbedNo: preview.absorbed.memberNo });
+            toast(`${r.displayName}(${r.memberNo})にまとめました。`);
           }}
         />
       )}
@@ -447,7 +479,9 @@ function MergeConfirm({
             やめる
           </button>
           <button type="button" className="btn danger-fill" disabled={busy} onClick={submit}>
-            {busy ? 'まとめています…' : 'まとめる'}
+            <BusyLabel busy={busy} pending="まとめています…">
+              まとめる
+            </BusyLabel>
           </button>
         </>
       }
@@ -470,7 +504,8 @@ function MergeConfirm({
 }
 
 /** まとめた後。30日以内なら、ここからも元に戻せる */
-function MergeDone({ result, absorbedNo }: { result: MergeResult; absorbedNo: string }) {
+function MergeDone({ result, absorbedNo, onBack }: { result: MergeResult; absorbedNo: string; onBack: () => void }) {
+  const toast = useToast();
   const [undoing, setUndoing] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
@@ -482,6 +517,7 @@ function MergeDone({ result, absorbedNo }: { result: MergeResult; absorbedNo: st
       await adminPost(`/merges/${result.mergeId}/undo`);
       setUndone(true);
       setUndoing(false);
+      toast(`元に戻しました。${absorbedNo} と ${result.memberNo} は、まとめる前の別々のおうちに戻りました。`);
     } catch (e) {
       setError(e);
     } finally {
@@ -490,9 +526,13 @@ function MergeDone({ result, absorbedNo }: { result: MergeResult; absorbedNo: st
   };
   return (
     <div className="page">
-      <PageHead title="おうちの統合" howto="おうちをまとめました。お客さんの会員証にも、すぐに反映されます。" />
+      <PageHead
+        title="おうちの統合"
+        crumbs={[{ label: 'おうちの統合', to: '/merge', onClick: onBack }, { label: 'まとめた結果' }]}
+        howto="おうちをまとめました。お客さんの会員証にも、すぐに反映されます。"
+      />
       <section className="panel mg-section" aria-label="まとめた結果">
-        <p role="status" className="mg-done">
+        <p className="mg-done">
           {undone
             ? `元に戻しました。${absorbedNo} と ${result.memberNo} は、まとめる前の別々のおうちに戻りました。`
             : `${result.displayName}(${result.memberNo})にまとめました。`}
@@ -530,7 +570,9 @@ function MergeDone({ result, absorbedNo }: { result: MergeResult; absorbedNo: st
                 やめる
               </button>
               <button type="button" className="btn danger-fill" disabled={busy} onClick={undo}>
-                {busy ? '戻しています…' : '元に戻す'}
+                <BusyLabel busy={busy} pending="戻しています…">
+                  元に戻す
+                </BusyLabel>
               </button>
             </>
           }

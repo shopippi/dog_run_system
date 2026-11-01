@@ -58,6 +58,12 @@ type HouseholdRow = {
   postal_code: string | null;
   referral: string | null;
   transport: string | null;
+  /** 2026-10-28 に足した列(アンケートの回答と会員証の背景)。以前の統合の記録(snapshot)にはない */
+  preferred_times?: string | null;
+  event_interests?: string | null;
+  uses_other_runs?: number | null;
+  wants_news?: number | null;
+  card_background?: string | null;
   status: MergeHouseholdView['status'];
   merged_into_id: number | null;
   updated_at: string;
@@ -92,7 +98,10 @@ type Loaded = {
 };
 
 const HOUSEHOLD_COLS =
-  'id, member_no, display_name, display_name_search, display_name_auto, registered_at, postal_code, referral, transport, status, merged_into_id, updated_at';
+  'id, member_no, display_name, display_name_search, display_name_auto, registered_at, postal_code, referral, transport, ' +
+  'preferred_times, event_interests, uses_other_runs, wants_news, card_background, status, merged_into_id, updated_at';
+/** 残す側が空なら、まとめる側の値を引き継ぐ列(アンケートの回答と会員証の背景) */
+const INHERIT_COLS = ['preferred_times', 'event_interests', 'uses_other_runs', 'wants_news', 'card_background'] as const;
 
 function dogView(d: DogRow): MergeDogView {
   return {
@@ -261,7 +270,7 @@ export type MergeSnapshot = {
   balances: { kept: number; absorbed: number };
   /** 残す側に移した家族 */
   memberIds: number[];
-  /** 残す側に移した犬(組み合わせなかった犬と、登録解除の犬) */
+  /** 残す側に移した犬(組み合わせなかった犬と、おやすみ中の犬) */
   movedDogIds: number[];
   pairs: { keep: DogRow; absorb: DogRow; take: MergeDogPair['take']; photo?: MergeDogPair['photo']; visitDogIds: number[] }[];
   /** 残す側に移した来場 */
@@ -515,14 +524,23 @@ export async function executeMerge(
       );
     }
   }
-  // 残す側に答えがないアンケート(郵便番号など)は、まとめる側の答えで補う
+  // 残す側に答えがないアンケート(郵便番号など)と会員証の背景は、まとめる側の値で補う
   s.push(
     db
       .prepare(
         `UPDATE households SET postal_code = COALESCE(postal_code, ?), referral = COALESCE(referral, ?),
-                transport = COALESCE(transport, ?), updated_at = ? WHERE id = ?`,
+                transport = COALESCE(transport, ?),
+                ${INHERIT_COLS.map((col) => `${col} = COALESCE(${col}, ?)`).join(', ')},
+                updated_at = ? WHERE id = ?`,
       )
-      .bind(absorbed.row.postal_code, absorbed.row.referral, absorbed.row.transport, nowIso, k),
+      .bind(
+        absorbed.row.postal_code,
+        absorbed.row.referral,
+        absorbed.row.transport,
+        ...INHERIT_COLS.map((col) => absorbed.row[col] ?? null),
+        nowIso,
+        k,
+      ),
     refreshAutoNameStatement(db, k, nowIso),
   );
   for (const ids of chunks(noticeIds)) {
@@ -747,6 +765,14 @@ export async function undoMerge(db: D1Database, mergeId: number, staffId: number
         k,
       ),
   ];
+  // 2026-10-28 に足した列も、統合の前の値に戻す(以前の統合の記録には列がないので、そのときは触らない)
+  if ('card_background' in snap.kept) {
+    s.push(
+      db
+        .prepare(`UPDATE households SET ${INHERIT_COLS.map((col) => `${col} = ?`).join(', ')} WHERE id = ?`)
+        .bind(...INHERIT_COLS.map((col) => snap.kept[col] ?? null), k),
+    );
+  }
   for (const ids of chunks(snap.memberIds)) {
     s.push(
       db

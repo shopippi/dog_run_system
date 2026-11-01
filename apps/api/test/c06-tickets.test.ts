@@ -276,7 +276,7 @@ describe('M-06 無料券を使用済みにする(受付・管理者)', () => {
     const v = await checkin(PAPA, [r.dogs[0]!.id], { now: DAY1 });
     const res = await markUsed(staff, id, a.body.ticketId, '2026-10-28T01:30:00Z');
     expect(res.status).toBe(200);
-    expect(res.body).toEqual({ ticketId: a.body.ticketId, usedAt: '2026-10-28T10:30:00+09:00', visitId: v.body.visitId });
+    expect(res.body).toEqual({ auditId: expect.any(Number), ticketId: a.body.ticketId, usedAt: '2026-10-28T10:30:00+09:00', visitId: v.body.visitId });
     expect((await markUsed(admin, id, b.body.ticketId)).status).toBe(200);
 
     const log = await adminCall('/admin/api/audit', { cookie: admin, now: DAY1 });

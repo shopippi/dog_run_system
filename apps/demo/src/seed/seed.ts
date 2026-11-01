@@ -2,8 +2,13 @@
 // 乱数は固定の種から作るので、何度やり直しても同じデータになる(日付だけは「今日」に合わせて動く)。
 
 import {
+  DEFAULT_SETTINGS,
   addDays,
   autoHouseholdName,
+  bookingMessageText,
+  bookingWhenText,
+  estimateBooking,
+  occupiedRange,
   formatDogNo,
   formatMemberNo,
   normalizeForSearch,
@@ -20,6 +25,8 @@ export type SeedOptions = {
   /** 犬の写真(JPEG)を作る。variant で色や形を変える。なければ写真なしで作る */
   makeDogPhoto?: (variant: number, kind: 'photo' | 'thumb') => Promise<Uint8Array>;
   putMedia?: (key: string, bytes: Uint8Array) => Promise<void>;
+  /** 会員証の背景の写真(JPEG)を作る。なければ写真の背景は作らない */
+  makeCardBackground?: () => Promise<Uint8Array>;
   /** 写真をつけるおうちの数(先頭から) */
   photoHouseholds?: number;
 };
@@ -143,11 +150,26 @@ const PEOPLE = [
 const AGES = ['20代', '30代', '30代', '40代', '40代', '50代', '60代', '70代以上'];
 const REFERRALS = ['Instagram', 'Googleマップ', '知人の紹介', '通りがかり', 'ほかのドッグランで聞いた', 'その他'];
 const TRANSPORTS = ['車', '車', '車', '徒歩', '自転車', '電車やバス'];
-const POSTALS = ['1540001', '1540017', '1520004', '1560043', '1530064', '1580094', '1450062', '1810013', '1820021', '2140014'];
+const POSTALS = [
+  '6751373', '6751375', '6751373', '6731431', '6730512', '6751375', '6770054', '6752312', '6750101', '6730521',
+  '6751373', '6731431', '6751375', '6730512', '6751373', '6770054', '6751375',
+];
 
-/** 東京の月ごとのおおよその気温(最高・最低) */
+/** 郵便番号から調べた地域(デモはインターネットにつながらないので、実在の市区町村・町域を入れておく。docs/design.md 12.3) */
+const POSTAL_AREAS: Record<string, [string, string, string]> = {
+  '6751373': ['兵庫県', '小野市', '東本町'],
+  '6751375': ['兵庫県', '小野市', '西本町'],
+  '6731431': ['兵庫県', '加東市', '社'],
+  '6730512': ['兵庫県', '三木市', '志染町井上'],
+  '6730521': ['兵庫県', '三木市', '志染町青山'],
+  '6770054': ['兵庫県', '西脇市', '野村町'],
+  '6752312': ['兵庫県', '加西市', '北条町北条'],
+  '6750101': ['兵庫県', '加古川市', '平岡町新在家'],
+};
+
+/** 兵庫県の内陸(三木・小野のあたり)の月ごとのおおよその気温(最高・最低) */
 const TEMPS: [number, number][] = [
-  [10, 1], [11, 2], [14, 5], [19, 10], [23, 15], [26, 19], [30, 23], [31, 24], [27, 21], [22, 15], [17, 9], [12, 4],
+  [9, -1], [10, -1], [14, 2], [20, 7], [25, 12], [28, 17], [31, 22], [33, 23], [29, 19], [23, 12], [17, 6], [11, 1],
 ];
 
 // ---------------------------------------------------------------- 型
@@ -334,17 +356,17 @@ export async function seedDemo(sql: Database, opts: SeedOptions): Promise<SeedSu
 
   // 固定のおうち(手順で使う)
   const account = (id: string) => ACCOUNTS.find((a) => a.userId === id)!;
-  const hKomugi = newHousehold(FIXED.komugi, at(addDays(START, 1), 10 * 60 + 20), 0, { referral: 'Instagram', transport: '車', postal: '1540001' });
+  const hKomugi = newHousehold(FIXED.komugi, at(addDays(START, 1), 10 * 60 + 20), 0, { referral: 'Instagram', transport: '車', postal: '6751373' });
   makeDog(hKomugi, 'こむぎ', 1, 'female');
   makeDog(hKomugi, 'だいず', 5, 'male');
   makeMember(hKomugi, { userId: 'U-demo-mama', name: account('U-demo-mama').name, age: '30代', gender: '女性', joinedAt: hKomugi.regAt });
   makeMember(hKomugi, { userId: 'U-demo-baaba', name: account('U-demo-baaba').name, age: '60代', gender: '女性', joinedAt: at(addDays(START, 40), 11 * 60) });
 
-  const hTaka = newHousehold(FIXED.taka, at(addDays(START, 2), 9 * 60 + 40), 0, { referral: '通りがかり', transport: '徒歩', postal: '1520004' });
+  const hTaka = newHousehold(FIXED.taka, at(addDays(START, 2), 9 * 60 + 40), 0, { referral: '通りがかり', transport: '徒歩', postal: '6731431' });
   makeDog(hTaka, 'アル', 5, 'male');
   makeMember(hTaka, { userId: 'U-demo-taka', name: account('U-demo-taka').name, age: '40代', gender: '男性', joinedAt: hTaka.regAt });
 
-  const hNico = newHousehold(FIXED.nico, at(addDays(START, 60), 13 * 60 + 5), 0, { referral: '知人の紹介', transport: '車', postal: '1520004' });
+  const hNico = newHousehold(FIXED.nico, at(addDays(START, 60), 13 * 60 + 5), 0, { referral: '知人の紹介', transport: '車', postal: '6731431' });
   makeDog(hNico, 'アル', 5, 'male');
   makeDog(hNico, 'ニコ', 1, 'female');
   makeMember(hNico, { userId: 'U-demo-nico', name: account('U-demo-nico').name, age: '40代', gender: '女性', joinedAt: hNico.regAt });
@@ -541,6 +563,12 @@ export async function seedDemo(sql: Database, opts: SeedOptions): Promise<SeedSu
            VALUES (?, ?, 'migration', ?, '旧カードからの引き継ぎ(受付で確認)', 'staff', 2, ?)`,
           [h.id, h.migration.points, h.migration.source, h.regAt],
         );
+        // 入力の記録(だれのカードか。デモでは最初の家族のカード)
+        run(
+          `INSERT INTO migration_cards (household_id, source, points, card_points, tickets, staff_id, created_at, family_member_id, ledger_id)
+           VALUES (?, ?, ?, ?, 0, 2, ?, ?, (SELECT MAX(id) FROM point_ledger))`,
+          [h.id, h.migration.source, h.migration.points, h.migration.points, h.regAt, h.members[0]?.id ?? null],
+        );
       }
     }
 
@@ -633,7 +661,7 @@ export async function seedDemo(sql: Database, opts: SeedOptions): Promise<SeedSu
     for (const [d, w] of weather) {
       run(
         `INSERT INTO daily_weather (date, weather, temp_max, temp_min, precipitation, station, source, fetched_at)
-         VALUES (?, ?, ?, ?, ?, '東京', '気象庁(デモ用の値)', ?)`,
+         VALUES (?, ?, ?, ?, ?, '三木', '気象庁(デモ用の値)', ?)`,
         [d, w.w, w.max, w.min, w.rain, at(addDays(d, 1), 5 * 60 + 10)],
       );
     }
@@ -657,6 +685,31 @@ export async function seedDemo(sql: Database, opts: SeedOptions): Promise<SeedSu
       ]);
     }
 
+    // 郵便番号から調べた地域(B 系のジョブで調べた結果と同じ形)
+    for (const [code, [pref, city, town]] of Object.entries(POSTAL_AREAS)) {
+      run(
+        `INSERT INTO postal_areas (postal_code, prefecture, city, town, status, source, looked_up_at) VALUES (?, ?, ?, ?, 'found', 'zipcloud', ?)`,
+        [code, pref, city, town, at(START, 3 * 60 + 10)],
+      );
+    }
+
+    // 日々のメモ(管理者・受付スタッフが書いたもの)。イベントの日・雨の日・休業日など
+    const noteAt = (d: string, minutes: number) => at(d, minutes);
+    const notes: { date: string; body: string; staff: number }[] = [];
+    for (const e of events.filter((x) => x.date < today)) notes.push({ date: e.date, body: `${e.name}。いつもの土曜より混んで、駐車場が11時に満車。`, staff: 2 });
+    const rainyWeekend = days.filter((d) => weather.get(d)?.w === '雨' && isWeekend(d) && isOpen(d)).slice(-3);
+    for (const d of rainyWeekend) notes.push({ date: d, body: '朝から雨。芝がぬかるんでいたので、奥のエリアは閉めた。', staff: 1 });
+    const recent = days.filter((d) => isOpen(d) && d >= addDays(today, -20));
+    if (recent[2]) notes.push({ date: recent[2], body: '小型犬の飼い主さんの集まり(10組ほど)。\n次回は月末にやりたいとのこと。', staff: 1 });
+    if (recent[9]) notes.push({ date: recent[9], body: '近くの小学校の運動会。午前は静か、午後から増えた。', staff: 2 });
+    if (recent.at(-2)) notes.push({ date: recent.at(-2)!, body: '水飲み場の蛇口を修理した。', staff: 1 });
+    for (const n of notes) {
+      run(
+        `INSERT INTO day_notes (date, body, created_by_staff_id, created_at, updated_by_staff_id, updated_at) VALUES (?, ?, ?, ?, ?, ?)`,
+        [n.date, n.body, n.staff, noteAt(n.date, 17 * 60), n.staff, noteAt(n.date, 17 * 60)],
+      );
+    }
+
     // taka_papa が nico.mama に送った家族の招待(まだ開いていない)。nico.mama が開くと、その場でおうちをまとめられる(C-12)。
     // デモの日付を進めても使えるよう、期限は長めにしておく
     const takaMember = hTaka.members[0]!;
@@ -665,6 +718,154 @@ export async function seedDemo(sql: Database, opts: SeedOptions): Promise<SeedSu
        VALUES ('demo-merge-invite', ?, 'family', ?, ?, ?)`,
       [hTaka.id, takaMember.id, toJstIso(new Date(now.getTime() - 3 * 3600e3)), toJstIso(new Date(now.getTime() + 60 * 24 * 3600e3))],
     );
+
+    // ---- 預かり・お泊まりの予約(21章)。今日の前後およそ1か月分。受け入れ数(小型5・中型3・大型2)を超えない
+    {
+      type Size = 'small' | 'medium' | 'large';
+      const caps = DEFAULT_SETTINGS.booking_capacity;
+      const used = new Map<string, number>();
+      const key = (svc: string, d: string, size: string) => `${svc}:${d}:${size}`;
+      const fits = (svc: 'daycare' | 'boarding', start: string, end: string, dogs: Dog[]) => {
+        const r = occupiedRange(svc, start, end);
+        for (let d = r.from; d <= r.to; d = addDays(d, 1)) {
+          for (const sz of ['small', 'medium', 'large'] as const) {
+            const n = dogs.filter((x) => x.size === sz).length;
+            if (n && (used.get(key(svc, d, sz)) ?? 0) + n > caps[svc][sz]) return false;
+          }
+        }
+        return true;
+      };
+      const stayed = new Set<number>();
+      let bseq = 0;
+      const addBooking = (b: {
+        h: Household;
+        svc: 'daycare' | 'boarding';
+        start: string;
+        end: string;
+        dogs: Dog[];
+        status: 'pending' | 'confirmed' | 'declined' | 'cancelled' | 'checked_in' | 'completed' | 'no_show';
+        source?: 'customer' | 'staff';
+        note?: string | null;
+        createdAt: string;
+        cancelReason?: string;
+        notify?: boolean;
+      }) => {
+        const holding = ['pending', 'confirmed', 'checked_in', 'completed'].includes(b.status);
+        if (holding && !fits(b.svc, b.start, b.end, b.dogs)) return false;
+        const id = ++bseq;
+        const st = b.svc === 'daycare' ? '10:00' : '11:00';
+        const et = b.svc === 'daycare' ? (rand() < 0.5 ? '16:00' : '17:30') : '16:00';
+        const r = occupiedRange(b.svc, b.start, b.end);
+        const est = estimateBooking(DEFAULT_SETTINGS, {
+          service: b.svc, startDate: b.start, endDate: b.end, startTime: st, endTime: et,
+          dogs: b.dogs.map((d) => ({ id: d.id, name: d.name, size: d.size as Size })),
+        });
+        const source = b.source ?? 'customer';
+        const first = b.dogs.filter((d) => !stayed.has(d.id));
+        const member = b.h.members[0]!;
+        const decided = b.status !== 'pending' && source === 'customer' && first.length > 0;
+        run(
+          `INSERT INTO bookings (id, household_id, service, status, start_date, end_date, start_time, end_time, occupy_from, occupy_to,
+                                 note, checklist, estimate_total, estimate_detail, source, approval_reason, requested_by_member_id,
+                                 created_by_staff_id, token, staff_note, decided_at, decided_by_staff_id, cancelled_at, cancelled_by_type,
+                                 cancelled_by_id, cancel_reason, checked_in_at, checked_in_by_staff_id, completed_at, completed_by_staff_id,
+                                 no_show_at, no_show_by_staff_id, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            id, b.h.id, b.svc, b.status, b.start, b.end, st, et, r.from, r.to,
+            b.note ?? null,
+            JSON.stringify(source === 'customer' ? DEFAULT_SETTINGS.booking_checklist : []),
+            est.total, JSON.stringify(est), source,
+            source === 'customer' && first.length > 0 ? 'first_time' : null,
+            source === 'customer' ? member.id : null,
+            source === 'staff' ? 1 : null,
+            `demo-booking-${id}`,
+            source === 'staff' ? '電話で受けた' : null,
+            b.status === 'pending' ? null : decided ? addDaysIso(b.createdAt, 0.2) : b.createdAt,
+            decided ? 2 : null,
+            b.status === 'cancelled' ? addDaysIso(b.createdAt, 1) : null,
+            b.status === 'cancelled' ? 'member' : null,
+            b.status === 'cancelled' ? member.id : null,
+            b.cancelReason ?? (b.status === 'cancelled' ? 'お客さんがキャンセル' : null),
+            ['checked_in', 'completed'].includes(b.status) ? at(b.start, 10 * 60 + 5) : null,
+            ['checked_in', 'completed'].includes(b.status) ? 1 : null,
+            b.status === 'completed' ? at(b.end, 16 * 60 + 10) : null,
+            b.status === 'completed' ? 1 : null,
+            b.status === 'no_show' ? at(b.start, 12 * 60) : null,
+            b.status === 'no_show' ? 1 : null,
+            b.createdAt, b.createdAt,
+          ],
+        );
+        for (const d of b.dogs) {
+          run(`INSERT INTO booking_dogs (booking_id, dog_id, size, first_time) VALUES (?, ?, ?, ?)`, [id, d.id, d.size, stayed.has(d.id) ? 0 : 1]);
+        }
+        if (holding) {
+          for (let d = r.from; d <= r.to; d = addDays(d, 1)) {
+            for (const x of b.dogs) used.set(key(b.svc, d, x.size), (used.get(key(b.svc, d, x.size)) ?? 0) + 1);
+          }
+        }
+        if (['checked_in', 'completed'].includes(b.status)) for (const d of b.dogs) stayed.add(d.id);
+        if (b.notify && source === 'customer' && ['confirmed', 'checked_in', 'completed'].includes(b.status)) {
+          const text = bookingMessageText({
+            kind: 'confirmed', facilityName: 'グリーンドーム', service: b.svc,
+            when: bookingWhenText({ service: b.svc, startDate: b.start, endDate: b.end, startTime: st, endTime: et }),
+            dogNames: b.dogs.map((d) => d.name), estimateTotal: est.total, message: null, link: null,
+          });
+          run(
+            `INSERT INTO booking_notifications (booking_id, kind, member_id, status, reason, message, month, created_at)
+             VALUES (?, 'confirmed', ?, 'sent', 'mock', ?, ?, ?)`,
+            [id, member.id, text, b.createdAt.slice(0, 7), b.createdAt],
+          );
+        }
+        return true;
+      };
+      function addDaysIso(iso: string, days: number) {
+        return toJstIso(new Date(new Date(iso).getTime() + days * 86400000));
+      }
+
+      // こむぎ・だいずのおうち: こむぎは預かったことがある(すぐ確定)。だいずは、はじめて(予約すると確認待ち)
+      const [komugi] = hKomugi.dogs;
+      addBooking({ h: hKomugi, svc: 'daycare', start: addDays(today, -20), end: addDays(today, -20), dogs: [komugi!], status: 'completed', createdAt: at(addDays(today, -26), 20 * 60), notify: true, note: 'ごはんはお昼に1回。おやつを持たせます。' });
+      addBooking({ h: hKomugi, svc: 'daycare', start: addDays(today, 8), end: addDays(today, 8), dogs: [komugi!], status: 'confirmed', createdAt: at(addDays(today, -2), 21 * 60), notify: true });
+
+      // ほかのおうち(5〜30)の予約。過ぎた日は利用済み(ときどき来なかった・キャンセル)、これからの日は確定(はじめての子は確認待ち)
+      const others = households.filter((x) => x.id >= 5 && x.dogs.length > 0);
+      // 紙の台帳のころに預かったことのある子(「預かり経験あり」の印)
+      for (const x of others.filter((_, i) => i % 3 !== 2)) {
+        run('UPDATE dogs SET stay_experience_at = ?, stay_experience_by_staff_id = 2 WHERE id = ?', [at(addDays(today, -40), 10 * 60), x.dogs[0]!.id]);
+        stayed.add(x.dogs[0]!.id);
+      }
+      // 満員の日(中型。だいずを選ぶと選べない)と、休みの日(研修)
+      const fullDay = addDays(today, 6);
+      for (const x of others.filter((o) => o.dogs.some((d) => d.size === 'medium')).slice(0, 3)) {
+        const dog = x.dogs.find((d) => d.size === 'medium')!;
+        stayed.add(dog.id);
+        addBooking({ h: x, svc: 'daycare', start: fullDay, end: fullDay, dogs: [dog], status: 'confirmed', createdAt: at(addDays(today, -5), 19 * 60) });
+      }
+      run(
+        `INSERT INTO booking_capacity_overrides (date, service, closed, note, created_by_staff_id, created_at) VALUES (?, 'daycare', 1, '研修のため', 2, ?)`,
+        [addDays(today, 9), at(addDays(today, -10), 9 * 60)],
+      );
+      for (let i = 0; i < 46; i++) {
+        const x = others[Math.floor(rand() * others.length)]!;
+        const offset = Math.floor(rand() * 36) - 15;
+        const svc: 'daycare' | 'boarding' = rand() < 0.28 ? 'boarding' : 'daycare';
+        const start = addDays(today, offset);
+        if (svc === 'daycare' ? start === fullDay : false) continue;
+        const end = svc === 'boarding' ? addDays(start, 1 + Math.floor(rand() * 3)) : start;
+        const dogs = x.dogs.length > 1 && rand() < 0.3 ? x.dogs.slice(0, 2) : [x.dogs[0]!];
+        const createdAt = at(addDays(start, -(3 + Math.floor(rand() * 12))), 20 * 60 + Math.floor(rand() * 90));
+        const allStayed = dogs.every((d) => stayed.has(d.id));
+        let status: Parameters<typeof addBooking>[0]['status'];
+        if (end < today) status = rand() < 0.08 ? 'no_show' : rand() < 0.1 ? 'cancelled' : 'completed';
+        else if (start <= today && svc === 'boarding') status = 'checked_in';
+        else if (start === today) status = 'checked_in';
+        else status = allStayed ? (rand() < 0.08 ? 'cancelled' : 'confirmed') : 'pending';
+        const source = rand() < 0.2 ? 'staff' : 'customer';
+        if (source === 'staff' && status === 'pending') status = 'confirmed';
+        addBooking({ h: x, svc, start, end, dogs, status, source, createdAt, note: rand() < 0.35 ? pick(['ごはんは朝と夕方に1回ずつ。', 'お薬を1日1回、ごはんに混ぜてください。', '雷が苦手です。', 'ほかの子と遊ぶのが好きです。']) : null });
+      }
+    }
 
     // ルール: 旧カードの移行期間(前後1か月)と、困ったときの連絡先
     run(`INSERT OR REPLACE INTO settings (key, value, updated_at) VALUES ('migration_period', ?, ?)`, [
@@ -676,7 +877,7 @@ export async function seedDemo(sql: Database, opts: SeedOptions): Promise<SeedSu
       nowIso,
     ]);
 
-    // 自動処理の実行の履歴(システムの状態の画面が緑になるように、直近3日分の成功を入れる)
+    // 自動処理の実行の履歴(システムの状態の画面がすべて正常になるように、直近3日分の成功を入れる)
     const job = (name: string, startedAt: string, message: string) =>
       run(`INSERT INTO system_jobs (name, started_at, finished_at, status, message) VALUES (?, ?, ?, 'ok', ?)`, [
         name,
@@ -692,8 +893,9 @@ export async function seedDemo(sql: Database, opts: SeedOptions): Promise<SeedSu
       job('expiry', at(d, 3 * 60 + 10), '期限が切れたポイントと無料券はありませんでした。');
       job('backup', at(d, 3 * 60 + 11), 'バックアップを保存しました(デモ用の値)。');
       job('migration_images', at(d, 3 * 60 + 11), '消す写真はありませんでした。');
+      job('postal_areas', at(d, 3 * 60 + 12), 'スキップしました(インターネットにつながらない環境のため)。');
       if (i === 0 && nowMinutes < 5 * 60 + 10) break;
-      job('weather', at(d, 5 * 60 + 10), `${addDays(d, -1)} の天気(東京)を取得しました(デモ用の値)。`);
+      job('weather', at(d, 5 * 60 + 10), `${addDays(d, -1)} の天気(三木)を取得しました(デモ用の値)。`);
     }
 
     sql.run('COMMIT');
@@ -716,6 +918,14 @@ export async function seedDemo(sql: Database, opts: SeedOptions): Promise<SeedSu
         variant++;
       }
     }
+  }
+
+  // 会員証の背景(C-06)。見比べられるよう、DR-000001 は写真、DR-000002 は紺。ほかは初期値(墨)
+  sql.run('UPDATE households SET card_background = ? WHERE id = ?', [JSON.stringify({ kind: 'preset', color: 'navy' }), FIXED.taka]);
+  if (opts.makeCardBackground && opts.putMedia) {
+    const key = `cards/${FIXED.komugi}/00000000-0000-4000-8000-000000000001.jpg`;
+    await opts.putMedia(key, await opts.makeCardBackground());
+    sql.run('UPDATE households SET card_background = ? WHERE id = ?', [JSON.stringify({ kind: 'photo', key }), FIXED.komugi]);
   }
 
   return {

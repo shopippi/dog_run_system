@@ -27,5 +27,5 @@ todayRoutes.get('/today', async (c) => {
 todayRoutes.get('/media/*', async (c) => {
   const key = decodeURIComponent(c.req.path.slice(`${ADMIN_MEDIA_BASE}/`.length));
   if (!/^(dogs|requests)\//.test(key) || key.includes('..')) throw errors.notFound('写真が見つかりませんでした。画面を読み込み直してください。');
-  return serveMedia(c.env.MEDIA, key);
+  return serveMedia(c.env.MEDIA, key, c.req.header('if-none-match'));
 });

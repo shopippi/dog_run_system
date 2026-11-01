@@ -11,8 +11,11 @@ import {
 import { useEffect, useId, useState } from 'react';
 import { Dialog } from '../components/Dialog';
 import { ErrorNotice } from '../components/ErrorNotice';
+import { BusyLabel } from '../components/BusyLabel';
 import { PageHead } from '../components/PageHead';
-import { RadioSegment, formatJstDateTime, useLoaded } from '../components/SettingsKit';
+import { useToast } from '../components/Toast';
+import { CfgListSkeleton, RadioSegment, SkeletonField, formatJstDateTime, useLoaded } from '../components/SettingsKit';
+import { Loading, Skeleton, SkeletonText } from '../components/Skeleton';
 import { adminApi, adminPatch, adminPost } from '../lib/api';
 import { useAuth } from '../lib/auth';
 
@@ -34,7 +37,8 @@ export function SurveyQuestionsPage() {
   const { readOnly } = useAuth();
   const [busy, setBusy] = useState(false);
   const [actionError, setActionError] = useState<unknown>(null);
-  const [notice, setNotice] = useState('');
+  const toast = useToast();
+  const setNotice = (m: string) => toast(m);
   const [editing, setEditing] = useState<AdminSurveyQuestion | null>(null);
   const [summary, setSummary] = useState<AdminSurveyQuestion | null>(null);
 
@@ -82,9 +86,6 @@ export function SurveyQuestionsPage() {
               <ErrorNotice error={actionError} />
             </div>
           ) : null}
-          <p className="sr-only" role="status">
-            {notice}
-          </p>
           <ul className="cfg-list" aria-label="質問">
             {questions.map((q, i) => (
               <li key={q.id} className={`cfg-item${q.visible ? '' : ' cfg-off'}`} aria-label={q.label}>
@@ -158,7 +159,26 @@ export function SurveyQuestionsPage() {
           </ul>
         </section>
       )}
-      {!data && !error && <p className="loading">読み込んでいます…</p>}
+      {!data && !error && (
+        <CfgListSkeleton
+          rows={8}
+          add={
+            readOnly ? undefined : (
+              <div className="cfg-fieldset">
+                <div className="cfg-row">
+                  <SkeletonField w={260} h="var(--control-h)" label={64} />
+                  <SkeletonField w={360} h="var(--control-h)" label={56} />
+                </div>
+                <SkeletonText size={13} w="80%" />
+                <SkeletonField label={64} />
+                <SkeletonField label={120} h={120} />
+                <Skeleton w={320} h={20} r={4} />
+                <Skeleton w={96} h="var(--control-h)" r={8} />
+              </div>
+            )
+          }
+        />
+      )}
       {editing && (
         <EditQuestion
           q={editing}
@@ -238,7 +258,9 @@ function AddQuestion({ onAdded }: { onAdded: (r: AdminSurveyQuestionsResponse, l
         </label>
         <div className="cfg-acts">
           <button type="submit" className="btn" disabled={busy || !label.trim()}>
-            {busy ? '追加しています…' : '追加する'}
+            <BusyLabel busy={busy} pending="追加しています…">
+              追加する
+            </BusyLabel>
           </button>
         </div>
       </form>
@@ -281,7 +303,9 @@ function EditQuestion({ q, onClose, onDone }: { q: AdminSurveyQuestion; onClose:
             やめる
           </button>
           <button type="button" className="btn" disabled={busy || !label.trim()} onClick={submit}>
-            {busy ? '保存しています…' : '保存する'}
+            <BusyLabel busy={busy} pending="保存しています…">
+              保存する
+            </BusyLabel>
           </button>
         </>
       }
@@ -340,7 +364,16 @@ function SummaryDialog({ q, onClose }: { q: AdminSurveyQuestion; onClose: () => 
         <b>{q.label}</b>
       </p>
       {error ? <ErrorNotice error={error} /> : null}
-      {!data && !error && <p className="sub-text">読み込んでいます…</p>}
+      {!data && !error && (
+        <Loading>
+          <SkeletonText size={13} w={180} />
+          <div className="cfg-bars">
+            {Array.from({ length: 3 }, (_, i) => (
+              <Skeleton key={i} h={22} r={4} />
+            ))}
+          </div>
+        </Loading>
+      )}
       {data && (
         <>
           <p className="sub-text">

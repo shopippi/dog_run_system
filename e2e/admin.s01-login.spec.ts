@@ -3,7 +3,7 @@ import { adminLogin } from './helpers';
 
 test('S-01 ログインすると、名前と役割が出る。ログインは再読み込みしても保たれる', async ({ page }) => {
   await page.goto('/admin/');
-  await expect(page.getByRole('heading', { name: 'ドッグラン 受付・管理' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'グリーンドーム 受付・管理' })).toBeVisible();
 
   await page.getByLabel('メールアドレス').fill('admin@example.com');
   await page.getByLabel('パスワード').fill('まちがい');

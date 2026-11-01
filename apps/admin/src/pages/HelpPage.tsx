@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { ErrorNotice } from '../components/ErrorNotice';
 import { PageHead } from '../components/PageHead';
 import { Section, useLoaded } from '../components/SettingsKit';
+import { Loading, SkeletonText } from '../components/Skeleton';
 import { HELP_FAQS, HELP_SCREENS, type HelpAudience } from '../content/help';
 import { adminApi } from '../lib/api';
 import { useAuth } from '../lib/auth';
@@ -59,6 +60,11 @@ export function HelpPage() {
 
       <Section title="製作者への連絡先" desc="システムが動かないとき、記録を元に戻してほしいとき、プログラムを変えてほしいときに連絡してください。">
         {contact.error ? <ErrorNotice error={contact.error} onRetry={contact.reload} /> : null}
+        {!contact.data && !contact.error && (
+          <Loading>
+            <SkeletonText size={15} lines={2} w={280} last={200} />
+          </Loading>
+        )}
         {contact.data &&
           (contact.data.developerContact.trim() ? (
             <p className="cfg-contact" aria-label="製作者の連絡先">

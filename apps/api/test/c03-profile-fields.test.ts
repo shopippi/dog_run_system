@@ -281,7 +281,7 @@ describe('A-02 管理者がおうちの回答を見る・変える(M-06)', () =>
       ]),
     });
     const csv = async (name: string) =>
-      String((await adminCall<string>(`/admin/api/export/${name}`, { cookie: c.admin })).body).replace(/^﻿/, '').split('\r\n');
+      String((await adminCall<string>(`/admin/api/export/${name}`, { cookie: c.admin })).body).replace(/^﻿/, '').split('\r\n').filter((l) => !l.startsWith('#')); // 先頭の説明行(#)は外す
     const h = await csv('households');
     expect(h[0]).toMatch(/,来たい時間帯,興味のあるイベント,ほかのドッグランの利用,お知らせの受け取り$/);
     expect(h[1]).toMatch(/,平日の昼・土日の午後,,いいえ,はい$/);

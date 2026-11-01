@@ -1,6 +1,7 @@
 import { RUNNABLE_JOBS, type JobRunResult, type RunnableJob, type SystemStatusResponse } from '@dr/shared';
 import { Hono, type Context } from 'hono';
-import { runBackupJob, runDailyStatsJob, runHolidaysJob, runWeatherJob } from '../../cron';
+import { lineBotInfo } from '../../services/line-push';
+import { runBackupJob, runDailyStatsJob, runHolidaysJob, runPostalAreasJob, runWeatherJob } from '../../cron';
 import type { AppEnv } from '../../env';
 import { requireRole } from '../../lib/staff-auth';
 import { auditStatement } from '../../services/audit';
@@ -45,6 +46,9 @@ systemRoutes.get('/system-status', requireRole('admin'), async (c) => {
   const body: SystemStatusResponse = await systemStatus(c.env.DB, c.get('now'), {
     detail: staff.role === 'developer',
     contact: settings.developer_contact,
+    lineLimit: settings.booking_notify.monthly_limit,
+    lineConfigured: !!c.env.LINE_MESSAGING_TOKEN?.trim(),
+    lineBot: await lineBotInfo(c.env),
   });
   return c.json(body);
 });
@@ -54,6 +58,7 @@ const RUNNERS: Record<RunnableJob, (env: AppEnv['Bindings'], now: Date) => Promi
   holidays: runHolidaysJob,
   backup: runBackupJob,
   daily_stats: runDailyStatsJob,
+  postal_areas: runPostalAreasJob,
 };
 
 // 自動処理を今すぐ実行する(M-17 の「今すぐ実行」)。管理者

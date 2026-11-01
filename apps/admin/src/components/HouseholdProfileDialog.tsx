@@ -8,6 +8,8 @@ import {
 import { useEffect, useId, useState } from 'react';
 import { ApiError, adminApi, adminPatch } from '../lib/api';
 import { Dialog } from './Dialog';
+import { BusyLabel } from './BusyLabel';
+import { Loading, Skeleton, SkeletonText } from './Skeleton';
 import { ErrorNotice } from './ErrorNotice';
 
 type Values = Record<number, SurveyAnswerValue>;
@@ -70,7 +72,9 @@ export function HouseholdProfileDialog({
             やめる
           </button>
           <button type="button" className="btn" disabled={busy || !data} onClick={save}>
-            {busy ? '保存しています…' : '保存する'}
+            <BusyLabel busy={busy} pending="保存しています…">
+              保存する
+            </BusyLabel>
           </button>
         </>
       }
@@ -78,7 +82,18 @@ export function HouseholdProfileDialog({
       <p className="sub-text">
         {d.displayName}(<span className="mono">{d.memberNo}</span>)のアンケートの回答です。家族みんなで共通です。変えた内容は操作ログに残ります。
       </p>
-      {!data && !error && <p className="sub-text">読み込んでいます…</p>}
+      {!data && !error && (
+        <Loading>
+          <div className="hp-form">
+            {Array.from({ length: 3 }, (_, i) => (
+              <div key={i} className="field">
+                <SkeletonText size={13} w={[96, 120, 80][i]} />
+                <Skeleton h="var(--control-h)" r={8} />
+              </div>
+            ))}
+          </div>
+        </Loading>
+      )}
       {data && (
         <div className="hp-form">
           {data.questions.map((q) => (

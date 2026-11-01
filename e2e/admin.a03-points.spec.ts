@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { adminLogin, newLineUser, openLiff, registerViaUi } from './helpers';
+import { adminLogin, adminToast, newLineUser, openLiff, registerViaUi } from './helpers';
 
 test('A-03 ポイントを1つ手動で足し、結果を確かめてから登録し、操作ログから元に戻す', async ({ browser }) => {
   const customer = await browser.newPage();
@@ -23,7 +23,7 @@ test('A-03 ポイントを1つ手動で足し、結果を確かめてから登�
   await expect(confirm.getByRole('definition').first()).toHaveText('0 → 1');
   await expect(confirm).toContainText('イベントの特典');
   await confirm.getByRole('button', { name: '登録する' }).click();
-  await expect(page.getByRole('status')).toContainText('いまは 1ポイント');
+  await expect(adminToast(page, 'いまは 1ポイント')).toBeVisible();
   const head = page.getByRole('region', { name: 'おうちの概要' });
   await expect(head.getByRole('group', { name: 'ポイント', exact: true })).toContainText('1ポイント');
   await expect(page.getByRole('list', { name: 'ポイントの記録' })).toContainText('イベントの特典');
@@ -32,7 +32,7 @@ test('A-03 ポイントを1つ手動で足し、結果を確かめてから登�
   await expect(customer.getByRole('img', { name: 'ポイント 1 / 10' })).toBeVisible();
 
   // 操作ログから元に戻す
-  await page.getByRole('status').getByRole('link', { name: '操作ログ' }).click();
+  await page.getByRole('navigation', { name: 'メニュー' }).getByRole('link', { name: '操作ログ' }).click();
   const row = page
     .getByRole('list', { name: '操作の一覧' })
     .getByRole('listitem')

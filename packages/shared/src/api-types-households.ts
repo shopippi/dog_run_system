@@ -53,6 +53,20 @@ export const AUDIT_ACTION_LABELS: Record<string, string> = {
   'ticket.exchange': '無料券と交換',
   'ticket.use': '無料券の使用',
   'ticket.mark_used': '無料券を使用済みにする',
+  'day_note.create': 'その日のメモを書いた',
+  'day_note.update': 'その日のメモを直した',
+  'day_note.delete': 'その日のメモを消した',
+  'system.run.postal_areas': '郵便番号から地域を調べる処理の実行',
+  'booking.request': '予約の申し込み(お客さん)',
+  'booking.create': '予約の手入力',
+  'booking.approve': '予約の承認',
+  'booking.decline': '予約のお断り',
+  'booking.check_in': '予約の利用開始',
+  'booking.complete': '予約を利用済みにした',
+  'booking.no_show': '予約を「来なかった」にした',
+  'booking.cancel': '予約のキャンセル',
+  'booking.override': 'その日の受け入れ数の変更',
+  'dog.stay_experience': '預かり経験ありの印',
 };
 
 export function auditActionLabel(action: string): string {
@@ -186,6 +200,8 @@ export type HouseholdDetail = {
   status: import('./constants').HouseholdStatus;
   statusLabel: string;
   sourceLabel: string;
+  /** 会員証の背景の種類(「写真」「単色(紺)」など。写真そのものは管理画面に出さない。C-06) */
+  cardBackgroundLabel: string;
   /** 統合済みのとき、統合先 */
   mergedInto: { id: number; memberNo: string; displayName: string } | null;
   balance: number;
@@ -198,6 +214,8 @@ export type HouseholdDetail = {
   family: HouseholdFamilyMember[];
   /** 犬(おやすみ中の犬も含む) */
   dogs: import('./api-types').DogSummary[];
+  /** 預かり・お泊まりの経験がある犬(受付で預かった・「預かり経験あり」の印。21章) */
+  stayExperiencedDogIds?: number[];
   /** 来場履歴(新しい順。最大100件) */
   visits: HouseholdVisit[];
   /** ポイントの記録(新しい順。最大200件) */
@@ -259,6 +277,11 @@ export type AdminDogDetail = {
   breeds: import('./api-types').Breed[];
   /** 変更の履歴(新しい順) */
   changes: DogChangeEntry[];
+  /**
+   * 預かり・お泊まりの経験(21章)。experienced: 受付でお預かりしたことがあるか印がある(すぐ確定になる)。
+   * marked: 管理者が「預かり経験あり」の印を付けている。stays: 受付でお預かりした回数
+   */
+  stay?: { experienced: boolean; marked: boolean; stays: number };
 };
 
 // ============================================================
@@ -273,3 +296,13 @@ export type ReceptionInvite = {
   expiresAt: string;
   ttlMinutes: number;
 };
+
+// ---------------------------------------------------------------
+// 2026-10-29 管理画面のトーストの「元に戻す」
+// ---------------------------------------------------------------
+
+/**
+ * 元に戻せる操作(チェックインの取り消し・ポイントの手動登録・旧カードの引き継ぎ・無料券を使用済みにする・家族を外す)の応答に足す、
+ * 操作ログの番号。POST /admin/api/audit/:id/undo で元に戻す(管理者だけ)。
+ */
+export type WithAuditId = { auditId: number | null };

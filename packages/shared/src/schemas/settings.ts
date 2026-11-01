@@ -22,12 +22,27 @@ export const SETTING_FIELDS: Record<SettingKey, { label: string; hint: string }>
   reception_invite_ttl_minutes: { label: '受付で出す招待QRの有効時間', hint: '1〜120分で入れてください。' },
   migration_period: { label: '移行期間', hint: '開始日と終了日を選び直してください。終了日は開始日より後にしてください。' },
   migration_max_points: { label: '旧カードから引き継げるポイントの上限', hint: '1〜200の数で入れてください。' },
+  migration_max_tickets: { label: '旧カードの特典から出せる無料券の上限', hint: '0〜10枚で入れてください。' },
+  migration_late_entry: { label: '移行期間のあとの引き継ぎ', hint: '受け付けるか受け付けないかを選んでください。' },
   developer_contact: { label: '製作者の連絡先', hint: '500文字までで入れてください。' },
   terms_text: { label: '利用規約', hint: '20,000文字までで入れてください。' },
   privacy_text: { label: 'プライバシーポリシー', hint: '20,000文字までで入れてください。' },
   liff_id: { label: 'LINEミニアプリの番号', hint: LIFF_ID_MESSAGE },
   merge_keep_same_day_points: { label: 'おうちをまとめたとき、同じ日の来場のポイント', hint: '残すか残さないかを選んでください。' },
+  facility_name: { label: '施設の名前', hint: '1〜30文字で入れてください。' },
   weather_station: { label: '天気の観測地点', hint: '気象庁の地点番号(5桁)と名前を入れてください。' },
+  booking_enabled: { label: 'LINEからの予約', hint: '受け付けるか受け付けないかを選んでください。' },
+  booking_daily_limit: { label: '1日にできる予約とキャンセルの回数', hint: '1〜100回で入れてください。' },
+  booking_approve_all: { label: 'すべて承認制にする', hint: 'する・しないを選んでください。' },
+  booking_capacity: { label: '受け入れる頭数', hint: '0〜100頭で入れてください。' },
+  booking_prices: { label: '料金の目安', hint: '0〜1,000,000円で入れてください。半日の時間は1〜12時間です。' },
+  booking_hours: { label: '預ける・お迎えの時間', hint: '「9:00」の形で、始めの時刻を終わりの時刻より前にしてください。' },
+  booking_closed_weekdays: { label: '予約を受けない曜日', hint: '曜日を選び直してください。' },
+  booking_cancel_deadline: { label: 'キャンセルの期限', hint: '0〜14日前と、「18:00」の形の時刻で入れてください。' },
+  booking_window: { label: '予約できる期間', hint: '何日後から(0〜30)・何日後まで(1〜365)・最長の泊数(1〜30)を入れてください。' },
+  booking_checklist: { label: '予約のときに確かめてもらうこと', hint: '1つ80文字まで、10個までにしてください。空の行は入れられません。' },
+  booking_checklist_required: { label: '確かめてもらうことへの印', hint: '必ず付けてもらうかを選んでください。' },
+  booking_notify: { label: 'LINEでのお知らせ', hint: '送る・送らないと、ひと月の上限(0〜100,000通)を入れてください。' },
 };
 
 const ymd = /^\d{4}-\d{2}-\d{2}$/;
@@ -222,17 +237,31 @@ export const closureCreateSchema = z.object({
 // A-14 CSV出力
 // ============================================================
 
-export const EXPORT_NAMES = ['households', 'members', 'dogs', 'visits', 'ledger', 'survey'] as const;
+export const EXPORT_NAMES = ['analysis', 'analysis_households', 'households', 'members', 'dogs', 'visits', 'ledger', 'survey', 'bookings'] as const;
 export type ExportName = (typeof EXPORT_NAMES)[number];
 
 /** 出力の種類。period: 期間を指定できるか */
-export const EXPORTS: Record<ExportName, { label: string; desc: string; period: boolean }> = {
+export const EXPORTS: Record<ExportName, { label: string; desc: string; period: boolean; ai?: boolean }> = {
+  // 2026-10-29 AI に渡しやすい CSV(docs/design.md 12.2)。個人を特定できる情報は入れない
+  analysis: {
+    label: 'AIに渡す分析パック',
+    desc: '1日1行。天気・祝日・休業・イベント・その日のメモ・来場の内訳・無料券。名前や会員IDは入りません',
+    period: true,
+    ai: true,
+  },
+  analysis_households: {
+    label: 'AIに渡す おうちごとの表',
+    desc: '1おうち1行。会員IDの代わりに通し番号。地域(市区町村)・きっかけ・来場回数など。名前や会員IDは入りません',
+    period: true,
+    ai: true,
+  },
   households: { label: 'おうち', desc: '会員ID・呼び名・ポイント・無料券・来場回数など。1おうち1行', period: false },
   members: { label: '家族', desc: 'LINEの名前・年代・性別・参加日など。1人1行', period: false },
   dogs: { label: 'ワンちゃん', desc: '犬ID・名前・犬種・サイズ・来場回数など。1頭1行', period: false },
   visits: { label: '来場', desc: '来場日・時刻・来たワンちゃん・無料券・取り消しなど。1回の来場で1行', period: true },
   ledger: { label: 'ポイント台帳', desc: 'ポイントの増減と理由。1回の増減で1行', period: true },
   survey: { label: 'アンケートの回答', desc: '固定の質問と追加した質問の回答。1つの回答で1行', period: false },
+  bookings: { label: '預かり・お泊まりの予約', desc: '1つの予約で1行。種類・状態・日にち・ワンちゃん・料金の目安など', period: true },
 };
 
 /** 出力の期間(来場・ポイント台帳)。どちらも空なら、すべて */

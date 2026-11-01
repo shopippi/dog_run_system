@@ -1,6 +1,8 @@
 import { Route, Routes } from 'react-router-dom';
 import { ErrorNotice } from './components/ErrorNotice';
 import { Layout } from './components/Layout';
+import { Loading, Skeleton, SkeletonPageHead, SkeletonText } from './components/Skeleton';
+import { ToastProvider } from './components/Toast';
 import { AuthProvider, useAuth } from './lib/auth';
 import { LoginPage } from './pages/LoginPage';
 import { ProxyCheckin } from './components/ProxyCheckin';
@@ -21,18 +23,25 @@ import { ExportPage } from './pages/ExportPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { DogEditPage } from './pages/DogEditPage';
 import { MigrationPage } from './pages/MigrationPage';
+import { SwitchoverPage } from './pages/SwitchoverPage';
+import { BookingCalendarPage } from './pages/bookings/BookingCalendarPage';
+import { BookingPendingPage } from './pages/bookings/BookingPendingPage';
+import { BookingNewPage } from './pages/bookings/BookingNewPage';
+import { BookingSettingsPage } from './pages/bookings/BookingSettingsPage';
 
 export function App() {
   return (
     <AuthProvider>
-      <Gate />
+      <ToastProvider>
+        <Gate />
+      </ToastProvider>
     </AuthProvider>
   );
 }
 
 function Gate() {
   const { staff, loading, error } = useAuth();
-  if (loading && !staff) return <p className="loading">読み込んでいます…</p>;
+  if (loading && !staff) return <ShellSkeleton />;
   if (error) {
     return (
       <main className="login">
@@ -74,6 +83,11 @@ function Gate() {
         <Route path="/export" element={<ExportPage />} />
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/migration" element={<MigrationPage />} />
+        <Route path="/switchover" element={<SwitchoverPage />} />
+        <Route path="/bookings" element={<BookingCalendarPage />} />
+        <Route path="/bookings/pending" element={<BookingPendingPage />} />
+        <Route path="/bookings/new" element={<BookingNewPage />} />
+        <Route path="/booking-settings" element={<BookingSettingsPage />} />
         <Route path="*" element={<Placeholder />} />
       </Routes>
     </Layout>
@@ -87,5 +101,32 @@ function Placeholder() {
         <p className="empty">この画面は準備中です。メニューから別の画面を選んでください。</p>
       </div>
     </div>
+  );
+}
+
+/** ログインの確認中。サイドバーと本文の形だけを出す(docs/design.md 11.1) */
+function ShellSkeleton() {
+  return (
+    <Loading className="shell sk-shell">
+      <aside className="side">
+        <div className="side-brand">
+          <Skeleton w={150} h={16} r={4} />
+        </div>
+        <div className="nav">
+          {Array.from({ length: 7 }, (_, i) => (
+            <span key={i} className="sk-nav">
+              <Skeleton w={18} h={18} r={4} />
+              <Skeleton w={i % 2 ? 72 : 96} h={12} r={4} />
+            </span>
+          ))}
+        </div>
+      </aside>
+      <main className="content">
+        <SkeletonPageHead />
+        <div className="panel sk-panel-block">
+          <SkeletonText lines={3} size={15} />
+        </div>
+      </main>
+    </Loading>
   );
 }

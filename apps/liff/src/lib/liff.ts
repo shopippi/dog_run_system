@@ -1,8 +1,16 @@
-import liff from '@line/liff';
-
-// LIFF SDK のうち、このアプリで使う部分だけをまとめる。
+// LIFF SDK のうち、このアプリで使う部分だけを読み込む(pluggable SDK。全部入りより小さく、電波が弱くても早く開く)。
 // VITE_LIFF_ID がないとき(開発・Playwright のテスト)はモックで動く。
 // モックのユーザーは URL の ?mockUser=U001:パパ か、前回のモックユーザーを使う。
+import liff from '@line/liff/core';
+import CloseWindow from '@line/liff/close-window';
+import GetDecodedIDToken from '@line/liff/get-decoded-id-token';
+import GetIDToken from '@line/liff/get-id-token';
+import IsApiAvailable from '@line/liff/is-api-available';
+import IsInClient from '@line/liff/is-in-client';
+import IsLoggedIn from '@line/liff/is-logged-in';
+import Login from '@line/liff/login';
+import ScanCodeV2 from '@line/liff/scan-code-v2';
+import ShareTargetPicker from '@line/liff/share-target-picker';
 
 const LIFF_ID = import.meta.env.VITE_LIFF_ID ?? '';
 export const isMock = LIFF_ID === '';
@@ -42,9 +50,32 @@ function mockUser(): { userId: string; name: string } {
   return { userId: userId || 'Umock0001', name: name || 'テストユーザー' };
 }
 
-export async function initLiff(): Promise<void> {
+let installed = false;
+function installModules() {
+  if (installed) return;
+  installed = true;
+  liff.use(new IsInClient());
+  liff.use(new IsLoggedIn());
+  liff.use(new Login());
+  liff.use(new GetIDToken());
+  liff.use(new GetDecodedIDToken());
+  liff.use(new IsApiAvailable());
+  liff.use(new CloseWindow());
+  liff.use(new ScanCodeV2());
+  liff.use(new ShareTargetPicker());
+}
+
+/** LIFF の準備。電波が弱く、決まった時間で終わらないときは失敗にする(画面に「もう一度読み込む」を出す) */
+export async function initLiff(timeoutMs = 20_000): Promise<void> {
   if (isMock) return;
-  await liff.init({ liffId: LIFF_ID });
+  installModules();
+  let timer = 0;
+  await Promise.race([
+    liff.init({ liffId: LIFF_ID }),
+    new Promise((_, reject) => {
+      timer = window.setTimeout(() => reject(new Error('liff init timeout')), timeoutMs);
+    }),
+  ]).finally(() => window.clearTimeout(timer));
   if (!liff.isLoggedIn()) {
     liff.login({ redirectUri: location.href });
     // ログイン画面へ移動するので、ここから先は進まない
@@ -60,6 +91,59 @@ export function getIdToken(): string {
   const token = liff.getIDToken();
   if (!token) throw new Error('LINEのログイン情報を取得できませんでした');
   return token;
+}
+
+/** IDトークンの期限が切れている(あと1分を切った)か。モックでは切れない */
+export function idTokenExpired(): boolean {
+  if (isMock) return false;
+  const exp = liff.getDecodedIDToken()?.exp;
+  return typeof exp === 'number' && exp * 1000 < Date.now() + 60_000;
+}
+
+const RELOGIN_KEY = 'dr.relogin';
+
+/**
+ * LINE のログインをやり直す(IDトークンの期限が切れたとき)。LINE の中では画面が一度読み込み直され、新しいトークンで戻る。
+ * 送信待ちのチェックインは端末に保存してあるので、戻ったあとに自動で送る。
+ * 1分以内に2回はやり直さない(やり直しがくり返されるのを防ぐ)。やり直せないときは false。
+ */
+export function relogin(): boolean {
+  if (isMock) return false;
+  try {
+    const last = Number(sessionStorage.getItem(RELOGIN_KEY) ?? 0);
+    if (Date.now() - last < 60_000) return false;
+    sessionStorage.setItem(RELOGIN_KEY, String(Date.now()));
+  } catch {
+    // 覚えられない端末でも、やり直しはする
+  }
+  liff.login({ redirectUri: location.href });
+  return true;
+}
+
+/**
+ * いま開いている LINE ユーザーを表す短い印(端末に保存する会員証を、人ごとに分けるため)。
+ * LINE のユーザーID そのものは保存せず、ハッシュにする。分からないときは null。
+ */
+export function currentUserKey(): string | null {
+  let id: string | undefined;
+  if (isMock) id = mockUser().userId;
+  else {
+    try {
+      id = liff.getDecodedIDToken()?.sub;
+    } catch {
+      id = undefined;
+    }
+  }
+  if (!id) return null;
+  // FNV-1a(32bit)を2回。暗号ではなく、ID をそのまま残さないための印
+  let h1 = 0x811c9dc5;
+  let h2 = 0x01000193;
+  for (let i = 0; i < id.length; i++) {
+    const c = id.charCodeAt(i);
+    h1 = Math.imul(h1 ^ c, 0x01000193) >>> 0;
+    h2 = Math.imul(h2 ^ c, 0x811c9dc5) >>> 0;
+  }
+  return h1.toString(36) + h2.toString(36);
 }
 
 export function isInLineApp(): boolean {

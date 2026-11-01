@@ -14,7 +14,7 @@ import { errors } from '../../lib/errors';
 import { loadSettings } from '../../lib/settings';
 import { requireRole } from '../../lib/staff-auth';
 import { parseJson } from '../../lib/validate';
-import { auditStatement } from '../../services/audit';
+import { auditStatement, latestAuditId } from '../../services/audit';
 import { cancelCheckin, findVisitOn, recordCheckin, requireActiveDogs } from '../../services/checkins';
 import { refreshDailyStatsQuietly } from '../../services/daily-stats';
 
@@ -23,13 +23,12 @@ export const adminCheckinRoutes = new Hono<AppEnv>();
 // チェックインの取り消し(S-03)。受付スタッフと管理者
 adminCheckinRoutes.post('/checkins/:id/cancel', requireRole('staff', 'admin'), async (c) => {
   const { reason } = await parseJson(c, cancelCheckinSchema);
-  await cancelCheckin(c.env.DB, {
-    visitId: Number(c.req.param('id')) || 0,
-    staffId: c.get('staff').id,
-    reason,
-    now: c.get('now'),
-  });
-  return c.json({ ok: true });
+  const visitId = Number(c.req.param('id')) || 0;
+  const staffId = c.get('staff').id;
+  await cancelCheckin(c.env.DB, { visitId, staffId, reason, now: c.get('now') });
+  // 画面のトーストの「元に戻す」のために、操作ログの番号を返す
+  const auditId = await latestAuditId(c.env.DB, { action: 'visit.cancel', targetType: 'visit', targetId: visitId, staffId });
+  return c.json({ ok: true, auditId });
 });
 
 // 会員以外のお客さんの頭数を記録する(S-05)。来場者数の集計に含める

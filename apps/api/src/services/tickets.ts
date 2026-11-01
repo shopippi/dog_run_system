@@ -16,10 +16,10 @@ import { pointBalance, unusedTicketCount } from './points';
 import type { AuditRow, UndoContext } from './undo';
 
 /*
- * 無料券の「交換する」「使用する」(要件定義書 8章、C-06)。
+ * 無料券の「交換する」と、スライドして「使用する」(要件定義書 8章、C-06)。
  * - 無料券は自動では発行しない。お客さんが会員証で「無料券と交換する」を押すと、ポイントを引いて1枚発行する
  * - 台帳(point_ledger)には「無料券と交換」(kind = ticket_issue)のマイナスの行を書く。残高は台帳の合計
- * - 使うときは会員証の「使用する」を受付で見せながら押す。その日の来場があれば、その来場に結びつける
+ * - 使うときは会員証の無料券を受付で見せながら右へスライドする。その日の来場があれば、その来場に結びつける
  *   (来場がまだなら、チェックインしたときに結びつける)
  */
 
@@ -244,7 +244,7 @@ export async function useTicket(
   return { ticketId: t.id, usedAt: nowIso, usedDate: today, visitId: used.used_visit_id };
 }
 
-/** 使った無料券の表示内容(「無料券を使用しました」の画面、C-06) */
+/** 使った無料券の表示内容(「使用できました」の画面、C-06) */
 export async function ticketUseDetail(
   db: D1Database,
   member: { householdId: number; memberNo: string; householdName: string },

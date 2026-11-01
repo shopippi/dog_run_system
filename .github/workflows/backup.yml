@@ -1,0 +1,48 @@
+# 本番のデータベース(写真もふくむ)の毎晩のバックアップ。暗号化して GitHub の Actions に30日残す(月額0円。R2 を使わないため)。
+# - 動くとき: 毎日 日本時間 3:40(main に入っているときだけ。GitHub の決まりで、予定の実行は既定のブランチのワークフローだけが動く)、
+#   または Actions の画面の「Run workflow」で手で動かしたとき
+# - 必要な Secrets: CLOUDFLARE_API_TOKEN(Environment「Secret」)、BACKUP_PASSPHRASE(暗号化の合言葉。なくすと戻せない)
+# - 戻し方: docs/deploy.md の「バックアップと復元」
+name: Backup
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '40 18 * * *'
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+env:
+  CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+  CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID || '1750afed104e032d623e116c11c29b4d' }}
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    environment: ${{ vars.DEPLOY_ENVIRONMENT || 'Secret' }}
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: 本番の D1 の ID を wrangler.toml に入れる
+        working-directory: apps/api
+        run: node scripts/prepare-production.mjs --no-create
+      - name: バックアップを取る(暗号化)
+        working-directory: apps/api
+        env:
+          BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: bash scripts/backup-d1.sh "$RUNNER_TEMP/backup.sql.gz.gpg"
+      - name: バックアップを保存する
+        if: env.BACKUP_FILE != ''
+        uses: actions/upload-artifact@v7
+        with:
+          name: backup-${{ github.run_number }}
+          path: ${{ env.BACKUP_FILE }}
+          retention-days: 30

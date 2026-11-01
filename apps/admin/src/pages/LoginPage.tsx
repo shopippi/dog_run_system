@@ -1,10 +1,13 @@
 import { useState, type FormEvent } from 'react';
+import { BusyLabel } from '../components/BusyLabel';
 import { ErrorNotice } from '../components/ErrorNotice';
 import { useAuth } from '../lib/auth';
+import { useFacilityName } from '../hooks/useFacilityName';
 
 /** M-01 ログイン(S-01) */
 export function LoginPage() {
   const { login } = useAuth();
+  const facilityName = useFacilityName();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
@@ -26,7 +29,7 @@ export function LoginPage() {
     <main className="login">
       <form className="panel login-box" onSubmit={submit}>
         <div className="login-head">
-          <h1>ドッグラン 受付・管理</h1>
+          <h1>{facilityName} 受付・管理</h1>
           <p className="howto">メールアドレスとパスワードを入れて「ログイン」を押してください。一度ログインすると、30日間はそのまま使えます。</p>
         </div>
         <div className="field">
@@ -46,7 +49,9 @@ export function LoginPage() {
         </div>
         {error ? <ErrorNotice error={error} /> : null}
         <button type="submit" className="btn" disabled={busy}>
-          {busy ? 'ログインしています…' : 'ログイン'}
+          <BusyLabel busy={busy} pending="ログインしています…">
+            ログイン
+          </BusyLabel>
         </button>
         <p className="note">パスワードを忘れたときは、管理者にパスワードの再発行を頼んでください。</p>
       </form>

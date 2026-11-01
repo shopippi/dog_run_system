@@ -81,8 +81,8 @@ export async function applyManualPoints(
     voided = results.map((r) => r.id);
     statements.push(
       db
-        .prepare(`UPDATE tickets SET status = 'void', note = ? WHERE status = 'unused' AND id IN (${voided.map(() => '?').join(',')})`)
-        .bind(`手動で減らした: ${reason}`, ...voided),
+        .prepare(`UPDATE tickets SET status = 'void', note = ? WHERE status = 'unused' AND id IN (SELECT value FROM json_each(?))`)
+        .bind(`手動で減らした: ${reason}`, JSON.stringify(voided)),
     );
   }
   statements.push(
@@ -159,8 +159,8 @@ export async function undoManualPoints(db: D1Database, log: AuditRow, ctx: UndoC
   if (voided.length) {
     statements.push(
       db
-        .prepare(`UPDATE tickets SET status = 'unused', note = NULL WHERE status = 'void' AND id IN (${voided.map(() => '?').join(',')})`)
-        .bind(...voided),
+        .prepare(`UPDATE tickets SET status = 'unused', note = NULL WHERE status = 'void' AND id IN (SELECT value FROM json_each(?))`)
+        .bind(JSON.stringify(voided)),
     );
   }
   if (statements.length) await db.batch(statements);

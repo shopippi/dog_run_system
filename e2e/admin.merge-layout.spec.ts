@@ -1,5 +1,6 @@
 import { expect, test, type Browser, type CDPSession, type Page } from '@playwright/test';
-import { adminLogin, answerSurvey, makePhoto, newLineUser, openLiff, registerViaUi } from './helpers';
+import { restoreTouch } from './households-helpers';
+import { adminLogin, adminToast, answerSurvey, makePhoto, newLineUser, openLiff, registerViaUi } from './helpers';
 import { insertMigrationRequest, putMedia, visitYesterday } from './merge-helpers';
 
 // 担当B(おうちの統合・確認待ち)の画面の見え方。e2e/admin.layout.spec.ts の checkScreen と同じ確かめ方。
@@ -46,6 +47,8 @@ async function checkScreen(page: Page, folder: string, screen: string, touch: bo
   expect(problems, `${folder} / ${screen}`).toEqual([]);
   if (process.env.SHOT_DIR) {
     await page.screenshot({ path: `${process.env.SHOT_DIR}/${folder}/${screen}.png`, fullPage: true });
+    // 全体の写真を撮ると、指の操作のエミュレーション(pointer: coarse)が外れることがあるので、かけ直す
+    if (touch) await restoreTouch(page);
     // 縦に長い画面の写真(fullPage)を撮ると、Chromium が「指で操作する端末」の設定(pointer: coarse)を外してしまう。
     // 次の画面の確かめが正しく行えるよう、かけ直す
     // (CDP の接続を切ると設定も外れるので、画面ごとに1つの接続をつないだままにする)
@@ -171,7 +174,7 @@ test.describe('おうちの統合・確認待ちの見え方', () => {
       await expect(dialog.getByRole('button', { name: 'やめる' })).toBeFocused();
       await checkScreen(page, v.name, 'M-08 おうちの統合(確認)', v.touch);
       await dialog.getByRole('button', { name: 'まとめる' }).click();
-      await expect(page.getByRole('status')).toContainText('にまとめました');
+      await expect(adminToast(page, 'にまとめました')).toBeVisible();
       await checkScreen(page, v.name, 'M-08 おうちの統合(まとめた後)', v.touch);
       await page.close();
     });

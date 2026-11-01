@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { adminLogin, newLineUser, registerViaUi } from './helpers';
+import { adminLogin, adminToast, newLineUser, registerViaUi } from './helpers';
 import { earnPoints, exchangeToday, householdIdOf } from './tickets-helpers';
 
 test('M-06 管理者がおうちの詳細から「無料券を使用済みにする」を押し、確認してから使用済みにする。操作ログから元に戻せる', async ({ browser, request }) => {
@@ -23,7 +23,7 @@ test('M-06 管理者がおうちの詳細から「無料券を使用済みにす
   await expect(dialog).toContainText('ポンズのおうち');
   await expect(dialog).toContainText('使える無料券は 0枚 になります');
   await dialog.getByRole('button', { name: '使用済みにする' }).click();
-  await expect(page.getByText(/無料券を1枚、使用済みにしました。/)).toBeVisible();
+  await expect(adminToast(page, /無料券を1枚、使用済みにしました。/)).toBeVisible();
   await expect(tickets.getByText('使用済み')).toBeVisible();
   await expect(tickets.getByRole('button', { name: '使用済みにする' })).toHaveCount(0);
 

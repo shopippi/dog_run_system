@@ -103,9 +103,17 @@ for (const scheme of ['light', 'dark'] as const) {
       await page.getByRole('button', { name: 'この子の登録をおやすみする' }).waitFor();
       await check(page, 'L-09 犬の変更(おやすみ)');
       await page.getByRole('button', { name: 'この子の登録をおやすみする' }).click();
+      // 下から出るシート(背景が暗くなった状態)
+      const sheet = page.getByRole('dialog', { name: /の登録をおやすみします/ });
+      await sheet.waitFor();
+      await page.waitForTimeout(400);
       await check(page, 'L-09 犬の変更(おやすみの確認)');
-      await page.getByRole('button', { name: 'おやすみする', exact: true }).click();
+      await sheet.getByRole('button', { name: 'おやすみする', exact: true }).click();
       await page.getByText('おやすみ中のワンちゃん').waitFor();
+      // 折りたたみを開いた状態で測る
+      await page.getByText('おやすみ中のワンちゃん(1)').click();
+      // トーストが出ている状態も測る
+      await page.locator('.toast').waitFor();
       await check(page, 'L-09 犬の管理(おやすみ中)');
       await page.close();
     });
@@ -146,7 +154,7 @@ for (const scheme of ['light', 'dark'] as const) {
       test.setTimeout(90_000);
       const customer = await browser.newPage();
       // ライトとダークで別のおうちにする(データベースはテスト全体で共有するため)
-      const dogName = scheme === 'light' ? 'ダイフク' : 'サクラモチ';
+      const dogName = scheme === 'light' ? 'クズモチ' : 'サクラモチ';
       await registerViaUi(customer, newLineUser('パパ'), [dogName]);
       await customer.close();
       const page = await browser.newPage({ viewport: { width: 1280, height: 800 }, colorScheme: scheme });

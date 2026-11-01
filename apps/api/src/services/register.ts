@@ -24,8 +24,14 @@ export type ExtraStatements = (ctx: { householdId: number; memberNo: string; now
 /**
  * おうちと最初の家族を作り、会員IDを発行する(C-01)。
  * 会員IDは「これまでの最大の番号 + 1」。同時に登録されて番号がぶつかったときは、番号を取り直してやり直す。
+ * 同時に N 件来ると、1回ごとに少なくとも1件は通るので、最悪 N 回やり直す。やり直しの回数(MAX_ATTEMPTS)は
+ * 一度に来る登録の数より多くし、ぶつかった者どうしが同じ時に取り直さないよう、少しだけずらして待つ
+ * (以前は5回までで、6件が同時に来ると最後の1件が「混み合っています」になることがあった)。
  * おうち・家族・犬・アンケートは1つのまとまり(D1 の batch)で書き込み、途中で失敗したら何も残さない。
  */
+/** 会員IDがぶつかったときに、やり直す回数の上限 */
+const MAX_ATTEMPTS = 30;
+
 export async function registerHousehold(
   db: D1Database,
   now: Date,
@@ -36,7 +42,7 @@ export async function registerHousehold(
   const nowIso = toJstIso(now);
   const householdName = autoHouseholdName(draft.dogNames);
 
-  for (let attempt = 0; attempt < 5; attempt++) {
+  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
     const householdId = await nextHouseholdId(db);
     const memberNo = formatMemberNo(householdId);
     const statements = [
@@ -90,7 +96,11 @@ export async function registerHousehold(
       return { householdId, memberNo, householdName };
     } catch (e) {
       const message = String((e as Error)?.message ?? e);
-      if (/households\.(id|member_no)/.test(message)) continue; // 番号がぶつかった
+      if (/households\.(id|member_no)/.test(message)) {
+        // 番号がぶつかった。少しずらしてから取り直す
+        await new Promise((r) => setTimeout(r, Math.random() * 20));
+        continue;
+      }
       if (/family_members\.line_user_id/.test(message)) throw alreadyRegistered();
       throw e;
     }

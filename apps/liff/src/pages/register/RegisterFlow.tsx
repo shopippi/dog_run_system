@@ -10,6 +10,7 @@ import { ConsentStep } from './ConsentStep';
 import { DogsStep } from './DogsStep';
 import { DoneStep } from './DoneStep';
 import { SurveyStep } from './SurveyStep';
+import { RegisterDogsSkeleton, RegisterSurveySkeleton } from '../skeletons';
 
 type Step = 'consent' | 'dogs' | 'survey' | 'done';
 
@@ -68,7 +69,7 @@ export function RegisterFlow({ me, onFinished }: { me: MeUnregistered; onFinishe
     return <DoneStep result={result} photoFailed={photoFailed} drafts={drafts} onNext={onFinished} />;
   }
   if (step === 'survey') {
-    if (!questions) return <main className="screen"><p className="loading">読み込んでいます…</p></main>;
+    if (!questions) return <RegisterSurveySkeleton />;
     return (
       <SurveyStep
         questions={questions}
@@ -83,7 +84,7 @@ export function RegisterFlow({ me, onFinished }: { me: MeUnregistered; onFinishe
   }
   if (step === 'dogs') {
     if (breedsError) return <main className="screen"><ErrorNotice error={breedsError} /></main>;
-    if (!breeds) return <main className="screen"><p className="loading">読み込んでいます…</p></main>;
+    if (!breeds) return <RegisterDogsSkeleton />;
     return (
       <DogsStep
         breeds={breeds}

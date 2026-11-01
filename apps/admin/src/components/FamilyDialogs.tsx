@@ -2,6 +2,7 @@ import type { HouseholdDetail, HouseholdFamilyMember, ReceptionInvite } from '@d
 import { useCallback, useEffect, useState } from 'react';
 import { adminApi, adminPost } from '../lib/api';
 import { Dialog } from './Dialog';
+import { BusyLabel } from './BusyLabel';
 import { ErrorNotice } from './ErrorNotice';
 import { QrImage } from './QrImage';
 
@@ -98,7 +99,7 @@ export function RemoveFamilyDialog({
   d: HouseholdDetail;
   m: HouseholdFamilyMember;
   onClose: () => void;
-  onDone: () => void;
+  onDone: (auditId: number | null) => void;
 }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
@@ -107,8 +108,8 @@ export function RemoveFamilyDialog({
     setBusy(true);
     setError(null);
     try {
-      await adminApi(`/households/${d.id}/family/${m.id}`, { method: 'DELETE' });
-      onDone();
+      const r = await adminApi<{ auditId?: number | null }>(`/households/${d.id}/family/${m.id}`, { method: 'DELETE' });
+      onDone(r?.auditId ?? null);
     } catch (e) {
       setError(e);
       setBusy(false);
@@ -125,7 +126,9 @@ export function RemoveFamilyDialog({
             やめる
           </button>
           <button type="button" className="btn danger-fill" disabled={busy} onClick={submit}>
-            {busy ? '外しています…' : '外す'}
+            <BusyLabel busy={busy} pending="外しています…">
+              外す
+            </BusyLabel>
           </button>
         </>
       }
@@ -139,7 +142,7 @@ export function RemoveFamilyDialog({
         </li>
         <li>残る家族: {remain.map((x) => (x.name ? `${x.name}さん` : '名前なし')).join('、')}</li>
         <li>{name}の会員証は使えなくなります。新しいおうちとして登録し直せます</li>
-        <li>間違えたときは、操作ログから元に戻せます</li>
+        <li>間違えたときは、お知らせの「元に戻す」か、操作ログから元に戻せます</li>
       </ul>
       {error ? <ErrorNotice error={error} /> : null}
     </Dialog>

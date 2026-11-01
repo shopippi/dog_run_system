@@ -1,11 +1,13 @@
 import { expect, test, type Page } from '@playwright/test';
+import { restoreTouch } from './households-helpers';
 import { d1, daysAgo, householdIdOf } from './analytics-helpers';
-import { adminLogin, newLineUser, openCheckin, registerViaUi } from './helpers';
+import { adminLogin, adminToast, newLineUser, openCheckin, registerViaUi } from './helpers';
 
 // 担当D(分析と自動処理)の画面の見え方(e2e/admin.layout.spec.ts と同じ確かめ方)。
 // PC(1280×800)とタブレット縦(768×1024)で、ダッシュボード(M-05)とシステムの状態(M-17)を確かめる。
 const VIEWPORTS = [
   { name: '1280x800', viewport: { width: 1280, height: 800 }, touch: false },
+  { name: '1024x768', viewport: { width: 1024, height: 768 }, touch: true },
   { name: '768x1024', viewport: { width: 768, height: 1024 }, touch: true },
 ] as const;
 
@@ -54,6 +56,8 @@ async function checkScreen(page: Page, folder: string, screen: string, touch: bo
   expect(problems, `${folder} / ${screen}`).toEqual([]);
   if (process.env.SHOT_DIR) {
     await page.screenshot({ path: `${process.env.SHOT_DIR}/${folder}/${screen}.png`, fullPage: true });
+    // 全体の写真を撮ると、指の操作のエミュレーション(pointer: coarse)が外れることがあるので、かけ直す
+    if (touch) await restoreTouch(page);
   }
 }
 
@@ -78,6 +82,9 @@ test.describe('担当D の画面の見え方', () => {
       .join(', ');
     d1(`INSERT OR IGNORE INTO daily_weather (date, weather, temp_max, temp_min, precipitation, station, source, fetched_at) VALUES ${weather}`);
     d1(`INSERT INTO events (date, name, created_at) VALUES ('${daysAgo(3)}', 'しつけ教室', 'x')`);
+    d1(`INSERT INTO day_notes (date, body, created_at, updated_at) VALUES ('${daysAgo(2)}', '午後から雨。小型犬の集まり。', 'x', 'x')`);
+    d1(`UPDATE households SET postal_code = '1540001'`);
+    d1(`INSERT OR IGNORE INTO postal_areas (postal_code, prefecture, city, town, status, looked_up_at) VALUES ('1540001', '東京都', '世田谷区', '池尻', 'found', 'x')`);
     await page.close();
   });
 
@@ -88,13 +95,18 @@ test.describe('担当D の画面の見え方', () => {
       const open = async (role: 'admin' | 'staff', period: string) => {
         const page = await browser.newPage({ viewport: v.viewport, hasTouch: v.touch });
         await adminLogin(page, role, '/dashboard');
-        await page.getByRole('radiogroup', { name: '期間' }).getByRole('radio', { name: period }).check();
-        await expect(page.locator('p.dash-period-label')).toContainText('営業日');
+        await page.getByRole('radiogroup', { name: '期間' }).getByRole('radio', { name: period }).click();
+        await expect(page.locator('p.dsb-period')).toContainText('営業日');
+        await expect(page.locator('.dsb-cal-cell.today')).toBeVisible();
         return page;
       };
-      let page = await open('admin', '過去12か月');
+      let page = await open('admin', '12か月');
       await expect(page.getByRole('list', { name: 'しばらく来ていない常連さん' })).toBeVisible();
       await checkScreen(page, v.name, 'M-05 ダッシュボード', v.touch);
+      // 日の詳細(右から出るパネル)
+      await page.locator('.dsb-cal-cell.today').click();
+      await expect(page.getByRole('dialog', { name: /の様子$/ }).getByRole('button', { name: 'メモを残す' })).toBeVisible();
+      await checkScreen(page, v.name, 'M-05 ダッシュボード(日の詳細)', v.touch);
       await page.close();
 
       page = await open('admin', '期間を選ぶ');
@@ -102,9 +114,21 @@ test.describe('担当D の画面の見え方', () => {
       await checkScreen(page, v.name, 'M-05 ダッシュボード(期間を選ぶ)', v.touch);
       await page.close();
 
-      page = await open('staff', '今月');
+      page = await open('staff', '7日');
       await expect(page.getByRole('region', { name: '来場頻度' })).toBeVisible();
       await checkScreen(page, v.name, 'M-05 ダッシュボード(受付スタッフ)', v.touch);
+      await page.close();
+
+      // M-02 今日の来場(上に「この日のメモ」)と M-18 CSV出力
+      page = await browser.newPage({ viewport: v.viewport, hasTouch: v.touch });
+      await adminLogin(page, 'staff', '/');
+      await expect(page.getByRole('button', { name: 'メモを残す' })).toBeVisible();
+      await checkScreen(page, v.name, 'M-02 今日の来場(この日のメモ)', v.touch);
+      await page.close();
+      page = await browser.newPage({ viewport: v.viewport, hasTouch: v.touch });
+      await adminLogin(page, 'admin', '/export');
+      await expect(page.getByRole('button', { name: 'ダウンロード' })).toBeVisible();
+      await checkScreen(page, v.name, 'M-18 CSV出力', v.touch);
       await page.close();
 
       // M-17 システムの状態(管理者は簡易、製作者は詳細)
@@ -112,7 +136,7 @@ test.describe('担当D の画面の見え方', () => {
       await adminLogin(page, 'admin', '/status');
       const stats = page.getByRole('listitem', { name: /日別の集計/ });
       await stats.getByRole('button', { name: '今すぐ実行' }).click();
-      await expect(stats.getByRole('status')).toBeVisible();
+      await expect(adminToast(page, '日別の集計')).toBeVisible();
       await checkScreen(page, v.name, 'M-17 システムの状態', v.touch);
       await page.close();
 

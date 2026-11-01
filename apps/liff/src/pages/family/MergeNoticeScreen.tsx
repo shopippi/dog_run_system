@@ -1,4 +1,5 @@
 import type { MergeNotice } from '@dr/shared';
+import { PressButton } from '../../components/PressButton';
 
 /**
  * 「おうちが一つになりました」(C-12)。ほかの家族が招待からおうちをまとめたとき、まとめられた側の家族に1回だけ出す。
@@ -29,9 +30,9 @@ export function MergeNoticeScreen({ notice, onDone }: { notice: MergeNotice; onD
         </div>
       </div>
       <p className="note">これまでの会員ID({notice.previousMemberNo})は使わなくなりました。</p>
-      <button type="button" className="btn" onClick={onDone}>
+      <PressButton type="button" className="btn" onClick={onDone}>
         会員証を見る
-      </button>
+      </PressButton>
     </main>
   );
 }

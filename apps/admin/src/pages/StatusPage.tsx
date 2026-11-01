@@ -7,7 +7,10 @@ import {
 } from '@dr/shared';
 import { useCallback, useEffect, useState } from 'react';
 import { ErrorNotice } from '../components/ErrorNotice';
+import { BusyLabel } from '../components/BusyLabel';
 import { PageHead } from '../components/PageHead';
+import { Loading, Skeleton, SkeletonText } from '../components/Skeleton';
+import { useToast } from '../components/Toast';
 import { adminApi, adminPost } from '../lib/api';
 import { useAuth } from '../lib/auth';
 
@@ -47,11 +50,31 @@ export function StatusPage() {
     <div className="page">
       <PageHead
         title="システムの状態"
-        howto="天気の取得やバックアップなど、自動で動く処理がうまく動いているかを色で表示します。緑は正常、黄は注意(多くは次の実行で自動でやり直します)、赤は止まっています。赤のときは製作者に連絡してください。"
+        howto="天気の取得やバックアップなど、自動で動く処理がうまく動いているかを色で表示します。青は正常、黄は注意(多くは次の実行で自動でやり直します)、赤は止まっています。赤のときは製作者に連絡してください。"
       />
       {error ? <ErrorNotice error={error} onRetry={() => void load()} /> : null}
       {!data ? (
-        !error && <p className="loading">読み込んでいます…</p>
+        !error && (
+          <Loading>
+            <section className="panel list-panel">
+              <ul className="status-list">
+                {Array.from({ length: 6 }, (_, i) => (
+                  <li key={i} className="status-row">
+                    <SkeletonText size={14} w={56} />
+                    <span className="status-body">
+                      <SkeletonText size={15} w={[120, 96, 140, 110, 88, 130][i]} />
+                      <SkeletonText size={13} w={240} />
+                      <SkeletonText size={14} w="70%" />
+                    </span>
+                    <span className="status-acts">
+                      <Skeleton w={104} h="var(--control-h)" r={8} />
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          </Loading>
+        )
       ) : (
         <>
           {data.overall === 'red' && (
@@ -67,6 +90,7 @@ export function StatusPage() {
               {data.jobs.map((j) => (
                 <JobRow key={j.name} job={j} canRun={!readOnly && j.runnable} onDone={load} />
               ))}
+              <LineRow line={data.lineMessages} />
             </ul>
           </section>
           <p className="note">{when(data.checkedAt)} の時点の状態です。</p>
@@ -74,6 +98,36 @@ export function StatusPage() {
         </>
       )}
     </div>
+  );
+}
+
+/** 予約の LINE のお知らせ(21.6)。つながっているか(公式アカウントの名前)と、今月送った数 / ひと月の上限 */
+function LineRow({ line }: { line: SystemStatusResponse['lineMessages'] }) {
+  const level: StatusLevel = line.bot.state === 'error' ? 'red' : line.bot.state === 'not_set' ? 'yellow' : 'green';
+  const state =
+    line.bot.state === 'connected'
+      ? `つながっています(${line.bot.displayName ?? ''}${line.bot.basicId ? ` / ${line.bot.basicId}` : ''})`
+      : line.bot.state === 'not_set'
+        ? '設定がまだです'
+        : line.bot.state === 'mock'
+          ? '練習用の環境(送ったつもりで記録)'
+          : 'つながりません';
+  const [, m] = line.month.split('-').map(Number);
+  return (
+    <li className="status-row" aria-label={`LINEのお知らせ ${STATUS_LEVEL_LABELS[level]}`}>
+      <Level level={level} />
+      <span className="status-body">
+        <b>LINEのお知らせ(予約の確定・お断り)</b>
+        <span className="sub-text">
+          {state}
+          <span aria-hidden="true"> · </span>
+          {m}月に送った数 {line.sent}通 / 上限 {line.limit}通
+          {line.skipped + line.failed > 0 ? `(送っていない ${line.skipped}・送れなかった ${line.failed})` : ''}
+        </span>
+        <span className="status-summary">{line.bot.message}</span>
+      </span>
+      <span className="status-acts" />
+    </li>
   );
 }
 
@@ -96,14 +150,14 @@ function JobRow({
   onDone: () => Promise<void>;
 }) {
   const [busy, setBusy] = useState(false);
-  const [result, setResult] = useState<JobRunResult | null>(null);
   const [error, setError] = useState<unknown>(null);
+  const toast = useToast();
   const run = async () => {
     setBusy(true);
     setError(null);
-    setResult(null);
     try {
-      setResult(await adminPost<JobRunResult>(`/system/run/${job.name}`));
+      const r = await adminPost<JobRunResult>(`/system/run/${job.name}`);
+      toast(`${job.label}: ${r.message}`);
       await onDone();
     } catch (e) {
       setError(e);
@@ -123,18 +177,15 @@ function JobRow({
           {job.lastRun ? `(${STATUS_WORDS[job.lastRun.status]})` : ''}
         </span>
         <span className="status-summary">{job.summary}</span>
-        {job.lastRun?.message && !result && <span className="status-message">{job.lastRun.message}</span>}
-        {result && (
-          <span className="status-result" role="status">
-            今すぐ実行の結果: {result.message}
-          </span>
-        )}
+        {job.lastRun?.message && <span className="status-message">{job.lastRun.message}</span>}
         {error ? <ErrorNotice error={error} /> : null}
       </span>
       <span className="status-acts">
         {canRun && (
           <button type="button" className="btn sub" disabled={busy} onClick={run}>
-            {busy ? '実行しています…' : '今すぐ実行'}
+            <BusyLabel busy={busy} pending="実行しています…">
+              今すぐ実行
+            </BusyLabel>
           </button>
         )}
       </span>

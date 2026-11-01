@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { answerSurvey, makePhoto, newLineUser, openCheckin, openLiff } from './helpers';
+import { liffShot } from './liff-shot';
 
 // LINE アプリの中で開いたときの見え方を確かめる(LIFF の Full サイズ)。
 // 画面の大きさは、各機種の画面から LINE の上部のバーとステータスバーを除いたもの。
@@ -44,7 +45,7 @@ async function checkScreen(page: Page, device: string, screen: string) {
   });
   expect(problems, `${device} / ${screen}`).toEqual([]);
   if (process.env.SHOT_DIR) {
-    await page.screenshot({ path: `${process.env.SHOT_DIR}/${device}/${screen}.png`, fullPage: true });
+    await liffShot(page, `${process.env.SHOT_DIR}/${device}/${screen}.png`);
   }
 }
 
@@ -110,7 +111,7 @@ for (const d of DEVICES) {
       await page.getByRole('img', { name: '家族の招待のQRコード' }).waitFor();
       await checkScreen(page, d.name, 'L-11 家族の招待');
       await page.getByRole('button', { name: 'LINEで招待を送る' }).click();
-      await page.getByRole('status').waitFor();
+      await page.locator('.toast').waitFor();
       const messages = await page.evaluate(() => (window as unknown as { __sharedMessages: string[] }).__sharedMessages);
       const invitePath = messages.at(-1)!.match(/\/liff(\/invite\/[A-Za-z0-9_-]+)/)![1]!;
 

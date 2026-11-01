@@ -14,7 +14,8 @@ async function as(role: 'staff' | 'admin' | 'developer') {
 async function csv(cookie: string, path: string) {
   const res = await adminCall<string>(`/admin/api/export/${path}`, { cookie, now: DAY2 });
   const text = String(res.body);
-  return { status: res.status, lines: text.replace(/^\uFEFF/, '').split('\r\n').filter(Boolean) };
+  // 先頭の説明行(# で始まる行)は、ここでは外す。説明行そのものは別のテストで確かめる
+  return { status: res.status, lines: text.replace(/^\uFEFF/, '').split('\r\n').filter((l) => l && !l.startsWith('#')) };
 }
 
 describe('A-14 CSV出力', () => {
@@ -27,8 +28,10 @@ describe('A-14 CSV出力', () => {
     expect(res.headers.get('content-disposition')).toContain(`filename*=UTF-8''${encodeURIComponent('おうち_2026-10-28.csv')}`);
     const bytes = new Uint8Array(await res.arrayBuffer());
     expect([...bytes.slice(0, 3)]).toEqual([0xef, 0xbb, 0xbf]);
-    expect(new TextDecoder().decode(bytes).split('\r\n')[0]).toBe(
-      '会員ID,おうちの呼び名,登録日時,登録のしかた,状態,統合先の会員ID,郵便番号,知ったきっかけ,来場手段,家族の人数,ワンちゃんの数,ポイント,使える無料券,来場回数,最初の来場日,最後の来場日,来たい時間帯,興味のあるイベント,ほかのドッグランの利用,お知らせの受け取り',
+    const lines = new TextDecoder().decode(bytes).replace(/^\uFEFF/, '').split('\r\n');
+    expect(lines[0]).toBe('# グリーンドーム おうち(CSV)');
+    expect(lines.find((l) => !l.startsWith('#'))).toBe(
+      '会員ID,おうちの呼び名,登録日時,登録のしかた,状態,統合先の会員ID,郵便番号,知ったきっかけ,来場手段,家族の人数(人),ワンちゃんの数(頭),ポイント(ポイント),使える無料券(枚),来場回数(回),最初の来場日,最後の来場日,来たい時間帯,興味のあるイベント,ほかのドッグランの利用,お知らせの受け取り',
     );
   });
 
@@ -57,7 +60,7 @@ describe('A-14 CSV出力', () => {
 
     const all = await csv(cookie, 'visits');
     expect(all.lines).toHaveLength(3);
-    expect(all.lines[0]).toBe('来場日,時刻,会員ID,おうちの呼び名,頭数,来たワンちゃん,無料券,登録のしかた,チェックインした家族,入力したスタッフ,取り消した日時,取り消しの理由');
+    expect(all.lines[0]).toBe('来場日,時刻,会員ID,おうちの呼び名,頭数(頭),来たワンちゃん,無料券,登録のしかた,チェックインした家族,入力したスタッフ,取り消した日時,取り消しの理由');
     expect(all.lines[1]).toBe('2026-10-27,10:00,DR-000001,アルのおうち,1,アル,,ご本人,パパ,,,');
     expect(all.lines[2]).toMatch(/^2026-10-28,10:00,.*,2026-10-28T10:00:00\+09:00,入力ミス$/);
     const one = await csv(cookie, 'visits?from=2026-10-28&to=2026-10-28');
@@ -65,7 +68,7 @@ describe('A-14 CSV出力', () => {
     expect(one.lines[1]).toMatch(/^2026-10-28/);
 
     const led = await csv(cookie, 'ledger?from=2026-10-28');
-    expect(led.lines[0]).toBe('日時,会員ID,おうちの呼び名,増減,種類,理由,旧カード,有効期限,操作した人');
+    expect(led.lines[0]).toBe('日時,会員ID,おうちの呼び名,増減(ポイント),種類,理由,旧カード,有効期限,操作した人');
     expect(led.lines.slice(1).map((l) => l.split(',').slice(3, 5).join(','))).toEqual(['1,来場', '-1,来場の取り消し']);
     expect(led.lines[2]).toMatch(/,管理者$/);
     expect((await csv(cookie, 'ledger?to=2026-10-27')).lines).toHaveLength(2);

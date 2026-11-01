@@ -68,7 +68,7 @@ describe('B-01 天気の取得', () => {
     await morning('2026-10-28');
     // 3時間ごとのファイル8つと、翌日0時のファイル(0:00 の値は前日に入る)
     expect(spy).toHaveBeenCalledTimes(9);
-    expect(spy.mock.calls.map((c) => String(c[0]))).toContain('https://www.jma.go.jp/bosai/amedas/data/point/44132/20261027_21.json');
+    expect(spy.mock.calls.map((c) => String(c[0]))).toContain('https://www.jma.go.jp/bosai/amedas/data/point/63461/20261027_21.json');
     // 気温は 0:10 の 10.0 から 23:50 の 33.0 まで。翌日 0:00 は 12.0。
     // 日照は 2分 × 144 = 288分 = 4.8時間 → 晴れ
     expect(await weatherRow('2026-10-27')).toEqual({
@@ -77,7 +77,7 @@ describe('B-01 天気の取得', () => {
       temp_min: 10,
       precipitation: 0,
       sunshine_hours: 4.8,
-      station: '東京',
+      station: '三木',
       source: '気象庁',
     });
     expect(await lastJob()).toMatchObject({ status: 'ok' });

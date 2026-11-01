@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { checkinViaLiff } from './households-helpers';
-import { adminLogin, makePhoto, newLineUser, openLiff, registerViaUi } from './helpers';
+import { adminLogin, adminToast, makePhoto, newLineUser, openLiff, registerViaUi } from './helpers';
 
 test('A-04 管理者が写真(回して)・名前・犬種を変えると、会員証と今日の来場にすぐ反映され、犬種の変更は履歴に残る', async ({ browser }) => {
   const customer = await browser.newPage();
@@ -29,7 +29,7 @@ test('A-04 管理者が写真(回して)・名前・犬種を変えると、会�
   await expect(page.getByRole('button', { name: '保存する' })).toBeDisabled();
   await page.getByLabel('犬種・サイズを変える理由').fill('登録のときの選びまちがい');
   await page.getByRole('button', { name: '保存する' }).click();
-  await expect(page.getByRole('status')).toContainText('保存しました');
+  await expect(adminToast(page, '保存しました').last()).toBeVisible();
 
   const history = page.getByRole('list', { name: '変更の履歴' });
   await expect(history).toContainText('犬種: プードル → 柴犬');
@@ -66,12 +66,12 @@ test('A-04 写真を外し、操作ログから元に戻せる。登録のおや
   await page.locator('input[type=file]').setInputFiles({ name: 'a.jpg', mimeType: 'image/jpeg', buffer: await makePhoto(page, 900, 900) });
   await expect(page.getByRole('img', { name: 'クッキーの写真' })).toBeVisible({ timeout: 15_000 });
   await page.getByRole('button', { name: '保存する' }).click();
-  await expect(page.getByRole('status')).toContainText('保存しました');
+  await expect(adminToast(page, '保存しました').last()).toBeVisible();
   await expect(page.getByRole('button', { name: '保存する' })).toBeDisabled();
   await expect(page.getByRole('img', { name: 'クッキーの写真' })).toBeVisible();
   await page.getByRole('button', { name: '写真を外す' }).click();
   await page.getByRole('button', { name: '保存する' }).click();
-  await expect(page.getByRole('status')).toContainText('保存しました');
+  await expect(adminToast(page, '保存しました').last()).toBeVisible();
   await expect(page.getByRole('img', { name: 'クッキー(写真なし)' })).toBeVisible();
 
   await page.getByRole('navigation', { name: 'メニュー' }).getByRole('link', { name: '操作ログ' }).click();
@@ -93,7 +93,7 @@ test('A-04 写真を外し、操作ログから元に戻せる。登録のおや
   const dialog = page.getByRole('dialog', { name: 'ワンちゃんの登録をおやすみする' });
   await expect(dialog).toContainText('これまでの来場の記録は、そのまま残ります');
   await dialog.getByRole('button', { name: 'おやすみする' }).click();
-  await expect(page.getByRole('status')).toContainText('登録をおやすみしました');
+  await expect(adminToast(page, '登録をおやすみしました')).toBeVisible();
   await expect(page.getByRole('button', { name: '登録に戻す' })).toBeVisible();
   await expect(page.getByRole('region', { name: /登録の内容/ }).getByText('おやすみ中', { exact: true })).toBeVisible();
   await expect(page.locator('body')).not.toContainText(/登録解除|登録を解除|亡くな|手放/);

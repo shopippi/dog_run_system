@@ -1,8 +1,9 @@
-import type { AdminTicketUseResult, HouseholdDetail, HouseholdTicket } from '@dr/shared';
+import type { AdminTicketUseResult, HouseholdDetail, HouseholdTicket, WithAuditId } from '@dr/shared';
 import { useState } from 'react';
 import { adminPost } from '../lib/api';
 import { formatYmd } from '../lib/jst-format';
 import { Dialog } from './Dialog';
+import { BusyLabel } from './BusyLabel';
 import { ErrorNotice } from './ErrorNotice';
 
 /**
@@ -18,7 +19,7 @@ export function TicketUseDialog({
   d: HouseholdDetail;
   ticket: HouseholdTicket;
   onClose: () => void;
-  onDone: (r: AdminTicketUseResult) => void;
+  onDone: (r: AdminTicketUseResult & Partial<WithAuditId>) => void;
 }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
@@ -26,7 +27,7 @@ export function TicketUseDialog({
     setBusy(true);
     setError(null);
     try {
-      onDone(await adminPost<AdminTicketUseResult>(`/households/${d.id}/tickets/${ticket.id}/use`, {}));
+      onDone(await adminPost<AdminTicketUseResult & WithAuditId>(`/households/${d.id}/tickets/${ticket.id}/use`, {}));
     } catch (e) {
       setError(e);
       setBusy(false);
@@ -42,7 +43,9 @@ export function TicketUseDialog({
             やめる
           </button>
           <button type="button" className="btn" disabled={busy} onClick={submit}>
-            {busy ? '使用済みにしています…' : '使用済みにする'}
+            <BusyLabel busy={busy} pending="使用済みにしています…">
+              使用済みにする
+            </BusyLabel>
           </button>
         </>
       }

@@ -11,7 +11,7 @@ describe('S-01 ログイン', () => {
     expect(res.status).toBe(200);
     expect(res.cookie).toMatch(/^dr_sid=[0-9a-f]{64}$/);
 
-    const me = await adminCall('/admin/api/me', { cookie: res.cookie });
+    const me = await adminCall('/admin/api/me', { cookie: res.cookie, now: T0 });
     expect(me.body).toEqual({ id: 1, name: '管理者', email: 'owner@example.com', role: 'admin' });
 
     const s = await env.DB.prepare('SELECT id, expires_at FROM staff_sessions').first<{ id: string; expires_at: string }>();

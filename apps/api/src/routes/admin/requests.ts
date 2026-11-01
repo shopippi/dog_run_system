@@ -15,7 +15,7 @@ import { loadSettings } from '../../lib/settings';
 import { requireRole } from '../../lib/staff-auth';
 import { parseJson } from '../../lib/validate';
 import { ADMIN_MEDIA_BASE } from '../../services/admin-visits';
-import { auditStatement } from '../../services/audit';
+import { auditStatement, latestAuditId } from '../../services/audit';
 import { migrationStatus, recordMigration, undoMigration } from '../../services/migration';
 import { registerUndo } from '../../services/undo';
 
@@ -248,15 +248,26 @@ requestsRoutes.post('/households/:id/migrate', requireRole('admin'), async (c) =
   const input = await parseJson(c, migrationInputSchema);
   const db = c.env.DB;
   const now = c.get('now');
+  const householdId = Number(c.req.param('id')) || 0;
+  const staffId = c.get('staff').id;
   const result = await recordMigration(db, {
-    householdId: Number(c.req.param('id')) || 0,
+    householdId,
+    memberId: input.member_id,
     source: input.source,
     points: input.points,
-    staffId: c.get('staff').id,
+    cardPoints: input.card_points,
+    tickets: input.tickets,
+    cardRef: input.card_ref,
+    note: input.note,
+    duplicateOk: input.duplicate_ok,
+    lateReason: input.late_reason,
+    staffId,
     now,
     settings: await loadSettings(db),
   });
-  return c.json(result, 201);
+  // 画面のトーストの「元に戻す」のために、操作ログの番号を返す
+  const auditId = await latestAuditId(db, { action: 'household.migrate', targetType: 'household', targetId: householdId, staffId });
+  return c.json({ ...result, auditId }, 201);
 });
 
 // 移行を元に戻す(操作ログ A-15 から)。発行した無料券が使われていれば戻せない

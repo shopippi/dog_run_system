@@ -10,11 +10,11 @@ import {
 } from '@dr/shared';
 import { splitJobMessage } from './jobs';
 
-// A-17・D-02 システムの状態。system_jobs の記録から、処理ごとに緑・黄・赤を決める。
+// A-17・D-02 システムの状態。system_jobs の記録から、処理ごとに正常(green)・注意(yellow)・止まっている(red)を決める。
 
 const HOUR = 3600_000;
 
-/** 処理ごとの、正常とみなす間隔(最後の成功からこれ以内なら緑) */
+/** 処理ごとの、正常とみなす間隔(最後の成功からこれ以内なら正常) */
 const EXPECTED: Record<SystemJobName, { hours: number; schedule: string }> = {
   weather: { hours: 30, schedule: '毎朝 5:10' },
   daily_stats: { hours: 30, schedule: '毎晩 3:10(来場のたびにも更新)' },
@@ -22,6 +22,7 @@ const EXPECTED: Record<SystemJobName, { hours: number; schedule: string }> = {
   backup: { hours: 30, schedule: '毎晩 3:10' },
   migration_images: { hours: 30, schedule: '毎晩 3:10' },
   holidays: { hours: 400 * 24, schedule: '毎年 2月1日' },
+  postal_areas: { hours: 30, schedule: '毎晩 3:10(新しい郵便番号だけ)' },
 };
 
 /** 「動いています」のまま、これより長いものは途中で止まったとみなす */
@@ -45,7 +46,7 @@ const toRunWithDetail = (r: Row): SystemJobRun => ({ ...toRun(r), detail: splitJ
 
 /**
  * 1つの処理の色を決める。
- * - 緑: 最後の成功が、決まった間隔(毎日の処理は30時間)以内で、最後の実行が「失敗」でない
+ * - 正常(green): 最後の成功が、決まった間隔(毎日の処理は30時間)以内で、最後の実行が「失敗」でない
  * - 黄: 最後の実行が「一部だけ」、または最後の成功が間隔の2倍以内(失敗して次の実行でやり直す・予定より遅れている)、
  *       またはまだ一度も動いていない(使い始めたばかり)
  * - 赤: それ以外(しばらく成功していない)
@@ -99,6 +100,12 @@ const TABLE_LABELS: Record<string, string> = {
   staff_sessions: 'ログイン状態',
   audit_log: '操作ログ',
   system_jobs: '自動処理の記録',
+  bookings: '予約',
+  booking_dogs: '予約のワンちゃん',
+  booking_capacity_overrides: '予約の受け入れ数の変更',
+  booking_notifications: '予約のLINEのお知らせ',
+  booking_guard: '予約の同時の見張り',
+  booking_dog_guard: '予約のワンちゃんの重なりの見張り',
   d1_migrations: '記録の形の版',
 };
 
@@ -112,8 +119,20 @@ export const D1_DB_LIMIT_BYTES = 500 * 1024 ** 2;
 export async function systemStatus(
   db: D1Database,
   now: Date,
-  opts: { detail: boolean; contact: string },
+  opts: {
+    detail: boolean;
+    contact: string;
+    lineLimit?: number;
+    lineConfigured?: boolean;
+    lineBot?: SystemStatusResponse['lineMessages']['bot'];
+  },
 ): Promise<SystemStatusResponse> {
+  const month = toJstIso(now).slice(0, 7);
+  const { results: lineRows } = await db
+    .prepare('SELECT status, COUNT(*) AS n FROM booking_notifications WHERE month = ? GROUP BY status')
+    .bind(month)
+    .all<{ status: 'sent' | 'skipped' | 'failed'; n: number }>();
+  const lineCount = (s: string) => lineRows.find((r) => r.status === s)?.n ?? 0;
   const [lastRes, successRes] = await db.batch([
     db.prepare(
       `SELECT j.name, j.started_at, j.finished_at, j.status, j.message FROM system_jobs j
@@ -179,6 +198,15 @@ export async function systemStatus(
     overall,
     jobs,
     contact: overall === 'red' ? opts.contact || null : null,
+    lineMessages: {
+      month,
+      sent: lineCount('sent'),
+      skipped: lineCount('skipped'),
+      failed: lineCount('failed'),
+      limit: opts.lineLimit ?? 200,
+      configured: opts.lineConfigured ?? false,
+      bot: opts.lineBot ?? { state: 'not_set', displayName: null, basicId: null, message: 'LINEのお知らせの設定がまだです。' },
+    },
     detail,
   };
 }

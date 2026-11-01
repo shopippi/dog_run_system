@@ -80,3 +80,8 @@ export function makeDogPhoto(variant: number, kind: 'photo' | 'thumb'): Promise<
 export function makeCardPhoto(): Promise<Uint8Array> {
   return svgToJpeg(paperCardSvg(7), 800, 560);
 }
+
+/** 会員証の背景の写真の代わり(白っぽい犬の明るい写真。文字が読めるかを見比べるため) */
+export function makeCardBackground(): Promise<Uint8Array> {
+  return svgToJpeg(dogSvg(3, 'photo'), 1200, 900);
+}
