@@ -12,7 +12,7 @@ const LINE_AFTER = 4;
  * 画面の上の帯。下の階層では、左に戻り先の名前を出す(docs/design.md 5章)。
  * 上に固定し、すりガラスにする。下の線は、ページが少しスクロールしてから出す(11.3)。
  */
-export function AppHeader({ back }: { back?: HeaderBack | null }) {
+export function AppHeader({ back, title }: { back?: HeaderBack | null; title?: string }) {
   const facilityName = useFacilityName();
   const [scrolled, setScrolled] = useState(false);
   useEffect(() => {
@@ -29,7 +29,7 @@ export function AppHeader({ back }: { back?: HeaderBack | null }) {
           {back.label}
         </Link>
       ) : (
-        <span className="app-title">{facilityName} 会員証</span>
+        <span className="app-title">{facilityName} {title ?? '会員証'}</span>
       )}
     </header>
   );

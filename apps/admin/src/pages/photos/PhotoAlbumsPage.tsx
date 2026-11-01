@@ -138,7 +138,7 @@ export function PhotoAlbumsPage() {
             )}
           </div>
         ) : (
-          <ul className="pa-rows">
+          <ul className={`pa-rows${!readOnly && (data ?? []).some(publishable) ? '' : ' no-check'}`}>
             {data?.map((a) => (
               <AlbumRow key={a.id} a={a} readOnly={readOnly} checked={selected.has(a.id)} selectable={publishable(a)} onToggle={() => toggle(a.id)} />
             ))}
@@ -177,7 +177,7 @@ function AlbumRow({ a, readOnly, checked, selectable, onToggle }: { a: AdminAlbu
           <Link to={`/photos/albums/${a.id}`} className="pa-album-name">
             {a.name}
           </Link>
-          <span className={`badge${a.status === 'published' ? ' info' : ''}`}>{ALBUM_STATUS_LABELS[a.status]}</span>
+          <span className={`badge${a.status === 'published' ? ' pa-on' : ''}`}>{ALBUM_STATUS_LABELS[a.status]}</span>
         </span>
         <span className="sub-text pa-nums">
           {ALBUM_KIND_LABELS[a.kind]} · {formatAlbumDate(a.eventDate)} · 価格表「{a.priceListName}」 · 写真 {total}枚

@@ -102,7 +102,10 @@ export function App() {
 
   return (
     <Shell>
-      <AppHeader back={photos ? photoBackFor(location.pathname) : !invite && me?.registered ? backFor(location.pathname) : null} />
+      <AppHeader
+        back={photos ? photoBackFor(location.pathname) : !invite && me?.registered ? backFor(location.pathname) : null}
+        title={photos ? '写真' : undefined}
+      />
       <RouteView>
         {/* 画面ごとのエラーの境界と、分けて読み込む画面の読み込み中(その画面のスケルトン) */}
         <ErrorBoundary key={location.pathname}>

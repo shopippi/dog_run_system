@@ -7,7 +7,9 @@ import { build } from 'vite';
 
 const demo = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const apps = path.resolve(demo, '..');
-const tmp = path.join(demo, 'node_modules', '.demo-apps');
+// 出力先(DEMO_OUT で変えられる。e2e がデモを配信しているあいだに、別の場所へ作るため)
+const out = path.resolve(demo, process.env.DEMO_OUT ?? 'dist');
+const tmp = path.join(demo, 'node_modules', process.env.DEMO_OUT ? '.demo-apps-out' : '.demo-apps');
 
 process.env.VITE_DEMO = '1';
 // LIFF はモックで動かす(手元の .env に LIFF ID があっても使わない)
@@ -25,12 +27,12 @@ for (const app of ['liff', 'admin']) {
 delete process.env.VITE_DEMO;
 delete process.env.VITE_LIFF_ID;
 
-await build({ root: demo, configFile: path.join(demo, 'vite.config.ts'), logLevel: 'warn' });
+await build({ root: demo, configFile: path.join(demo, 'vite.config.ts'), logLevel: 'warn', build: { outDir: out, emptyOutDir: true } });
 for (const app of ['liff', 'admin']) {
-  fs.cpSync(path.join(tmp, app), path.join(demo, 'dist', app), { recursive: true });
+  fs.cpSync(path.join(tmp, app), path.join(out, app), { recursive: true });
 }
 fs.rmSync(tmp, { recursive: true, force: true });
 // SQLite の本体(WASM)を同梱する(CDN につながらない環境でも動くように)
 const wasm = fileURLToPath(import.meta.resolve('sql.js/dist/sql-wasm.wasm'));
-fs.copyFileSync(wasm, path.join(demo, 'dist', 'sql-wasm.wasm'));
-console.log(`デモをビルドしました: ${path.relative(process.cwd(), path.join(demo, 'dist'))}/index.html`);
+fs.copyFileSync(wasm, path.join(out, 'sql-wasm.wasm'));
+console.log(`デモをビルドしました: ${path.relative(process.cwd(), out)}/index.html`);

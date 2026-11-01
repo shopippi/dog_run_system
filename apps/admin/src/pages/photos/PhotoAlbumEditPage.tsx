@@ -355,7 +355,7 @@ function AlbumForm({ detail, readOnly, onSaved }: { detail: AdminAlbumDetail; re
     <section className="panel pa-section" aria-labelledby="pa-album-form">
       <div className="pa-section-head">
         <h2 id="pa-album-form" className="pa-row-title">
-          アルバムの内容 <span className={`badge${a.status === 'published' ? ' info' : ''}`}>{ALBUM_STATUS_LABELS[a.status]}</span>
+          アルバムの内容 <span className={`badge${a.status === 'published' ? ' pa-on' : ''}`}>{ALBUM_STATUS_LABELS[a.status]}</span>
         </h2>
         <p className="sub-text pa-nums">
           {ALBUM_KIND_LABELS[a.kind]} · 写真 {total}枚(公開中 {a.counts.published}・下書き {a.counts.draft}・非公開 {a.counts.hidden})· 売上 {formatPhotoPrice(a.salesYen)}(売れた写真 {a.soldPhotos}枚)

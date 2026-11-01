@@ -409,9 +409,6 @@ iframe:focus-visible {
 .lt-liffbar { display: flex; align-items: center; justify-content: space-between; height: 40px; padding: 0 6px 0 14px; background: #FFFFFF; border-bottom: 1px solid #E3E6EA; color: #111315; font-size: 13px; }
 .lt-liff-title { font-weight: 600; }
 .lt-liffbar button { width: 40px; height: 40px; border: 0; background: transparent; font-size: 22px; color: #111315; cursor: pointer; }
-.lt-soon { height: 660px; display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: 12px; padding: 0 28px; background: #FFFFFF; color: #16191D; }
-.lt-soon h2 { margin: 4px 0 0; font-size: 20px; font-weight: 600; font-feature-settings: "palt"; }
-.lt-soon p { margin: 0; font-size: 15px; line-height: 1.55; color: #5B6470; }
 .phone .lt-liffbar + iframe { height: 660px; }
 /* 3 つ並べると「LINE のト/ーク画面」のように切れる(左の列は 404px)ので、1 列に並べる */
 .launch.three { grid-template-columns: 1fr; max-width: 404px; }

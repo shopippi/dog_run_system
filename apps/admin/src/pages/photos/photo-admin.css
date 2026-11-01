@@ -42,9 +42,16 @@
 .pa-album-side { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; text-align: right; font-size: var(--fs-14); }
 .pa-k { color: var(--text-secondary); font-size: var(--fs-13); }
 .pa-empty-act { margin-top: var(--sp-3); }
+/* 状態の印は色を付けない(公開中だけ文字を濃く。docs/design.md) */
+.badge.pa-on { color: var(--text); }
+/* 選べるアルバム(下書き)が1つもないときは、印の列を出さない */
+.pa-rows.no-check .pa-album { grid-template-columns: 56px minmax(0, 1fr) auto; }
+.pa-rows.no-check .pa-album-check { display: none; }
 @media (hover: hover) { .pa-album:hover { background: var(--surface-sunk); } }
 @media (max-width: 720px) {
   .pa-album { grid-template-columns: 28px 56px minmax(0, 1fr); }
+  .pa-rows.no-check .pa-album { grid-template-columns: 56px minmax(0, 1fr); }
+  .pa-rows.no-check .pa-album-side { grid-column: 2 / -1; }
   .pa-album-side { grid-column: 3 / -1; align-items: flex-start; text-align: left; }
   .pa-search { flex-basis: 100%; }
 }

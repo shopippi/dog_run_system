@@ -6,7 +6,7 @@ import { loadSqlJs } from './engine/sqljs';
 import { makeCardBackground, makeDogPhoto, makeSamplePhoto } from './seed/art';
 import { ACCOUNTS, DEMO_PASSWORD, STAFF } from './seed/fixtures';
 import { SCENES } from './scenes';
-import { LiffBar, LineTalk, PhotosSoon } from './LineTalk';
+import { LiffBar, LineTalk } from './LineTalk';
 
 type Account = { userId: string; name: string };
 type Talk = { id: number; from: string; text: string; at: string };
@@ -98,7 +98,7 @@ export function App() {
       <main className="wrap">
         <Header />
         <p className="loading" role="status">
-          デモの準備をしています。はじめて開いたときは、半年分の来場データを作るので少し時間がかかります…
+          デモの準備をしています。はじめて開いたときは、半年分の来場データと見本の写真を作るので少し時間がかかります…
         </p>
       </main>
     );
@@ -123,7 +123,7 @@ function Demo({ engine }: { engine: DemoEngine }) {
   const [, setTick] = useState(0);
   const [phone, setPhone] = useState<{ route: string; key: number }>({ route: '/', key: 0 });
   // LINE のトーク画面を出しているか / トーク画面のリッチメニューから開いたか(上に LINE の帯を出す)
-  const [lineView, setLineView] = useState<'app' | 'talk' | 'liff' | 'photos'>('app');
+  const [lineView, setLineView] = useState<'app' | 'talk' | 'liff'>('app');
   const [admin, setAdmin] = useState<{ route: string; key: number }>({ route: '/', key: 0 });
   const [status, setStatus] = useState('');
   const [busy, setBusy] = useState(false);
@@ -192,13 +192,8 @@ function Demo({ engine }: { engine: DemoEngine }) {
     setLineView('app');
     setPhone((p) => ({ route, key: p.key + 1 }));
   };
-  /** リッチメニューから開く(LINE の中で開いたように、上に LINE の帯を出す)。チェックインは受付の QR を読んだことにする。
-   * 写真を買う(photos)は、写真の販売ができるまで準備中の画面を出す */
+  /** リッチメニューから開く(LINE の中で開いたように、上に LINE の帯を出す)。チェックインは受付の QR を読んだことにする */
   const openFromRichMenu = (route: string) => {
-    if (route === 'photos') {
-      setLineView('photos');
-      return;
-    }
     const r = route === 'checkin' ? `/checkin?k=${encodeURIComponent(engine.passphrase())}` : route;
     setPhone((p) => ({ route: r, key: p.key + 1 }));
     setLineView('liff');
@@ -293,6 +288,16 @@ function Demo({ engine }: { engine: DemoEngine }) {
       openPhone('/bookings', 'U-demo-mama');
       if (ui.role !== 'admin') await loginAs('admin');
       openAdmin('/bookings/pending');
+    } else if (n === 10) {
+      // いちばん新しいアルバム(きのう)を、リッチメニューの「写真を買う」から開いたように出す
+      const latest = engine.select<{ id: number }>(
+        "SELECT id FROM albums WHERE status = 'published' AND removed_at IS NULL ORDER BY event_date DESC, id DESC LIMIT 1",
+      )[0];
+      update({ who: 'U-demo-mama' });
+      setPhone((p) => ({ route: latest ? `/photos/albums/${latest.id}` : '/photos', key: p.key + 1 }));
+      setLineView('liff');
+      if (ui.role !== 'admin') await loginAs('admin');
+      openAdmin('/photos');
     }
     update({ hint: `${n}. ${scene.title} — ${hint}` });
   };
@@ -431,14 +436,11 @@ function Demo({ engine }: { engine: DemoEngine }) {
           <div className="phone">
             {lineView === 'talk' ? (
               <LineTalk facility="グリーンドーム" onOpen={openFromRichMenu} notices={bookingNotices(account.userId)} />
-            ) : lineView === 'photos' ? (
-              <>
-                <LiffBar title="グリーンドーム 写真" onClose={() => setLineView('talk')} />
-                <PhotosSoon />
-              </>
             ) : (
               <>
-            {lineView === 'liff' && <LiffBar title="グリーンドーム 会員証" onClose={() => setLineView('talk')} />}
+            {lineView === 'liff' && (
+              <LiffBar title={phone.route.startsWith('/photos') ? 'グリーンドーム 写真' : 'グリーンドーム 会員証'} onClose={() => setLineView('talk')} />
+            )}
             <iframe
               key={`${phone.key}:${ui.who}`}
               ref={phoneRef}

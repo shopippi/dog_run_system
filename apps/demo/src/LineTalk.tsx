@@ -6,8 +6,8 @@ export const RICH_MENU_AREAS = [
   { label: '会員証', route: '/', x: 0, y: 0, w: 1667, h: 843 },
   { label: 'チェックイン', route: 'checkin', x: 1667, y: 0, w: 833, h: 843 },
   { label: '預かり・お泊まり', route: '/bookings/new', x: 0, y: 843, w: 833, h: 843 },
-  // 写真の販売(/photos)はまだ LIFF にないので、デモでは「準備中」の画面を出す(PhotosSoon)
-  { label: '写真を買う', route: 'photos', x: 833, y: 843, w: 834, h: 843 },
+  // 写真の販売(LIFF の /photos。docs/photo-requirements.md)
+  { label: '写真を買う', route: '/photos', x: 833, y: 843, w: 834, h: 843 },
   { label: '使い方', route: '/help', x: 1667, y: 843, w: 833, h: 843 },
 ] as const;
 
@@ -100,20 +100,6 @@ export function LiffBar({ title, onClose }: { title: string; onClose: () => void
       <button type="button" aria-label="閉じて LINE のトークに戻る" onClick={onClose}>
         ×
       </button>
-    </div>
-  );
-}
-
-/** 写真の販売(リッチメニューの「写真を買う」)。まだできていないので、デモでは準備中の画面を出す */
-export function PhotosSoon() {
-  return (
-    <div className="lt-soon" role="region" aria-label="写真を買う(準備中)">
-      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-        <path d="M3.5 8.6A1.6 1.6 0 0 1 5.1 7h2.5l1.5-2.1h5.8L16.4 7h2.5a1.6 1.6 0 0 1 1.6 1.6v9.3a1.6 1.6 0 0 1-1.6 1.6H5.1a1.6 1.6 0 0 1-1.6-1.6z" />
-        <circle cx="12" cy="13.2" r="3.7" />
-      </svg>
-      <h2>写真の販売は準備中です</h2>
-      <p>ドッグランで撮った写真を、ここから選んで買えるようになります。始まったら、このトークでお知らせします。</p>
     </div>
   );
 }

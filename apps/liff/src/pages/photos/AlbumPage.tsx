@@ -117,8 +117,13 @@ function Album({ detail, freshness }: { detail: GalleryAlbumDetail; freshness: R
           <CartLink />
         </div>
         <p className="lead">
-          <span className="ph-nowrap">{formatAlbumDate(album.eventDate)}</span>
-          {' · '}
+          {/* 日付のアルバムは名前が日付なので、日付を繰り返さない */}
+          {album.name !== formatAlbumDate(album.eventDate) && (
+            <>
+              <span className="ph-nowrap">{formatAlbumDate(album.eventDate)}</span>
+              {' · '}
+            </>
+          )}
           <span className="ph-nowrap">{album.photoCount}枚</span>
           {' · '}
           <span className="ph-nowrap">1枚 {formatPhotoPrice(album.unitPrice)}</span>

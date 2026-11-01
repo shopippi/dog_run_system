@@ -209,9 +209,11 @@ test('LINE のトーク画面: リッチメニューから会員証・預かり�
   await expect(phone(page).getByRole('heading', { name: '予約する' })).toBeVisible();
   await page.getByRole('button', { name: '閉じて LINE のトークに戻る' }).click();
 
-  // 写真の販売はまだないので、準備中の画面が出る
+  // 写真を買う: LIFF の写真の画面(アルバムの一覧)が開く
   await menu.getByRole('button', { name: 'リッチメニューの「写真を買う」' }).click();
-  await expect(page.getByRole('region', { name: '写真を買う(準備中)' })).toContainText('写真の販売は準備中です');
+  await expect(page.getByText('グリーンドーム 写真')).toBeVisible();
+  await expect(phone(page).getByRole('heading', { name: '写真', exact: true })).toBeVisible();
+  await expect(phone(page).getByRole('list', { name: 'アルバム' }).getByText('ハロウィン仮装の日')).toBeVisible();
   await page.getByRole('button', { name: '閉じて LINE のトークに戻る' }).click();
 
   await menu.getByRole('button', { name: 'リッチメニューの「使い方」' }).click();

@@ -18,6 +18,7 @@ import {
 } from '@dr/shared';
 import type { Database, SqlValue } from 'sql.js';
 import { ACCOUNTS, DEMO_PASSWORD, FIXED, STAFF } from './fixtures';
+import type { PhotoSeedOptions } from './photos';
 
 export type SeedOptions = {
   now: Date;
@@ -30,7 +31,7 @@ export type SeedOptions = {
   /** 写真をつけるおうちの数(先頭から) */
   photoHouseholds?: number;
   /** 写真販売の見本の写真(JPEG)を作る。あれば、写真販売の見本のアルバムを作る(seed/photos.ts) */
-  makeSamplePhoto?: (variant: number, longEdge?: number) => Promise<Uint8Array>;
+  makeSamplePhoto?: PhotoSeedOptions['makeSamplePhoto'];
 };
 
 export type SeedSummary = { households: number; visits: number; walkins: number; tickets: number };

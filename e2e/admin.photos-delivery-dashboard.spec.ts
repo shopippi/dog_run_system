@@ -16,7 +16,8 @@ test('PA-1: 今月の売上・販売終了が近いアルバム・新しい注�
   const user = newLineUser('ダッシュボードのパパ');
   await seedPurchases(page, request, user, [
     { name: 'もうすぐ終わるアルバム', eventDate: '2026-05-01', photos: 2, saleEndsAt: new Date(Date.now() + 3 * 86400_000) },
-  ]);
+    // 同じデータベースでほかのテストが作った注文より新しくする(新しい注文は8件まで出る)
+  ], { paidAt: new Date() });
   await adminLogin(page, 'admin', '/photos');
   await page.getByRole('heading', { name: '写真販売', exact: true }).waitFor();
   const summary = page.getByRole('region', { name: /の集計$/ });

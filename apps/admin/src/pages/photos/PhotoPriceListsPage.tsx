@@ -55,7 +55,7 @@ export function PhotoPriceListsPage() {
                 <span className="pa-row-body">
                   <span className="pa-row-title">
                     <b>{p.name}</b>
-                    {p.isDefaultFor && <span className="badge info">{p.isDefaultFor === 'date' ? '日付のアルバムの既定' : 'イベントのアルバムの既定'}</span>}
+                    {p.isDefaultFor && <span className="badge">{p.isDefaultFor === 'date' ? '日付のアルバムの既定' : 'イベントのアルバムの既定'}</span>}
                     {p.status === 'archived' && <span className="badge">使わない</span>}
                   </span>
                   <span className="sub-text pa-nums">

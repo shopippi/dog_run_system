@@ -156,7 +156,12 @@ export function PurchasedPage({ config }: { config: PhotoConfigResponse }) {
                   <div className="pu-album-title">
                     <h3 className="section-label">{album.name}</h3>
                     <span className="sub-text">
-                      <span className="mono-num">{formatAlbumDate(album.eventDate)}</span>・<span className="mono-num">{album.photos.length}枚</span>
+                      {album.name !== formatAlbumDate(album.eventDate) && (
+                        <>
+                          <span className="mono-num">{formatAlbumDate(album.eventDate)}</span>・
+                        </>
+                      )}
+                      <span className="mono-num">{album.photos.length}枚</span>
                     </span>
                   </div>
                   {selecting && (
