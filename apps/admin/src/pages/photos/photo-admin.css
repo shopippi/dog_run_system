@@ -63,9 +63,9 @@
 .pa-grid { padding: var(--sp-4) var(--sp-5) var(--sp-5); }
 .pa-grid .ph-agrid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
 /* 写真の下の名前・価格・状態は、2行まで見せる(共通の部品の1行の表示を、この画面では広げる) */
-.pa-grid .ph-acell { aspect-ratio: 4 / 5; }
-.pa-grid .ph-acell img { height: calc(100% - 40px); }
-.pa-grid .ph-acell-label { height: 40px; padding: 3px 6px; white-space: normal; line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; font-variant-numeric: tabular-nums; }
+.pa-grid .ph-acell { display: flex; flex-direction: column; aspect-ratio: 4 / 5; }
+.pa-grid .ph-acell img { flex: 1; min-height: 0; height: auto; }
+.pa-grid .ph-acell-label { position: static; flex: none; height: 40px; padding: 3px 6px; border-top: 1px solid var(--border); white-space: normal; line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; font-variant-numeric: tabular-nums; }
 .pa-foot { display: flex; justify-content: flex-end; }
 @media (max-width: 720px) {
   .pa-bulk-acts { margin-left: 0; }

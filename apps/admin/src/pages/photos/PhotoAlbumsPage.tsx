@@ -180,7 +180,7 @@ function AlbumRow({ a, readOnly, checked, selectable, onToggle }: { a: AdminAlbu
           <span className={`badge${a.status === 'published' ? ' info' : ''}`}>{ALBUM_STATUS_LABELS[a.status]}</span>
         </span>
         <span className="sub-text pa-nums">
-          {ALBUM_KIND_LABELS[a.kind]} · {formatAlbumDate(a.eventDate)} · {a.priceListName} · 写真 {total}枚
+          {ALBUM_KIND_LABELS[a.kind]} · {formatAlbumDate(a.eventDate)} · 価格表「{a.priceListName}」 · 写真 {total}枚
           {a.counts.draft > 0 && a.status !== 'draft' && <>(まだ公開していない写真 {a.counts.draft}枚)</>}
           {a.counts.hidden > 0 && <>(非公開 {a.counts.hidden}枚)</>}
         </span>
