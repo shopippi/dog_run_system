@@ -27,6 +27,7 @@ a.po-row:focus-visible { outline: 2px solid var(--focus-color); outline-offset: 
 .po-more { display: flex; justify-content: center; padding: var(--sp-3); border-top: 1px solid var(--border); }
 @media (max-width: 720px) {
   .po-row { grid-template-columns: minmax(0, 1fr) auto; row-gap: var(--sp-1); }
+  .po-row > .po-no { grid-column: 1 / -1; flex-direction: row; flex-wrap: wrap; gap: 0 var(--sp-2); }
   .po-row > .po-st, .po-row > .po-count { display: none; }
   .po-head { display: none; }
 }

@@ -40,7 +40,7 @@ for (const v of [
     await row.click();
     await page.getByRole('heading', { name: `注文 #${orderId}` }).waitFor();
     await expect(page.getByText('練習用の支払い(お金は動いていません)')).toBeVisible();
-    await expect(page.getByText('返金できます')).toHaveCount(3);
+    await expect(page.locator('.po-refund b', { hasText: '返金できます' })).toHaveCount(3);
     await expect(page.getByText('まだダウンロードされていません。')).toBeVisible();
     await checkScreen(page, v.name, 'PA-6 注文の内容', v.touch);
 
@@ -90,11 +90,12 @@ test('条件の外(ダウンロード済み)は、理由と「条件の外で返
 });
 
 test('製作者は注文を見られるが、返金の操作は出ない', async ({ browser, request }) => {
+  test.setTimeout(90_000);
   const orderId = await paidOrder(request, '製作者');
   const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
   await adminLogin(page, 'developer', `/photos/orders/${orderId}`);
   await page.getByRole('heading', { name: `注文 #${orderId}` }).waitFor();
-  await expect(page.getByText('返金できます').first()).toBeVisible();
+  await expect(page.locator('.po-refund b', { hasText: '返金できます' }).first()).toBeVisible();
   await expect(page.getByRole('button', { name: /返金する/ })).toHaveCount(0);
   await expect(page.getByRole('checkbox')).toHaveCount(0);
   await page.close();

@@ -56,7 +56,7 @@ for (const scheme of ['light', 'dark'] as const) {
     await admin.getByRole('link', { name: new RegExp(`^注文番号 ${pending.orderId} `) }).waitFor();
     await measure(admin, 'PA-6 注文の一覧');
     await admin.getByRole('link', { name: new RegExp(`^注文番号 ${pending.orderId - 1} `) }).click();
-    await admin.getByText('返金できます').first().waitFor();
+    await admin.locator('.po-refund b', { hasText: '返金できます' }).first().waitFor();
     await measure(admin, 'PA-6 注文の内容');
     await admin.getByRole('checkbox').first().check();
     await admin.getByRole('button', { name: /選んだ明細を返金する/ }).click();
