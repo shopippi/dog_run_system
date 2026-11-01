@@ -2,12 +2,13 @@ import { expect, test } from '@playwright/test';
 import { checkScreen } from './households-helpers';
 import { adminLogin, adminToast, newLineUser } from './helpers';
 import { sql } from './merge-helpers';
-import { seedPurchases, shot } from './photos-delivery-helpers';
+import { resetPhotoSales, seedPurchases, shot } from './photos-delivery-helpers';
 import { VqaLog } from './visual-qa-helpers';
 
 // PA-1 写真販売のダッシュボードと PA-7 写真販売の設定(段階1-D)。数・販売終了が近いアルバム・新しい注文、設定の保存と見え方。
 
 test.describe.configure({ timeout: 120_000 });
+test.afterAll(() => resetPhotoSales());
 
 test('PA-1: 今月の売上・販売終了が近いアルバム・新しい注文が出る', async ({ browser, request }) => {
   const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });

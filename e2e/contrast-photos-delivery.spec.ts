@@ -1,11 +1,12 @@
 import { expect, test } from '@playwright/test';
 import { lowContrast } from './households-helpers';
 import { adminLogin, newLineUser, openLiff } from './helpers';
-import { seedPurchases, shot } from './photos-delivery-helpers';
+import { resetPhotoSales, seedPurchases, shot } from './photos-delivery-helpers';
 
 // 段階1-D の画面のコントラスト(4.5:1。ライトとダーク): PU-7 購入した写真(一覧・選ぶ・開いたところ)、PA-1、PA-7
 
 test.describe.configure({ timeout: 120_000 });
+test.afterAll(() => resetPhotoSales());
 
 for (const scheme of ['light', 'dark'] as const) {
   test(`${scheme === 'light' ? 'ライト' : 'ダーク'}: 購入した写真・ダッシュボード・設定の文字が読める`, async ({ browser, request }) => {

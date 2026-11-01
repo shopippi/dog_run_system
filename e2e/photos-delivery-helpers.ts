@@ -179,3 +179,11 @@ export function parseStoreZip(buf: Buffer): { name: string; data: Buffer; method
   }
   return out;
 }
+
+/**
+ * 販売を止めた状態(初期値)に戻す。seedPurchases は販売を始めるので、ほかの spec(準備中を確かめるもの)に影響させないよう、
+ * 各 spec の afterAll で呼ぶ
+ */
+export function resetPhotoSales() {
+  sql("UPDATE settings SET value = 'false' WHERE key = 'photo_sales_enabled'");
+}

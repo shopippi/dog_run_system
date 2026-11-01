@@ -4,13 +4,14 @@ import { authHeaders } from './customer-helpers';
 import { checkScreen } from './households-helpers';
 import { newLineUser, openLiff } from './helpers';
 import { liffShot } from './liff-shot';
-import { parseStoreZip, seedPurchases, sha256, shot } from './photos-delivery-helpers';
+import { parseStoreZip, resetPhotoSales, seedPurchases, sha256, shot } from './photos-delivery-helpers';
 import { newDevicePage, vqaDeviceList, VqaLog } from './visual-qa-helpers';
 
 // PU-7 購入した写真(段階1-D)。一覧(アルバム別・透かしなしの中サイズ)→ 原本のダウンロード → まとめて ZIP。
 // 受け取ったファイルが原本とバイト単位で同じこと(SHA-256)を確かめる。見え方(重なり・はみ出し・押す大きさ)も。
 
 test.describe.configure({ timeout: 120_000 });
+test.afterAll(() => resetPhotoSales());
 
 const PHONE = { viewport: { width: 393, height: 759 }, isMobile: true, hasTouch: true } as const;
 
