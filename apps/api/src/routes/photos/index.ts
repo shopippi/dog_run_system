@@ -9,6 +9,7 @@ import { adminPriceListRoutes } from './admin-price-lists';
 import { adminUploadRoutes } from './admin-upload';
 import { checkoutRoutes } from './checkout';
 import { photoAvailabilityRoutes, photoConfigRoutes, photoFallbackUploadRoutes, photoFileRoutes, photoLegalRoutes } from './common';
+import { photoLegalHtmlRoutes } from './legal-html';
 import { deliveryPublicRoutes, deliveryRoutes } from './delivery';
 import { galleryRoutes } from './gallery';
 import { mockStripeRoutes } from './mock-stripe';
@@ -25,6 +26,7 @@ import { webhookRoutes } from './webhook';
 export const photoPublicRoutes = new Hono<AppEnv>();
 photoPublicRoutes.route('/', webhookRoutes);
 photoPublicRoutes.route('/', photoLegalRoutes);
+photoPublicRoutes.route('/', photoLegalHtmlRoutes);
 photoPublicRoutes.route('/', deliveryPublicRoutes);
 photoPublicRoutes.route('/', photoFileRoutes);
 

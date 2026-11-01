@@ -9,7 +9,7 @@ import type { Bindings } from '../../env';
 
 export const STRIPE_API = 'https://api.stripe.com/v1';
 /** 使う API の版(Stripe はアカウントごとに版を持つので、送る側で固定する) */
-export const STRIPE_API_VERSION = '2025-09-30.clover';
+export const STRIPE_API_VERSION = '2026-10-28.endive';
 /** まねの Stripe の Webhook の秘密(STRIPE_WEBHOOK_SECRET が無いときの、local・test だけの値) */
 export const MOCK_WEBHOOK_SECRET = 'whsec_mock_local_only';
 /** Webhook の時刻のずれの許容(秒)。Stripe の公式のライブラリと同じ5分 */

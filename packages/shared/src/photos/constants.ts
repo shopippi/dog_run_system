@@ -154,4 +154,7 @@ Object.assign(AUDIT_ACTION_LABELS, {
   'price_list.create': '写真の価格表を作る',
   'price_list.update': '写真の価格表の変更',
   'price_list.defaults': '写真の価格表の既定を変える',
+  'photo_order.refund': '写真の注文の返金',
+  'photo_order.amount_mismatch': '写真の注文の金額が合わない',
+  'photo_order.refund_unmatched': '写真の返金の照合ができない',
 });
