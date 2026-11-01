@@ -1,0 +1,22 @@
+/* PA-1 写真販売のダッシュボード(段階1-D)。既存のダッシュボード・今日の来場と同じ形(数値ブロック・一覧の行)。色は足さない */
+.pd-page { display: flex; flex-direction: column; gap: var(--sp-5); }
+.pd-kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.pd-panel-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--sp-1) var(--sp-4); padding: var(--sp-4) var(--sp-5); border-bottom: 1px solid var(--border); }
+.pd-panel-head h2 { font-size: var(--fs-15); }
+.pd-list { list-style: none; margin: 0; padding: 0; }
+.pd-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: var(--sp-2) var(--sp-4); min-height: 64px; padding: var(--sp-3) var(--sp-5); }
+.pd-row + .pd-row { border-top: 1px solid var(--border); }
+.pd-row-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.pd-row-body b { font-size: var(--fs-14); font-weight: var(--fw-strong); overflow-wrap: anywhere; }
+.pd-row-side { display: flex; align-items: center; gap: var(--sp-3); white-space: nowrap; }
+.pd-amount { font-size: var(--fs-14); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.pd-nowrap { white-space: nowrap; }
+.pd-link { display: inline-flex; align-items: center; min-height: 40px; color: var(--accent-text); font-size: var(--fs-14); text-decoration: none; }
+.pd-link:hover { text-decoration: underline; }
+.pd-link:focus-visible { outline: 2px solid var(--focus-color); outline-offset: 2px; }
+@media (pointer: coarse) { .pd-link { min-height: 44px; } }
+@media (max-width: 720px) {
+  .pd-kpis { grid-template-columns: minmax(0, 1fr); }
+  .pd-kpis .kpi + .kpi { border-left: 0; border-top: 1px solid var(--border); }
+  .pd-row { grid-template-columns: minmax(0, 1fr); }
+}
