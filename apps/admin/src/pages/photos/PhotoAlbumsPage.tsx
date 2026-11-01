@@ -164,11 +164,13 @@ function AlbumRow({ a, readOnly, checked, selectable, onToggle }: { a: AdminAlbu
   const total = a.counts.draft + a.counts.published + a.counts.hidden;
   return (
     <li className={`pa-album${a.status === 'ended' ? ' off' : ''}`} aria-label={a.name}>
-      <span className="pa-album-check">
-        {!readOnly && selectable && (
+      {!readOnly && selectable ? (
+        <label className="pa-album-check">
           <input type="checkbox" checked={checked} aria-label={`「${a.name}」を選ぶ`} onChange={onToggle} />
-        )}
-      </span>
+        </label>
+      ) : (
+        <span className="pa-album-check" />
+      )}
       {a.coverThumbUrl ? <img className="pa-cover" src={a.coverThumbUrl} alt="" loading="lazy" /> : <span className="pa-cover" aria-hidden="true" />}
       <span className="pa-row-body">
         <span className="pa-row-title">

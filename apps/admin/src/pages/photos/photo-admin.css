@@ -33,7 +33,7 @@
   display: grid; grid-template-columns: 28px 56px minmax(0, 1fr) auto; align-items: center; gap: var(--sp-3) var(--sp-4);
   min-height: 80px; padding: var(--sp-3) var(--sp-5); border-top: 1px solid var(--border);
 }
-.pa-album-check { display: flex; align-items: center; justify-content: center; min-height: var(--control-h); }
+.pa-album-check { display: flex; align-items: center; justify-content: center; min-width: 28px; min-height: var(--control-h); cursor: pointer; }
 .pa-album-check input { width: 20px; height: 20px; margin: 0; accent-color: var(--ink); }
 .pa-cover { display: block; width: 56px; height: 56px; border-radius: var(--radius-sm); object-fit: cover; background: var(--surface-sunk); }
 .pa-album-name { display: inline-flex; align-items: center; min-height: var(--control-h); color: var(--text); font-size: var(--fs-15); font-weight: var(--fw-strong); text-decoration: none; overflow-wrap: anywhere; }

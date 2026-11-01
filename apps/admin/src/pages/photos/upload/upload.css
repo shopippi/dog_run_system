@@ -52,3 +52,5 @@
   .ph-up-album .ph-up-pick { grid-column: 1 / -1; justify-self: start; }
   .ph-up-drop { padding: var(--sp-5) var(--sp-4); }
 }
+/* 見えないファイルの選択欄(押すのはラベル)。入力欄の文字の決まり(16px 以上)にそろえる */
+.ph-up-pick input[type="file"] { font-size: var(--fs-input); }
