@@ -1,0 +1,6 @@
+/* PA-7 写真販売の設定(段階1-D)。ルールの設定と同じ部品(SettingsKit・cfg-*)。色は足さない */
+.ps-page { display: flex; flex-direction: column; gap: var(--sp-5); }
+.ps-blocked { margin: 0; font-size: var(--fs-13); color: var(--text-secondary); }
+.ps-limit { border: 0; margin: 0; padding: 0; min-width: 0; display: flex; flex-direction: column; gap: var(--sp-2); }
+.ps-wm-sample { display: flex; align-items: center; gap: var(--sp-3); padding: var(--sp-3) var(--sp-4); border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface-sunk); }
+.ps-wm-text { font-size: var(--fs-14); font-weight: var(--fw-strong); letter-spacing: .04em; color: var(--text); overflow-wrap: anywhere; }
