@@ -13,6 +13,7 @@ import { errors } from '../../lib/errors';
 import { loadSettings } from '../../lib/settings';
 import { requireRole } from '../../lib/staff-auth';
 import { auditStatement } from '../../services/audit';
+import { checkPhotoSettingsPatch } from '../../services/photos/dashboard';
 import { registerUndo } from '../../services/undo';
 
 // A-12 ルールの設定(M-13)
@@ -86,6 +87,9 @@ settingsRoutes.patch('/settings', requireRole('admin'), async (c) => {
   }
   const checked = checkSettingsPatch(body);
   if (!checked.ok) throw errors.badRequest(checked.message, checked.key ? { path: checked.key } : undefined);
+  // 写真販売を「販売する」にするのは、写真の置き場所と決済の準備ができているときだけ
+  const photoProblem = checkPhotoSettingsPatch(c.env, checked.data);
+  if (photoProblem) throw errors.badRequest(photoProblem, { path: 'photo_sales_enabled' });
   const saved = await saveSettings(c.env.DB, checked.data, c.get('staff').id, c.get('now'));
   return c.json(toResponse(saved));
 });

@@ -1,3 +1,4 @@
+import { AUDIT_ACTION_LABELS } from '../api-types-households';
 // 写真販売の決まった値と、画面に出す言葉(docs/photo-requirements.md)。
 
 export const ALBUM_KINDS = ['date', 'event'] as const;
@@ -137,3 +138,9 @@ export const photoCancelUrl = (origin: string) => `${origin}/liff${PHOTO_LIFF_PA
 
 /** 代わりの置き場所(local・test・デモ)で、写真販売のファイルのキーの頭に付ける(犬の写真などと分ける) */
 export const PHOTO_FALLBACK_PREFIX = 'photo-sales/';
+
+// 操作ログ(A-15)の言葉(写真販売)
+Object.assign(AUDIT_ACTION_LABELS, {
+  'photo_album.sale_end': '写真の販売終了(自動)',
+  'photo_album.files_delete': '売れなかった写真のファイルの削除(自動)',
+});

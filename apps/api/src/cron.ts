@@ -10,7 +10,7 @@ import { expirePointsAndTickets } from './services/expiry';
 import { deleteMigrationImages } from './services/migration-images';
 import { lookupPostalAreas } from './services/postal-areas';
 import { purgeIdempotencyKeys } from './lib/idempotency';
-import { runPhotoSaleEnd } from './services/photos/sale-end';
+import { photoSaleEndJob } from './services/photos/sale-end';
 
 /** 日本時間 3:10(UTC 18:10)。日別集計の再計算、有効期限の処理、バックアップ、移行期間終了後の画像削除 */
 export const CRON_NIGHTLY = '10 18 * * *';
@@ -45,7 +45,7 @@ export async function runNightly(env: Bindings, now: Date): Promise<void> {
   // 7日より古い送信の印(二重送信を防ぐための一時的な記録。業務の記録ではない)を消す。失敗しても、ほかの処理に影響させない
   await purgeIdempotencyKeys(env.DB, now).catch((e) => console.error('送信の印の整理に失敗しました', e));
   // 写真販売の販売終了と、売れなかった写真のファイルの削除(PF-8。段階1-D で system_jobs に記録する)
-  await runPhotoSaleEnd(env, now).catch((e) => console.error('写真の販売終了の処理に失敗しました', e));
+  await runJob(env.DB, 'photo_sale_end', now, () => photoSaleEndJob(env, now)).catch((e) => console.error('写真の販売終了の処理に失敗しました', e));
 }
 
 export async function runMorning(env: Bindings, now: Date): Promise<void> {

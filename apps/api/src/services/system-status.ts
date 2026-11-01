@@ -23,6 +23,7 @@ const EXPECTED: Record<SystemJobName, { hours: number; schedule: string }> = {
   migration_images: { hours: 30, schedule: '毎晩 3:10' },
   holidays: { hours: 400 * 24, schedule: '毎年 2月1日' },
   postal_areas: { hours: 30, schedule: '毎晩 3:10(新しい郵便番号だけ)' },
+  photo_sale_end: { hours: 30, schedule: '毎晩 3:10' },
 };
 
 /** 「動いています」のまま、これより長いものは途中で止まったとみなす */
